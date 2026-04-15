@@ -1,223 +1,81 @@
-# Minitensor Architecture Notes
+# Architecture: Design Decisions
 
-This project should stay small enough that one person can understand the full path from tensor authoring to backend execution.
+Non-obvious design decisions that aren't visible from reading the code. For the full picture (diagrams, package table, roadmap) see [README.md](../README.md).
 
-## Recommended Package Boundaries
+---
 
-The current package split is a good foundation:
+## Package Boundaries
 
-```text
-packages/
-  core/             User-facing Tensor API, eager ops, autograd graph capture
-  ir/               Backend-neutral graph/value/node schema
-  runtime/          Graph execution, tensor lifetime, backend dispatch contract
-  backend-cpu/      Reference backend and correctness oracle
-  backend-wasm/     Browser CPU acceleration backend
-  backend-webgpu/   GPU backend
-```
+The boundary rule exists to keep each package independently testable and replaceable:
 
-That separation is worth keeping. The main rule is:
-
-```text
-core can build graphs, but should not know how a backend stores memory.
-ir can describe graphs, but should not know about autograd or devices.
-runtime can execute graphs, but should not contain op math.
-backends can run kernels, but should not define user-facing tensor semantics.
-```
-
-## Suggested Near-Term Structure
-
-The current structure is already close. The next cleanups should be evolutionary:
-
-```text
-packages/
-  core/
-    src/
-      tensor.ts
-      tensor_init.ts
-      ops/
-        elementwise.ts
-        linear.ts
-        shape.ts
-      autograd/
-        engine.ts
-      compiler/
-        compileGraph.ts
-
-  ir/
-    src/
-      types.ts
-      shape-inference.ts
-      validate.ts
-
-  runtime/
-    src/
-      backend.ts
-      engine.ts
-      execution-plan.ts
-
-  backend-cpu/
-    src/
-      backend.ts
-      kernels/
-
-  backend-wasm/
-    src/
-      backend.ts
-      module.ts
-      kernels/
-    rust/
-      src/
-
-  backend-webgpu/
-    src/
-      backend.ts
-      device.ts
-      kernels/
-      shaders/
-```
-
-Do not rush to create every folder. Add these only when the existing files become crowded.
+- `core` can build graphs but must not know how a backend stores memory — otherwise swapping backends would require changing user-facing code.
+- `ir` can describe computation but must not know about autograd or devices — the same graph must be producible from hand-authored tensors and from an ONNX parser without either knowing about the other.
+- `runtime` can execute graphs but must not contain op math — otherwise adding a backend would mean touching the engine.
+- `backends` can run kernels and own memory but must not define user-facing tensor semantics — user code imports from `core`, not from backend packages.
 
 ## Backend Contract
 
-The current `Backend` interface is the right idea:
-
-```ts
-interface Backend {
-  allocate(...)
-  read(...)
-  write(...)
-  execute(...)
-  dispose(...)
-}
-```
-
-For the next phase, consider making two concepts explicit:
+Two concepts must remain distinct:
 
 ```text
-RuntimeTensor = backend-owned memory handle
-Kernel = implementation of one IR op for one backend
+RuntimeTensor  = backend-owned memory handle (shape + dtype + opaque buffer)
+Kernel         = implementation of one IR op for one backend
 ```
 
-That helps keep `Engine` simple. It should plan execution and call kernels, not understand MatMul dimensions beyond what the IR and backend contract require.
+`Engine` should only plan execution order and call kernels. It must not understand MatMul dimensions, WGSL workgroup geometry, or WASM pointer arithmetic. When `Engine.execute()` receives a node, it allocates outputs from the backend and delegates everything else. If `Engine` is growing op-specific logic, that logic belongs in the backend.
 
-## Kernel Registry
+## Kernel Registry Pattern
 
-Backends should maintain an explicit op registry instead of growing `switch` statements inside `execute()`.
+Each backend owns a `Map<string, KernelFn>` keyed by `node.op`. This replaces growing `switch` statements in `execute()` and gives each backend one canonical place to answer:
+
+- Which ops do I support?
+- How does this op map to my implementation?
+- What backend-specific state does this op need?
+
+Registry files:
+
+- `packages/backend-cpu/src/kernels/registry.ts`
+- `packages/backend-wasm/src/kernels/registry.ts`
+- `packages/backend-webgpu/src/kernels/registry.ts`
+
+**Exception:** `WebGPUBackend.execute()` in `packages/backend-webgpu/src/backend.ts` currently has op-specific dispatch logic baked in for `MatMul` and `Transpose`. These ops need a uniform buffer (shape metadata injected at binding `inputs.length + 1`) and non-standard workgroup geometry. Until that dispatch is refactored into the kernel registry, any new WebGPU op that requires a uniform buffer needs a new `if (node.op === '...')` block there. See [docs/adding-an-op.md](./adding-an-op.md) for the full procedure.
+
+## WASM Backend: Memory Model
+
+Tensor memory lives in the WASM heap, not in JS. The lifecycle:
 
 ```text
-node.op -> backend-specific kernel runner
+allocate()  →  module.alloc_f32(size)         returns a pointer; wraps in WasmTensorHandle
+write()     →  copies JS TypedArray into WASM heap via module.memory.buffer view
+execute()   →  calls Rust kernel with raw pointers (no JS/WASM data crossing per element)
+read()      →  copies WASM heap slice back into a new JS Float32Array
+dispose()   →  module.free_f32(ptr, elements)  frees the WASM allocation
 ```
 
-That gives each backend one obvious place to answer:
-
-```text
-Which ops do I support?
-How does this op map to my implementation?
-What backend-specific metadata does this op need?
-```
-
-The current direction is:
-
-```text
-backend-cpu/src/kernels/registry.ts
-backend-wasm/src/kernels/registry.ts
-backend-webgpu/src/kernels/registry.ts
-```
-
-## WASM Backend Assessment
-
-The WASM backend now uses a more conventional runtime shape:
-
-```text
-WASM owns tensor memory
-RuntimeTensor stores a pointer handle
-write() copies JS data into WASM memory
-execute() calls Rust kernels with pointers
-read() copies data back into a JS Float32Array
-dispose() frees the WASM allocation
-```
-
-This is a better foundation for adding many ops because tensors no longer cross the JS/WASM boundary on every kernel call.
-
-The current package layout is acceptable:
-
-```text
-backend-wasm/
-  src/   TypeScript package users import
-  rust/  Rust crate compiled by wasm-pack
-  pkg/   generated wasm-bindgen output
-```
-
-For a package whose public API is TypeScript, this is a normal shape. If the Rust crate grows large enough to be developed independently, then split it into a workspace-level `crates/minitensor-wasm/` later. Do not split it just for convention.
+Tensors no longer cross the JS/WASM boundary on every kernel call. This is the key difference from a naive implementation where each op takes `&[f32]` slices — that pattern copies data on every call. The `_raw` suffix on Rust functions (e.g., `add_raw`) marks the pointer-based variants used at runtime.
 
 ## WASM Generated Package Boundary
 
-The generated `pkg/` folder should be treated as build output with a small wrapper boundary:
+`packages/backend-wasm/pkg/` is build output from `wasm-pack`. It must not be imported directly by kernel code.
 
-```text
-backend-wasm/src/module.ts
-```
-
-That file is the only TypeScript source that should know the generated import path:
+`packages/backend-wasm/src/module.ts` is the only TypeScript file that imports from `pkg/`:
 
 ```ts
 import initWasm from '../pkg/minitensor_wasm';
 ```
 
-Kernel code should depend on `module.ts`, not import from `pkg/` directly. This keeps generated code contained.
-
-## Recommendation For WASM
-
-Keep Rust and TypeScript in the same `backend-wasm` package for now. The next WASM improvements should be allocator discipline, dtype support, and tests that prove disposed tensors do not remain readable.
+All kernel code imports from `module.ts`. This contains the `MinitensorWasmModule` interface, the `WasmTensorHandle` type, `loadWasmModule()`, and `getF32View()`. If `wasm-pack` regenerates `pkg/` with a different structure, only `module.ts` needs updating.
 
 ## Testing Strategy
 
-Keep CPU as the reference backend. Every op should have:
+CPU is the correctness oracle. Every op must pass:
 
 ```text
-same graph -> CPU result
-same graph -> WASM result
-same graph -> WebGPU result, when WebGPU is available
+same graph  →  CPU result
+same graph  →  WASM result     (must match CPU within tolerance)
+same graph  →  WebGPU result   (when WebGPU is available)
 ```
 
-Browser/WebGPU tests should stay in Vitest browser mode. Bun's native test runner should not be the main test command, because it will scan `_archive` and ignore the Vitest include boundary.
+Tests run in Vitest browser mode (Playwright, Chromium with `--enable-unsafe-webgpu`). Do not use `bun test` as the primary test command — it will ignore Vitest's `include` boundary and may pick up unintended files.
 
-## What To Build Next
-
-The best next feature is not ONNX yet. Build a tiny visual graph demo:
-
-```text
-y = Relu(MatMul(x, W) + b)
-```
-
-It should show:
-
-```text
-graph nodes
-tensor shapes
-backend selected
-output values
-optional timing per node
-```
-
-That gives the project its identity: a learning-friendly tensor library where execution and visualization grow together.
-
-## Longer-Term API Direction
-
-The authoring layer can mimic PyTorch without copying its internals:
-
-```ts
-const x = tensor([[1, 2]]);
-const w = tensor([[3], [4]], { requiresGrad: true });
-const y = x.matmul(w).relu();
-```
-
-The runtime layer should remain ONNX-friendly:
-
-```text
-ONNX model -> internal IR -> execution plan -> backend kernels
-```
-
-That means PyTorch-like ergonomics belong in `core`, while ONNX import belongs in a future `onnx` package that produces the same IR used by hand-authored tensors.
+WASM tests currently run under Node via Vitest. The WASM backend has not been validated in a real browser. Any test claiming WASM correctness is only valid under Node until browser validation is added.
