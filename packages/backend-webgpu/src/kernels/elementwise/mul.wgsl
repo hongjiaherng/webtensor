@@ -14,9 +14,5 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
   let lenA = arrayLength(&A);
   let lenB = arrayLength(&B);
   
-  // Pseudo-broadcasting: if length is 1, treat it as a broadcast scalar
-  let indexA = select(index, 0u, lenA == 1u);
-  let indexB = select(index, 0u, lenB == 1u);
-
-  Out[index] = A[indexA] * B[indexB];
+  Out[index] = A[index % lenA] * B[index % lenB];
 }

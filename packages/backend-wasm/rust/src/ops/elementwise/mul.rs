@@ -9,9 +9,11 @@ pub fn mul(a: &[f32], b: &[f32], out: &mut [f32]) {
 }
 
 #[wasm_bindgen]
-pub unsafe fn mul_raw(a_ptr: *const f32, b_ptr: *const f32, out_ptr: *mut f32, len: usize) {
-    let a = slice::from_raw_parts(a_ptr, len);
-    let b = slice::from_raw_parts(b_ptr, len);
-    let out = slice::from_raw_parts_mut(out_ptr, len);
-    mul(a, b, out);
+pub unsafe fn mul_raw(a_ptr: *const f32, b_ptr: *const f32, out_ptr: *mut f32, len_a: usize, len_b: usize, len_out: usize) {
+    let a = slice::from_raw_parts(a_ptr, len_a);
+    let b = slice::from_raw_parts(b_ptr, len_b);
+    let out = slice::from_raw_parts_mut(out_ptr, len_out);
+    for i in 0..len_out {
+        out[i] = a[i % len_a] * b[i % len_b];
+    }
 }

@@ -25,8 +25,11 @@ export class WebGPUBackend implements Backend {
   }
 
   allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor {
+    if (dtype !== 'float32') {
+      throw new Error(`WebGPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`);
+    }
     const size = getShapeSize(shape);
-    let byteSize = size * 4; // Assuming f32/i32 for MVP
+    let byteSize = size * 4;
     byteSize = Math.ceil(byteSize / 4) * 4;
     
     const buffer = this.device.createBuffer({

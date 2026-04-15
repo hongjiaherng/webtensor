@@ -14,3 +14,5 @@ packages/backend-wasm/rust/target/
 .env.*
 .DS_Store
 Thumbs.db
+
+.vscode/

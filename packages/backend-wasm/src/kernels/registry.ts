@@ -1,6 +1,5 @@
 import { Node } from '@minitensor/ir';
 import { RuntimeTensor } from '@minitensor/runtime';
-import { getShapeSize } from './utils';
 import { MinitensorWasmModule, WasmTensorHandle, isWasmTensorHandle } from '../module';
 
 export type WASMKernel = (
@@ -18,21 +17,21 @@ function handleOf(tensor: RuntimeTensor): WasmTensorHandle {
 }
 
 const binaryElementwise = (
-  fn: (module: MinitensorWasmModule, aPtr: number, bPtr: number, outPtr: number, len: number) => void
+  fn: (module: MinitensorWasmModule, aPtr: number, bPtr: number, outPtr: number, lenA: number, lenB: number, lenOut: number) => void
 ): WASMKernel => {
   return (module, _node, inputs, outputs) => {
     const a = handleOf(inputs[0]);
     const b = handleOf(inputs[1]);
     const out = handleOf(outputs[0]);
-    fn(module, a.ptr, b.ptr, out.ptr, out.elements);
+    fn(module, a.ptr, b.ptr, out.ptr, a.elements, b.elements, out.elements);
   };
 };
 
 export const wasmKernelRegistry = new Map<string, WASMKernel>([
-  ['Add', binaryElementwise((module, a, b, out, len) => module.add_raw(a, b, out, len))],
-  ['Sub', binaryElementwise((module, a, b, out, len) => module.sub_raw(a, b, out, len))],
-  ['Mul', binaryElementwise((module, a, b, out, len) => module.mul_raw(a, b, out, len))],
-  ['Div', binaryElementwise((module, a, b, out, len) => module.div_raw(a, b, out, len))],
+  ['Add', binaryElementwise((module, a, b, out, lenA, lenB, lenOut) => module.add_raw(a, b, out, lenA, lenB, lenOut))],
+  ['Sub', binaryElementwise((module, a, b, out, lenA, lenB, lenOut) => module.sub_raw(a, b, out, lenA, lenB, lenOut))],
+  ['Mul', binaryElementwise((module, a, b, out, lenA, lenB, lenOut) => module.mul_raw(a, b, out, lenA, lenB, lenOut))],
+  ['Div', binaryElementwise((module, a, b, out, lenA, lenB, lenOut) => module.div_raw(a, b, out, lenA, lenB, lenOut))],
   ['MatMul', (module, _node, inputs, outputs) => {
     const shapeA = inputs[0].shape as number[];
     const shapeB = inputs[1].shape as number[];
@@ -48,6 +47,17 @@ export const wasmKernelRegistry = new Map<string, WASMKernel>([
       k,
       n
     );
+  }],
+  ['Relu', (module, _node, inputs, outputs) => {
+    const a = handleOf(inputs[0]);
+    const out = handleOf(outputs[0]);
+    module.relu_raw(a.ptr, out.ptr, out.elements);
+  }],
+  ['ReluGrad', (module, _node, inputs, outputs) => {
+    const grad = handleOf(inputs[0]);
+    const a = handleOf(inputs[1]);
+    const out = handleOf(outputs[0]);
+    module.relu_grad_raw(grad.ptr, a.ptr, out.ptr, out.elements);
   }],
   ['Transpose', (module, _node, inputs, outputs) => {
     const shape = inputs[0].shape as number[];

@@ -26,6 +26,28 @@ export function add(a: Tensor, b: Tensor): Tensor {
   });
 }
 
+export function sub(a: Tensor, b: Tensor): Tensor {
+  const outShape = broadcastShapes(a.shape, b.shape);
+  return new Tensor({
+    shape: outShape,
+    dtype: a.dtype,
+    device: a.device,
+    requiresGrad: a.requiresGrad || b.requiresGrad,
+    ctx: { op: 'Sub', inputs: [a, b] }
+  });
+}
+
+export function div(a: Tensor, b: Tensor): Tensor {
+  const outShape = broadcastShapes(a.shape, b.shape);
+  return new Tensor({
+    shape: outShape,
+    dtype: a.dtype,
+    device: a.device,
+    requiresGrad: a.requiresGrad || b.requiresGrad,
+    ctx: { op: 'Div', inputs: [a, b] }
+  });
+}
+
 export function mul(a: Tensor, b: Tensor): Tensor {
   const outShape = broadcastShapes(a.shape, b.shape);
   const requiresGrad = a.requiresGrad || b.requiresGrad;

@@ -16,7 +16,7 @@ diagrams:
 	plantuml -tsvg $(DIAGRAMS_DIR)/*.puml
 
 wasm:
-	cd packages/backend-wasm/rust && wasm-pack build --target bundler --out-dir ../pkg
+	cd packages/backend-wasm/rust && wasm-pack build --target web --out-dir ../pkg
 
 test:
 	bun run test

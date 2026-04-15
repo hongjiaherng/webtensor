@@ -4,6 +4,7 @@ import { executeAdd } from './elementwise/add';
 import { executeSub } from './elementwise/sub';
 import { executeMul } from './elementwise/mul';
 import { executeDiv } from './elementwise/div';
+import { executeRelu, executeReluGrad } from './elementwise/relu';
 import { executeMatMul } from './linear/matmul';
 import { executeTranspose } from './shape/transpose';
 
@@ -40,6 +41,19 @@ export const cpuKernelRegistry = new Map<string, CPUKernel>([
       m,
       k,
       n
+    );
+  }],
+  ['Relu', (_node, inputs, outputs) => {
+    executeRelu(
+      inputs[0].buffer as Float32Array,
+      outputs[0].buffer as Float32Array
+    );
+  }],
+  ['ReluGrad', (_node, inputs, outputs) => {
+    executeReluGrad(
+      inputs[0].buffer as Float32Array, // grad
+      inputs[1].buffer as Float32Array, // original input a
+      outputs[0].buffer as Float32Array
     );
   }],
   ['Transpose', (_node, inputs, outputs) => {

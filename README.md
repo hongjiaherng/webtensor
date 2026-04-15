@@ -71,13 +71,13 @@ CPU is the correctness oracle. All other backends must match CPU output within t
 
 | Op | CPU | WASM | WebGPU | Notes |
 | --- | :---: | :---: | :---: | --- |
-| Add | yes | yes | yes | same-shape only — `[N,D] + [D]` not supported |
-| Sub | yes | yes | — | WebGPU kernel missing |
-| Mul | yes | yes | yes | same-shape only — `[N,D] + [D]` not supported |
-| Div | yes | yes | — | WebGPU kernel missing |
+| Add | yes | yes | yes | suffix broadcasting — `[N,D] + [D]` supported |
+| Sub | yes | yes | — | WebGPU kernel missing; suffix broadcasting on CPU + WASM |
+| Mul | yes | yes | yes | suffix broadcasting — `[N,D] * [D]` supported |
+| Div | yes | yes | — | WebGPU kernel missing; suffix broadcasting on CPU + WASM |
 | MatMul | yes | yes | yes | 2D only; batched rank ≥ 3 not implemented |
 | Transpose | yes | yes | yes | 2D only |
-| Relu | — | — | — | needed for any real MLP |
+| Relu | yes | yes | yes | ReluGrad (for training backward) implemented on CPU + WASM |
 | Sigmoid | — | — | — | |
 | Softmax | — | — | — | |
 | Reshape | — | — | — | |
@@ -141,7 +141,7 @@ These block the path to training and inference:
 | --- | --- |
 | No cross-backend parity tests | WASM/WebGPU correctness is unverified |
 | No activation ops (Relu, Sigmoid, Softmax) | Cannot run a real forward pass |
-| No broadcasting in binary ops | Bias addition `[N,D] + [D]` silently fails |
+| No broadcasting in Sub/Div on WebGPU | WebGPU kernels for Sub and Div are not yet implemented |
 | Matmul and transpose are 2D-only | Batched ops needed for real models |
 | No loss functions or optimizer | Cannot train |
 | No ONNX parser | Cannot load pre-trained models |
