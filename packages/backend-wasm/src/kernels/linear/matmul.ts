@@ -1,4 +1,4 @@
-import { WASMKernel, handleOf } from '../utils';
+import { WASMKernel, handleOf, ensureContiguous } from '../utils';
 
 export const matmulKernel: WASMKernel = (module, _node, inputs, outputs) => {
   const shapeA = inputs[0].shape as number[];
@@ -6,10 +6,12 @@ export const matmulKernel: WASMKernel = (module, _node, inputs, outputs) => {
   const m = shapeA[shapeA.length - 2] || 1;
   const k = shapeA[shapeA.length - 1];
   const n = shapeB[shapeB.length - 1];
-  module.matmul_raw(
-    handleOf(inputs[0]).ptr,
-    handleOf(inputs[1]).ptr,
-    handleOf(outputs[0]).ptr,
-    m, k, n,
-  );
+  const ca = ensureContiguous(module, inputs[0]);
+  const cb = ensureContiguous(module, inputs[1]);
+  try {
+    module.matmul_raw(ca.handle.ptr, cb.handle.ptr, handleOf(outputs[0]).ptr, m, k, n);
+  } finally {
+    if (ca.owned) module.free_f32(ca.handle.ptr, ca.handle.elements);
+    if (cb.owned) module.free_f32(cb.handle.ptr, cb.handle.elements);
+  }
 };

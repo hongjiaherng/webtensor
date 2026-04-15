@@ -1,8 +1,14 @@
-import { WASMKernel, handleOf } from '../utils';
+import { WASMKernel, handleOf, ensureContiguous } from '../utils';
 
 export const mulKernel: WASMKernel = (module, _node, inputs, outputs) => {
-  const a = handleOf(inputs[0]);
-  const b = handleOf(inputs[1]);
-  const out = handleOf(outputs[0]);
-  module.mul_raw(a.ptr, b.ptr, out.ptr, a.elements, b.elements, out.elements);
+  const ca = ensureContiguous(module, inputs[0]);
+  const cb = ensureContiguous(module, inputs[1]);
+  try {
+    const out = handleOf(outputs[0]);
+    module.mul_raw(ca.handle.ptr, cb.handle.ptr, out.ptr,
+                   ca.handle.elements, cb.handle.elements, out.elements);
+  } finally {
+    if (ca.owned) module.free_f32(ca.handle.ptr, ca.handle.elements);
+    if (cb.owned) module.free_f32(cb.handle.ptr, cb.handle.elements);
+  }
 };

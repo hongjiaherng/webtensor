@@ -10,6 +10,10 @@ export function getShapeSize(shape: (number | null)[]): number {
   return size;
 }
 
+export function alignTo(value: number, alignment: number): number {
+  return Math.ceil(value / alignment) * alignment;
+}
+
 /** C-order (row-major) strides for a concrete shape. */
 export function computeContiguousStrides(shape: number[]): number[] {
   const strides = new Array<number>(shape.length);
@@ -21,8 +25,18 @@ export function computeContiguousStrides(shape: number[]): number[] {
   return strides;
 }
 
-export function alignTo(value: number, alignment: number): number {
-  return Math.ceil(value / alignment) * alignment;
+/**
+ * Returns true when the tensor is packed C-contiguous:
+ * offset is 0 and strides are standard row-major values.
+ */
+export function isContiguous(shape: number[], strides: number[], offset: number): boolean {
+  if (offset !== 0) return false;
+  let expected = 1;
+  for (let i = shape.length - 1; i >= 0; i--) {
+    if (strides[i] !== expected) return false;
+    expected *= shape[i];
+  }
+  return true;
 }
 
 /**

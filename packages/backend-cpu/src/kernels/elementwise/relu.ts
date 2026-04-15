@@ -1,27 +1,27 @@
-import { CPUKernel } from '../utils';
-
-export function executeRelu(a: Float32Array, out: Float32Array): void {
-  for (let i = 0; i < out.length; i++) {
-    out[i] = a[i] > 0 ? a[i] : 0;
-  }
-}
-
-// Backward: passes gradient where input was positive, zeros it elsewhere.
-// grad * (a > 0 ? 1 : 0)
-export function executeReluGrad(grad: Float32Array, a: Float32Array, out: Float32Array): void {
-  for (let i = 0; i < out.length; i++) {
-    out[i] = a[i] > 0 ? grad[i] : 0;
-  }
-}
+import { CPUKernel, stridedIdx } from '../utils';
 
 export const reluKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeRelu(inputs[0].storage.buffer as Float32Array, outputs[0].storage.buffer as Float32Array);
+  const shape = inputs[0].shape as number[];
+  const strides = inputs[0].strides;
+  const offset = inputs[0].offset;
+  const inBuf = inputs[0].storage.buffer as Float32Array;
+  const outBuf = outputs[0].storage.buffer as Float32Array;
+  for (let i = 0; i < outBuf.length; i++) {
+    const v = inBuf[stridedIdx(shape, strides, offset, i)];
+    outBuf[i] = v > 0 ? v : 0;
+  }
 };
 
+// Backward: passes gradient where input was positive, zeros it elsewhere.
 export const reluGradKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeReluGrad(
-    inputs[0].storage.buffer as Float32Array,  // grad
-    inputs[1].storage.buffer as Float32Array,  // original input a
-    outputs[0].storage.buffer as Float32Array,
-  );
+  // inputs[0] = grad, inputs[1] = original activation input a
+  const shape = inputs[0].shape as number[];
+  const outBuf = outputs[0].storage.buffer as Float32Array;
+  const gradBuf = inputs[0].storage.buffer as Float32Array;
+  const aBuf = inputs[1].storage.buffer as Float32Array;
+  for (let i = 0; i < outBuf.length; i++) {
+    const grad = gradBuf[stridedIdx(shape, inputs[0].strides, inputs[0].offset, i)];
+    const a = aBuf[stridedIdx(shape, inputs[1].strides, inputs[1].offset, i)];
+    outBuf[i] = a > 0 ? grad : 0;
+  }
 };
