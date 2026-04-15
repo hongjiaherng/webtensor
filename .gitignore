@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local reference material and previous experiments. Keep it on disk, not in the published package repo.
+_archive/
+
+# Rust build outputs are reproducible and very large.
+target/
+packages/backend-wasm/rust/target/
+
+# Local environment/editor noise.
+.env
+.env.*
+.DS_Store
+Thumbs.db

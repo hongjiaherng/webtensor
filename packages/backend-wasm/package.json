@@ -1,0 +1,15 @@
+{
+  "name": "@minitensor/backend-wasm",
+  "version": "0.1.0",
+  "description": "WASM backend for minitensor using wasm-bindgen",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build:wasm": "bunx wasm-pack build rust --target web --out-dir ../pkg",
+    "build": "bun run build:wasm"
+  },
+  "dependencies": {
+    "@minitensor/core": "workspace:*",
+    "@minitensor/runtime": "workspace:*"
+  }
+}

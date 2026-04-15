@@ -1,0 +1,15 @@
+{
+  "name": "minitensor-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "minitensor_wasm_bg.wasm",
+    "minitensor_wasm.js",
+    "minitensor_wasm.d.ts"
+  ],
+  "main": "minitensor_wasm.js",
+  "types": "minitensor_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
