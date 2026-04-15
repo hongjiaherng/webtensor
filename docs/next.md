@@ -62,7 +62,7 @@ These will bite you if you don't know them:
 
 - **WASM is unvalidated in a browser.** All WASM tests run under Node via Vitest. The `wasm-pack --target bundler` output has not been loaded in a real browser. There may be initialization or memory issues that Node masks.
 
-- **`compileGraph()` uses `requiresGrad` to classify inputs vs initializers.** In `packages/core/src/compiler.ts`, a `Constant` node with `requiresGrad: true` is classified as a graph input; without it, as an initializer. This works for the current use cases but will break when weight tensors need to be both `requiresGrad: true` (for training) and initializers (for inference reuse). Needs a redesign before the training loop is built.
+- ~~**`compileGraph()` uses `requiresGrad` to classify inputs vs initializers.**~~ **Fixed.** All `Constant` nodes are now unconditionally classified as `initializers`. `graph.inputs` is reserved for future placeholder tensors (dynamic batch data). `requiresGrad` is an autograd concern and never affects graph topology classification. See `packages/core/src/compiler.ts` for the full rationale.
 
 - **`Engine.evaluate()` is synchronous, but WebGPU `read()` is async.** `packages/runtime/src/engine.ts` calls `backend.execute()` synchronously. The `get()` method returns `ArrayBufferView | Promise<ArrayBufferView>`, but `evaluate()` itself does not await. This means callers must manually `await engine.get(outputId)` after `evaluate()`, and there is no guarantee that GPU work has completed. This is a latent inconsistency that will need a proper async execution model.
 
