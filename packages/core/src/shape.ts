@@ -37,10 +37,13 @@ export function flattenArray(arr: NestedArray<number>): number[] {
   return out;
 }
 
-export function broadcastShapes(shapeA: (number | null)[], shapeB: (number | null)[]): (number | null)[] {
+export function broadcastShapes(
+  shapeA: (number | null)[],
+  shapeB: (number | null)[],
+): (number | null)[] {
   const result: (number | null)[] = [];
   const maxRank = Math.max(shapeA.length, shapeB.length);
-  
+
   const padA = maxRank - shapeA.length;
   const padB = maxRank - shapeB.length;
 

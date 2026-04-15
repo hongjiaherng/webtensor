@@ -7,16 +7,19 @@ Working context doc. The "Immediate task" section gets rewritten when the active
 ## Current State
 
 **Verified working:**
+
 - CPU backend — all 6 ops (Add, Sub, Mul, Div, MatMul, Transpose), reference implementation
 - Autograd — reverse-mode diff for MatMul; forward pass for Add, Mul, Relu, Transpose
 - Engine — topological sort, reference-counted disposal of intermediates, retained set for inputs/outputs/initializers
 - WASM backend — same 6 ops as CPU, tensor memory in WASM heap, pointer-based kernel calls
 
 **Scaffolded but unverified:**
+
 - WASM in browser — tests run under Node via Vitest; the WASM backend has not been validated in a real browser
 - WebGPU correctness — 4 ops (Add, Mul, MatMul, Transpose) exist but have never been numerically compared to CPU output
 
 **Absent:**
+
 - Relu kernel on any backend (defined in `core/ops.ts` but no kernel implementations)
 - All other activation ops (Sigmoid, Tanh, Softmax)
 - Broadcasting for binary ops — same-shape only; `[N,D] + [D]` not supported
@@ -32,17 +35,20 @@ Working context doc. The "Immediate task" section gets rewritten when the active
 **Goal:** `y = Relu(MatMul(x, W) + b)` produces matching outputs on CPU, WASM, and WebGPU.
 
 **Acceptance criteria:**
+
 1. A single test compiles the graph once and runs it on all three backends
 2. WASM output matches CPU within `1e-5`
 3. WebGPU output matches CPU within `1e-4` (GPU float tolerance)
 4. Test is deterministic (fixed `x`, `W`, `b` values)
 
 **What this requires:**
+
 - Relu kernel on CPU, WASM (Rust + `relu_raw`), and WebGPU (WGSL)
 - Broadcasting for Add: `[N, D] + [D]` (bias addition pattern)
 - A parity test helper that runs the same graph on multiple backends and diffs the outputs
 
 **Where to start:**
+
 1. CPU Relu kernel (`packages/backend-cpu/src/kernels/elementwise/relu.ts`) + register + test
 2. Write the parity helper (small utility in `tests/` that compares two `ArrayBufferView`s within tolerance)
 3. WASM Relu (Rust `relu_raw` + extend `MinitensorWasmModule` + register) + rebuild WASM
@@ -70,11 +76,11 @@ These will bite you if you don't know them:
 
 ## Priority Order
 
-| Phase | Work | Blocked by |
-| --- | --- | --- |
-| 2 | Relu + broadcasting Add + cross-backend parity test | nothing |
-| 3 | Sub/Div on WebGPU; remaining activations (Sigmoid, Tanh); batched MatMul; Reshape, Concat | phase 2 |
-| 4 | Loss functions (MSE, CrossEntropy); SGD + Adam optimizers; training loop in `core` | phase 3 |
-| 5 | `devtools` package: graph viz, weight/activation inspector, real-time loss curve | parallel with 4 |
-| 6 | `onnx` package: protobuf parser, ONNX op → IR mapping | phase 4 |
-| 7 | Kernel fusion, buffer pooling, async engine execution model | phase 6 |
+| Phase | Work                                                                                      | Blocked by      |
+| ----- | ----------------------------------------------------------------------------------------- | --------------- |
+| 2     | Relu + broadcasting Add + cross-backend parity test                                       | nothing         |
+| 3     | Sub/Div on WebGPU; remaining activations (Sigmoid, Tanh); batched MatMul; Reshape, Concat | phase 2         |
+| 4     | Loss functions (MSE, CrossEntropy); SGD + Adam optimizers; training loop in `core`        | phase 3         |
+| 5     | `devtools` package: graph viz, weight/activation inspector, real-time loss curve          | parallel with 4 |
+| 6     | `onnx` package: protobuf parser, ONNX op → IR mapping                                     | phase 4         |
+| 7     | Kernel fusion, buffer pooling, async engine execution model                               | phase 6         |

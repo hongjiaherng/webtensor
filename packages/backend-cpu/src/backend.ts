@@ -6,7 +6,9 @@ import { cpuKernelRegistry } from './kernels/registry';
 export class CPUBackend implements Backend {
   allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor {
     if (dtype !== 'float32') {
-      throw new Error(`CPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`);
+      throw new Error(
+        `CPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`,
+      );
     }
     const size = getShapeSize(shape);
     const buffer = new Float32Array(size);
@@ -34,6 +36,7 @@ export class CPUBackend implements Backend {
   }
 
   dispose(tensor: RuntimeTensor): void {
+    if (tensor.isView) return;
     tensor.storage.buffer = null;
   }
 }

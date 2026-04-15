@@ -1,4 +1,11 @@
-export type AttributeValue = number | string | number[] | string[] | boolean | ArrayBuffer | ArrayBufferView;
+export type AttributeValue =
+  | number
+  | string
+  | number[]
+  | string[]
+  | boolean
+  | ArrayBuffer
+  | ArrayBufferView;
 
 export interface Node {
   id: string;

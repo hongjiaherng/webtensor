@@ -1,4 +1,4 @@
-import { Tensor, TensorOptions } from './tensor';
+import { Tensor } from './tensor';
 import { DType, Device, NestedArray } from './types';
 import { inferShape, flattenArray } from './shape';
 
@@ -12,7 +12,7 @@ export interface InitOptions {
 export function tensor(data: NestedArray<number>, options?: InitOptions): Tensor {
   const extractedShape = inferShape(data);
   const shape = options?.shape ?? (extractedShape.length > 0 ? extractedShape : [1]);
-  
+
   const flattened = flattenArray(data);
   let buffer: ArrayBufferView;
   const dtype = options?.dtype ?? 'float32';
@@ -33,9 +33,9 @@ export function tensor(data: NestedArray<number>, options?: InitOptions): Tensor
       op: 'Constant',
       inputs: [],
       attributes: {
-        data: buffer
-      }
-    }
+        data: buffer,
+      },
+    },
   });
 }
 
@@ -47,8 +47,8 @@ export function zeros(shape: (number | null)[], options?: InitOptions): Tensor {
     requiresGrad: options?.requiresGrad,
     ctx: {
       op: 'Zeros',
-      inputs: []
-    }
+      inputs: [],
+    },
   });
 }
 
@@ -60,7 +60,7 @@ export function ones(shape: (number | null)[], options?: InitOptions): Tensor {
     requiresGrad: options?.requiresGrad,
     ctx: {
       op: 'Ones',
-      inputs: []
-    }
+      inputs: [],
+    },
   });
 }

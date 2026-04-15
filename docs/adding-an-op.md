@@ -29,7 +29,9 @@ export function sigmoid(a: Tensor): Tensor {
       backward: (grad: Tensor) => {
         // d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
         // Requires a SigmoidGrad op or reuses forward output — add later
-        return [/* gradA */];
+        return [
+          /* gradA */
+        ];
       },
     },
   });
@@ -71,7 +73,7 @@ export const sigmoidKernel: CPUKernel = (_node, inputs, outputs) => {
 ```ts
 export function executeAdd(a: Float32Array, b: Float32Array, out: Float32Array): void {
   for (let i = 0; i < out.length; i++) {
-    out[i] = a[i % a.length] + b[i % b.length];  // modulo for suffix broadcasting
+    out[i] = a[i % a.length] + b[i % b.length]; // modulo for suffix broadcasting
   }
 }
 
@@ -181,11 +183,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
 Implements the `WebGPUKernel` interface from `../utils`. Three methods:
 
-| Method | Responsibility |
-| --- | --- |
-| `createPipeline(device)` | Compile the WGSL shader into a `GPUComputePipeline`. |
+| Method                                                 | Responsibility                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `createPipeline(device)`                               | Compile the WGSL shader into a `GPUComputePipeline`.                        |
 | `buildBindGroupEntries(device, node, inputs, outputs)` | Wire buffers (and any uniform buffers for shape metadata) to binding slots. |
-| `getDispatch(node, inputs, outputs)` | Return `[x, y, z]` workgroup counts. |
+| `getDispatch(node, inputs, outputs)`                   | Return `[x, y, z]` workgroup counts.                                        |
 
 ```ts
 import source from './sigmoid.wgsl?raw';
@@ -195,7 +197,10 @@ export const sigmoidKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
-      compute: { module: device.createShaderModule({ code: source, label: 'SigmoidShader' }), entryPoint: 'main' },
+      compute: {
+        module: device.createShaderModule({ code: source, label: 'SigmoidShader' }),
+        entryPoint: 'main',
+      },
       label: 'SigmoidPipeline',
     });
   },

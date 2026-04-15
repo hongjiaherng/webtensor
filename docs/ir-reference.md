@@ -9,7 +9,14 @@ The IR describes a computation graph as pure data. It has no device state, no gr
 ### `AttributeValue`
 
 ```ts
-type AttributeValue = number | string | number[] | string[] | boolean | ArrayBuffer | ArrayBufferView;
+type AttributeValue =
+  | number
+  | string
+  | number[]
+  | string[]
+  | boolean
+  | ArrayBuffer
+  | ArrayBufferView;
 ```
 
 ONNX-style flexible attribute bag. `ArrayBuffer` is used for constant tensor data (weights, biases).
@@ -22,13 +29,13 @@ A value is an edge in the graph, not a node. It describes a tensor flowing betwe
 interface Value {
   name: string;
 
-  shape: (number | null)[];  // null = dynamic dimension
+  shape: (number | null)[]; // null = dynamic dimension
   dtype: 'float32' | 'int32' | 'bool';
 
-  data?: ArrayBuffer;        // only for weights/constants (initializers)
+  data?: ArrayBuffer; // only for weights/constants (initializers)
 
-  producer?: string;         // id of the Node that outputs this value
-  consumers?: string[];      // ids of Nodes that take this value as input
+  producer?: string; // id of the Node that outputs this value
+  consumers?: string[]; // ids of Nodes that take this value as input
 
   debugName?: string;
 }
@@ -43,11 +50,11 @@ An op instance in the graph. Inputs and outputs are value names (strings), not v
 ```ts
 interface Node {
   id: string;
-  op: string;                             // e.g. "Add", "MatMul" — must match registry key exactly
-  inputs: string[];                       // Value.name references
-  outputs: string[];                      // Value.name references
+  op: string; // e.g. "Add", "MatMul" — must match registry key exactly
+  inputs: string[]; // Value.name references
+  outputs: string[]; // Value.name references
   attributes?: Record<string, AttributeValue>;
-  name?: string;                          // optional human label for visualization
+  name?: string; // optional human label for visualization
 }
 ```
 
@@ -58,12 +65,12 @@ interface Node {
 ```ts
 interface Graph {
   nodes: Node[];
-  values: Record<string, Value>;  // keyed by Value.name
-  inputs: string[];               // value names of graph inputs (trainable tensors)
-  outputs: string[];              // value names of graph outputs
-  initializers: string[];         // value names of fixed weights/constants (subset of values)
+  values: Record<string, Value>; // keyed by Value.name
+  inputs: string[]; // value names of graph inputs (trainable tensors)
+  outputs: string[]; // value names of graph outputs
+  initializers: string[]; // value names of fixed weights/constants (subset of values)
   name?: string;
-  opset?: number;                 // ONNX opset version for future compatibility
+  opset?: number; // ONNX opset version for future compatibility
 }
 ```
 
@@ -79,11 +86,11 @@ interface Graph {
 shape: (number | null)[]
 ```
 
-| Shape | Meaning |
-| --- | --- |
-| `[1, 128]` | fixed — all dimensions known at compile time |
-| `[null, 128]` | dynamic batch — batch size unknown |
-| `[null, null]` | fully dynamic |
+| Shape          | Meaning                                      |
+| -------------- | -------------------------------------------- |
+| `[1, 128]`     | fixed — all dimensions known at compile time |
+| `[null, 128]`  | dynamic batch — batch size unknown           |
+| `[null, null]` | fully dynamic                                |
 
 Dynamic shapes (`null` dimensions) are part of the type system but are not yet enforced by the runtime. The current engine assumes all shapes are static at execution time.
 
@@ -107,11 +114,11 @@ The utility `broadcastShapes(a, b)` in `packages/core/src/shape.ts` computes the
 
 When the ONNX parser is built, it maps directly to this IR:
 
-| ONNX | This IR |
-| --- | --- |
-| `NodeProto` | `Node` |
+| ONNX          | This IR                               |
+| ------------- | ------------------------------------- |
+| `NodeProto`   | `Node`                                |
 | `TensorProto` | `Value` (with `data` field populated) |
-| `GraphProto` | `Graph` |
+| `GraphProto`  | `Graph`                               |
 
 Op names match ONNX exactly (`"MatMul"`, `"Relu"`, `"Softmax"`, etc.) so that a graph produced from ONNX runs on the same kernel registries without any translation layer.
 

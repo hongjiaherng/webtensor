@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { tensor, add } from '../../packages/core/src';
 import { Backend } from '../../packages/runtime/src';
-import { BACKENDS, runBinary, expectClose } from '../helpers';
+import { BACKENDS, runBinary } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
   describe(`Add — ${name} Backend`, () => {
@@ -22,15 +22,33 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('row broadcast [2,3] + [3]', async () => {
-      const out = await runBinary(backend, add, [[1, 2, 3], [4, 5, 6]], [10, 20, 30]);
+      const out = await runBinary(
+        backend,
+        add,
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        [10, 20, 30],
+      );
       expect(Array.from(out)).toEqual([11, 22, 33, 14, 25, 36]);
     });
 
     it('rank 3: [2,2,3] + [3]', async () => {
       const out = await runBinary(
-        backend, add,
-        [[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]],
-        [1, 2, 3]
+        backend,
+        add,
+        [
+          [
+            [1, 2, 3],
+            [4, 5, 6],
+          ],
+          [
+            [7, 8, 9],
+            [10, 11, 12],
+          ],
+        ],
+        [1, 2, 3],
       );
       expect(Array.from(out)).toEqual([2, 4, 6, 5, 7, 9, 8, 10, 12, 11, 13, 15]);
     });
@@ -40,7 +58,7 @@ BACKENDS.forEach(({ name, create }) => {
       const b = Array.from({ length: 1024 }, () => 2.0);
       const out = await runBinary(backend, add, a, b);
       expect(out.length).toBe(1024);
-      expect(out.every(v => v === 3.0)).toBe(true);
+      expect(out.every((v) => v === 3.0)).toBe(true);
     });
 
     it('zeros', async () => {
@@ -57,8 +75,14 @@ BACKENDS.forEach(({ name, create }) => {
 
 describe('Add — shape error (no backend)', () => {
   it('incompatible shapes throw during graph construction', () => {
-    const a = tensor([[1, 2, 3], [4, 5, 6]]); // [2,3]
-    const b = tensor([[1, 2], [3, 4]]);        // [2,2]
+    const a = tensor([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]); // [2,3]
+    const b = tensor([
+      [1, 2],
+      [3, 4],
+    ]); // [2,2]
     expect(() => add(a, b)).toThrow();
   });
 });

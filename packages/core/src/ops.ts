@@ -1,5 +1,5 @@
 import { Tensor } from './tensor';
-import { broadcastShapes, shapesEqual } from './shape';
+import { broadcastShapes } from './shape';
 
 export function add(a: Tensor, b: Tensor): Tensor {
   const outShape = broadcastShapes(a.shape, b.shape);
@@ -14,15 +14,15 @@ export function add(a: Tensor, b: Tensor): Tensor {
       op: 'Add',
       inputs: [a, b],
       backward: (grad: Tensor) => {
-        let gradA = grad;
-        let gradB = grad;
-        
+        const gradA = grad;
+        const gradB = grad;
+
         // NOTE: In a full implementation, if `shapesEqual(a.shape, outShape)` is false,
         // we must insert a `reduceSum` operator to unbroadcast the gradients.
-        
+
         return [gradA, gradB];
-      }
-    }
+      },
+    },
   });
 }
 
@@ -33,7 +33,7 @@ export function sub(a: Tensor, b: Tensor): Tensor {
     dtype: a.dtype,
     device: a.device,
     requiresGrad: a.requiresGrad || b.requiresGrad,
-    ctx: { op: 'Sub', inputs: [a, b] }
+    ctx: { op: 'Sub', inputs: [a, b] },
   });
 }
 
@@ -44,7 +44,7 @@ export function div(a: Tensor, b: Tensor): Tensor {
     dtype: a.dtype,
     device: a.device,
     requiresGrad: a.requiresGrad || b.requiresGrad,
-    ctx: { op: 'Div', inputs: [a, b] }
+    ctx: { op: 'Div', inputs: [a, b] },
   });
 }
 
@@ -62,12 +62,12 @@ export function mul(a: Tensor, b: Tensor): Tensor {
       inputs: [a, b],
       backward: (grad: Tensor) => {
         // Backward pass of mul constructs new nodes in the graph
-        let gradA = mul(grad, b);
-        let gradB = mul(grad, a);
-        
+        const gradA = mul(grad, b);
+        const gradB = mul(grad, a);
+
         return [gradA, gradB];
-      }
-    }
+      },
+    },
   });
 }
 
@@ -78,7 +78,7 @@ export function matmul(a: Tensor, b: Tensor): Tensor {
   }
   const K_A = a.shape[a.shape.length - 1];
   const K_B = b.shape[b.shape.length - 2];
-  
+
   if (K_A !== null && K_B !== null && K_A !== K_B) {
     throw new Error(`MatMul inner dimensions must match: ${K_A} != ${K_B}`);
   }
@@ -105,8 +105,8 @@ export function matmul(a: Tensor, b: Tensor): Tensor {
         const gradA = matmul(grad, transpose(b));
         const gradB = matmul(transpose(a), grad);
         return [gradA, gradB];
-      }
-    }
+      },
+    },
   });
 }
 
@@ -115,9 +115,8 @@ export function transpose(a: Tensor): Tensor {
     throw new Error('Transpose requires at least 2 dimensions');
   }
   const outShape = [...a.shape];
-  const temp = outShape[outShape.length - 1];
-  outShape[outShape.length - 1] = outShape[outShape.length - 2];
-  outShape[outShape.length - 2] = temp;
+  const last = outShape.length - 1;
+  [outShape[last - 1], outShape[last]] = [outShape[last], outShape[last - 1]];
 
   return new Tensor({
     shape: outShape,
@@ -129,8 +128,43 @@ export function transpose(a: Tensor): Tensor {
       inputs: [a],
       backward: (grad: Tensor) => {
         return [transpose(grad)];
-      }
-    }
+      },
+    },
+  });
+}
+
+export function reshape(a: Tensor, shape: number[]): Tensor {
+  return new Tensor({
+    shape,
+    dtype: a.dtype,
+    device: a.device,
+    requiresGrad: false,
+    ctx: { op: 'Reshape', inputs: [a], attributes: { shape } },
+  });
+}
+
+export function slice(a: Tensor, starts: number[], ends: number[]): Tensor {
+  if (starts.length !== a.shape.length || ends.length !== a.shape.length) {
+    throw new Error('slice: starts and ends must have the same length as the tensor rank');
+  }
+  const outShape = starts.map((s, i) => ends[i] - s);
+
+  return new Tensor({
+    shape: outShape,
+    dtype: a.dtype,
+    device: a.device,
+    requiresGrad: false,
+    ctx: { op: 'Slice', inputs: [a], attributes: { starts, ends } },
+  });
+}
+
+export function contiguous(a: Tensor): Tensor {
+  return new Tensor({
+    shape: a.shape,
+    dtype: a.dtype,
+    device: a.device,
+    requiresGrad: false,
+    ctx: { op: 'Contiguous', inputs: [a] },
   });
 }
 
@@ -152,10 +186,10 @@ export function relu(a: Tensor): Tensor {
           ctx: {
             op: 'ReluGrad',
             inputs: [grad, a],
-          }
+          },
         });
         return [gradA];
-      }
-    }
+      },
+    },
   });
 }

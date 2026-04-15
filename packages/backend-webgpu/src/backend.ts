@@ -23,11 +23,11 @@ export class WebGPUBackend implements Backend {
 
   static async create(): Promise<WebGPUBackend> {
     if (typeof navigator === 'undefined' || !navigator.gpu) {
-      throw new Error("WebGPU is not supported (navigator.gpu is missing).");
+      throw new Error('WebGPU is not supported (navigator.gpu is missing).');
     }
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) {
-      throw new Error("No appropriate WebGPU adapter found");
+      throw new Error('No appropriate WebGPU adapter found');
     }
     const device = await adapter.requestDevice();
     return new WebGPUBackend(device);
@@ -35,10 +35,12 @@ export class WebGPUBackend implements Backend {
 
   allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor {
     if (dtype !== 'float32') {
-      throw new Error(`WebGPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`);
+      throw new Error(
+        `WebGPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`,
+      );
     }
     const size = getShapeSize(shape);
-    const byteSize = Math.ceil(size * 4 / 4) * 4;
+    const byteSize = Math.ceil((size * 4) / 4) * 4;
 
     const gpuBuffer = this.device.createBuffer({
       size: byteSize,
@@ -89,7 +91,7 @@ export class WebGPUBackend implements Backend {
     // Gather pre-pass: make any non-contiguous inputs contiguous.
     // Each gather runs in its own compute pass inside this encoder so that the
     // main kernel sees the packed data in the same queue submission.
-    const contiguousInputs: RuntimeTensor[] = inputs.map(t => {
+    const contiguousInputs: RuntimeTensor[] = inputs.map((t) => {
       const shape = t.shape as number[];
       if (isContiguous(shape, t.strides, t.offset)) return t;
       return this.gatherPass(commandEncoder, t);
@@ -124,6 +126,7 @@ export class WebGPUBackend implements Backend {
   }
 
   dispose(tensor: RuntimeTensor): void {
+    if (tensor.isView) return;
     if (tensor.storage.buffer) {
       const bufferToDestroy = tensor.storage.buffer as GPUBuffer;
       this.device.queue.onSubmittedWorkDone().then(() => {
@@ -169,7 +172,7 @@ export class WebGPUBackend implements Backend {
     metaData[0] = total;
     metaData[1] = shape.length;
     for (let i = 0; i < shape.length; i++) {
-      metaData[2 + i]  = shape[i];
+      metaData[2 + i] = shape[i];
       metaData[10 + i] = src.strides[i];
     }
     metaData[18] = src.offset;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { tensor, mul } from '../../packages/core/src';
+import { mul } from '../../packages/core/src';
 import { Backend } from '../../packages/runtime/src';
 import { BACKENDS, runBinary, expectClose } from '../helpers';
 
@@ -22,15 +22,33 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('row broadcast [2,3] * [3]', async () => {
-      const out = await runBinary(backend, mul, [[1, 2, 3], [4, 5, 6]], [2, 3, 4]);
+      const out = await runBinary(
+        backend,
+        mul,
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        [2, 3, 4],
+      );
       expect(Array.from(out)).toEqual([2, 6, 12, 8, 15, 24]);
     });
 
     it('rank 3: [2,2,2] * [2]', async () => {
       const out = await runBinary(
-        backend, mul,
-        [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
-        [10, 100]
+        backend,
+        mul,
+        [
+          [
+            [1, 2],
+            [3, 4],
+          ],
+          [
+            [5, 6],
+            [7, 8],
+          ],
+        ],
+        [10, 100],
       );
       expect(Array.from(out)).toEqual([10, 200, 30, 400, 50, 600, 70, 800]);
     });
@@ -40,7 +58,7 @@ BACKENDS.forEach(({ name, create }) => {
       const b = Array.from({ length: 1024 }, () => 3.0);
       const out = await runBinary(backend, mul, a, b);
       expect(out.length).toBe(1024);
-      expect(out.every(v => v === 6.0)).toBe(true);
+      expect(out.every((v) => v === 6.0)).toBe(true);
     });
 
     it('multiply by zero', async () => {

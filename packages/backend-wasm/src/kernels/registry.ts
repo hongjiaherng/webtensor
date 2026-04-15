@@ -1,11 +1,11 @@
 import { WASMKernel } from './utils';
-import { addKernel } from './elementwise/add';
-import { subKernel } from './elementwise/sub';
-import { mulKernel } from './elementwise/mul';
-import { divKernel } from './elementwise/div';
-import { reluKernel, reluGradKernel } from './elementwise/relu';
-import { matmulKernel } from './linear/matmul';
-import { transposeKernel } from './shape/transpose';
+import { addKernel } from './binary/add';
+import { subKernel } from './binary/sub';
+import { mulKernel } from './binary/mul';
+import { divKernel } from './binary/div';
+import { reluKernel, reluGradKernel } from './unary/relu';
+import { matmulKernel } from './linalg/matmul';
+import { contiguousKernel } from './memory/contiguous';
 
 export type { WASMKernel };
 
@@ -17,5 +17,5 @@ export const wasmKernelRegistry = new Map<string, WASMKernel>([
   ['Relu', reluKernel],
   ['ReluGrad', reluGradKernel],
   ['MatMul', matmulKernel],
-  ['Transpose', transposeKernel],
+  ['Contiguous', contiguousKernel],
 ]);

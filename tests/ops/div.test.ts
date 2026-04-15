@@ -4,7 +4,7 @@ import { Backend } from '../../packages/runtime/src';
 import { BACKENDS, runBinary, expectClose } from '../helpers';
 
 // Div kernel is missing on WebGPU — CPU + WASM only
-const SUPPORTED = BACKENDS.filter(b => b.name !== 'WebGPU');
+const SUPPORTED = BACKENDS.filter((b) => b.name !== 'WebGPU');
 
 SUPPORTED.forEach(({ name, create }) => {
   describe(`Div — ${name} Backend`, () => {
@@ -34,7 +34,7 @@ SUPPORTED.forEach(({ name, create }) => {
       const b = Array.from({ length: 1024 }, () => 2.0);
       const out = await runBinary(backend, div, a, b);
       expect(out.length).toBe(1024);
-      expect(out.every(v => v === 3.0)).toBe(true);
+      expect(out.every((v) => v === 3.0)).toBe(true);
     });
 
     it('divide by one (identity)', async () => {

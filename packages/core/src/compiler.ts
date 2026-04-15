@@ -26,7 +26,7 @@ export function compileGraph(outputs: Tensor[]): Graph {
 
   const visitedTensors = new Set<string>();
   const visitedOps = new Set<string>();
-  const inputs: string[] = [];       // reserved — see note above
+  const inputs: string[] = []; // reserved — see note above
   const initializers: string[] = [];
 
   const traverse = (t: Tensor) => {

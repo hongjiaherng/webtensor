@@ -1,9 +1,9 @@
 import { WebGPUKernel } from './utils';
-import { addKernel } from './elementwise/add';
-import { mulKernel } from './elementwise/mul';
-import { reluKernel } from './elementwise/relu';
-import { matmulKernel } from './linear/matmul';
-import { transposeKernel } from './shape/transpose';
+import { addKernel } from './binary/add';
+import { mulKernel } from './binary/mul';
+import { reluKernel } from './unary/relu';
+import { matmulKernel } from './linalg/matmul';
+import { contiguousKernel } from './memory/contiguous';
 
 export type { WebGPUKernel };
 
@@ -12,5 +12,5 @@ export const webgpuKernelRegistry = new Map<string, WebGPUKernel>([
   ['Mul', mulKernel],
   ['Relu', reluKernel],
   ['MatMul', matmulKernel],
-  ['Transpose', transposeKernel],
+  ['Contiguous', contiguousKernel],
 ]);

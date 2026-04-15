@@ -13,18 +13,33 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('[2,3] × [3,2] = [2,2]', async () => {
       const out = await runBinary(
-        backend, matmul,
-        [[1, 2, 3], [4, 5, 6]],
-        [[7, 8], [9, 10], [11, 12]]
+        backend,
+        matmul,
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        [
+          [7, 8],
+          [9, 10],
+          [11, 12],
+        ],
       );
       expect(Array.from(out)).toEqual([58, 64, 139, 154]);
     });
 
     it('[2,2] × [2,2] square', async () => {
       const out = await runBinary(
-        backend, matmul,
-        [[1, 2], [3, 4]],
-        [[5, 6], [7, 8]]
+        backend,
+        matmul,
+        [
+          [1, 2],
+          [3, 4],
+        ],
+        [
+          [5, 6],
+          [7, 8],
+        ],
       );
       expect(Array.from(out)).toEqual([19, 22, 43, 50]);
     });
@@ -35,11 +50,7 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[1,4] × [4,1] dot product', async () => {
-      const out = await runBinary(
-        backend, matmul,
-        [[1, 2, 3, 4]],
-        [[1], [2], [3], [4]]
-      );
+      const out = await runBinary(backend, matmul, [[1, 2, 3, 4]], [[1], [2], [3], [4]]);
       expectClose(out, [30]);
     });
 
@@ -49,15 +60,27 @@ BACKENDS.forEach(({ name, create }) => {
       const B = Array.from({ length: 32 }, () => row);
       const out = await runBinary(backend, matmul, A, B);
       expect(out.length).toBe(1024);
-      expectClose(out, Array.from({ length: 1024 }, () => 32.0), 1e-3);
+      expectClose(
+        out,
+        Array.from({ length: 1024 }, () => 32.0),
+        1e-3,
+      );
     });
   });
 });
 
 describe('MatMul — shape errors (no backend)', () => {
   it('K-dimension mismatch throws', () => {
-    const a = tensor([[1, 2, 3], [4, 5, 6]]); // [2,3], K=3
-    const b = tensor([[1, 2], [3, 4], [5, 6], [7, 8]]); // [4,2], K=4
+    const a = tensor([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]); // [2,3], K=3
+    const b = tensor([
+      [1, 2],
+      [3, 4],
+      [5, 6],
+      [7, 8],
+    ]); // [4,2], K=4
     expect(() => matmul(a, b)).toThrow(/MatMul inner dimensions must match/);
   });
 

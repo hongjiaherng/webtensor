@@ -2,51 +2,95 @@
 /* eslint-disable */
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Strided element-wise add.
+ *
+ * meta layout (28 × u32):
+ *   [0]      total elements in output
+ *   [1]      rank
+ *   [2..9]   out_shape[0..7]
+ *   [10..17] a_broadcast_strides[0..7]
+ *   [18]     a_offset
+ *   [19..26] b_broadcast_strides[0..7]
+ *   [27]     b_offset
  */
-export function add_raw(a_ptr: number, b_ptr: number, out_ptr: number, len_a: number, len_b: number, len_out: number): void;
+export function add_strided(a_ptr: number, b_ptr: number, out_ptr: number, meta_ptr: number): void;
 
 export function alloc_f32(len: number): number;
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Allocate a block of `len` u32 values for passing shape/stride meta buffers
+ * from JavaScript into strided kernels.
  */
-export function div_raw(a_ptr: number, b_ptr: number, out_ptr: number, len_a: number, len_b: number, len_out: number): void;
+export function alloc_u32(len: number): number;
+
+/**
+ * Strided element-wise divide.  Same meta layout as add_strided (28 × u32).
+ */
+export function div_strided(a_ptr: number, b_ptr: number, out_ptr: number, meta_ptr: number): void;
 
 export function free_f32(ptr: number, len: number): void;
 
-export function matmul_raw(a_ptr: number, b_ptr: number, out_ptr: number, m: number, k: number, n: number): void;
+export function free_u32(ptr: number, len: number): void;
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Strided 2-D matrix multiply.
+ *
+ * meta layout (9 × u32):
+ *   [0]  M
+ *   [1]  K
+ *   [2]  N
+ *   [3]  a_row_stride   (A.strides[rank-2])
+ *   [4]  a_col_stride   (A.strides[rank-1])
+ *   [5]  b_row_stride
+ *   [6]  b_col_stride
+ *   [7]  a_offset
+ *   [8]  b_offset
  */
-export function mul_raw(a_ptr: number, b_ptr: number, out_ptr: number, len_a: number, len_b: number, len_out: number): void;
+export function matmul_strided(a_ptr: number, b_ptr: number, out_ptr: number, meta_ptr: number): void;
 
+/**
+ * Strided element-wise multiply.  Same meta layout as add_strided (28 × u32).
+ */
+export function mul_strided(a_ptr: number, b_ptr: number, out_ptr: number, meta_ptr: number): void;
+
+/**
+ * Backward pass: passes gradient where the forward input was positive, zeros elsewhere.
+ * Takes contiguous inputs (called from the autograd engine which always allocates fresh tensors).
+ */
 export function relu_grad_raw(grad_ptr: number, a_ptr: number, out_ptr: number, len: number): void;
 
-export function relu_raw(a_ptr: number, out_ptr: number, len: number): void;
+/**
+ * Strided relu.
+ *
+ * meta layout (19 × u32):
+ *   [0]      total elements
+ *   [1]      rank
+ *   [2..9]   shape[0..7]
+ *   [10..17] strides[0..7]
+ *   [18]     offset
+ */
+export function relu_strided(a_ptr: number, out_ptr: number, meta_ptr: number): void;
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Strided element-wise subtract.  Same meta layout as add_strided (28 × u32).
  */
-export function sub_raw(a_ptr: number, b_ptr: number, out_ptr: number, len_a: number, len_b: number, len_out: number): void;
-
-export function transpose_raw(a_ptr: number, out_ptr: number, m: number, n: number): void;
+export function sub_strided(a_ptr: number, b_ptr: number, out_ptr: number, meta_ptr: number): void;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly add_raw: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly add_strided: (a: number, b: number, c: number, d: number) => void;
     readonly alloc_f32: (a: number) => number;
-    readonly div_raw: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly div_strided: (a: number, b: number, c: number, d: number) => void;
     readonly free_f32: (a: number, b: number) => void;
-    readonly matmul_raw: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-    readonly mul_raw: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly matmul_strided: (a: number, b: number, c: number, d: number) => void;
+    readonly mul_strided: (a: number, b: number, c: number, d: number) => void;
     readonly relu_grad_raw: (a: number, b: number, c: number, d: number) => void;
-    readonly relu_raw: (a: number, b: number, c: number) => void;
-    readonly sub_raw: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-    readonly transpose_raw: (a: number, b: number, c: number, d: number) => void;
+    readonly relu_strided: (a: number, b: number, c: number) => void;
+    readonly sub_strided: (a: number, b: number, c: number, d: number) => void;
+    readonly free_u32: (a: number, b: number) => void;
+    readonly alloc_u32: (a: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_start: () => void;
 }

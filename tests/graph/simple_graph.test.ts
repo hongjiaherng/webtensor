@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { tensor, compileGraph, add, mul, matmul, relu } from '../../packages/core/src';
 import { Engine } from '../../packages/runtime/src';
 import { CPUBackend } from '../../packages/backend-cpu/src';
@@ -10,7 +10,7 @@ async function run(y: ReturnType<typeof tensor>): Promise<Float32Array> {
   const graph = compileGraph([y]);
   const engine = new Engine(new CPUBackend());
   engine.evaluate(graph);
-  return await engine.get(y.id) as Float32Array;
+  return (await engine.get(y.id)) as Float32Array;
 }
 
 describe('Graph: relu(a + b)', () => {
@@ -35,15 +35,23 @@ describe('Graph: (a + b) * c', () => {
 
     const engine = new Engine(new CPUBackend());
     engine.evaluate(graph);
-    const out = await engine.get(y.id) as Float32Array;
+    const out = (await engine.get(y.id)) as Float32Array;
     expect(Array.from(out)).toEqual([80, 70]);
   });
 });
 
 describe('Graph: relu(matmul(x,W) + b)', () => {
   it('correct output and node count', async () => {
-    const x = tensor([[1, -1, 1, -1], [-1, 1, -1, 1]]);
-    const W = tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]]);
+    const x = tensor([
+      [1, -1, 1, -1],
+      [-1, 1, -1, 1],
+    ]);
+    const W = tensor([
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 1, 1],
+    ]);
     const b = tensor([0.5, 0.5, 0.5]);
     const y = relu(add(matmul(x, W), b));
 
@@ -53,7 +61,7 @@ describe('Graph: relu(matmul(x,W) + b)', () => {
 
     const engine = new Engine(new CPUBackend());
     engine.evaluate(graph);
-    const out = await engine.get(y.id) as Float32Array;
+    const out = (await engine.get(y.id)) as Float32Array;
     expectClose(out, [0.5, 0, 0.5, 0.5, 2.5, 0.5]);
   });
 });
@@ -71,8 +79,8 @@ describe('Graph: two outputs from shared inputs', () => {
     const engine = new Engine(new CPUBackend());
     engine.evaluate(graph);
 
-    const out1 = await engine.get(y1.id) as Float32Array;
-    const out2 = await engine.get(y2.id) as Float32Array;
+    const out1 = (await engine.get(y1.id)) as Float32Array;
+    const out2 = (await engine.get(y2.id)) as Float32Array;
     expect(Array.from(out1)).toEqual([5, 7, 9]);
     expect(Array.from(out2)).toEqual([4, 10, 18]);
   });
@@ -91,7 +99,7 @@ describe('Graph: diamond DAG (shared intermediate)', () => {
 
     const engine = new Engine(new CPUBackend());
     engine.evaluate(graph);
-    const out = await engine.get(y.id) as Float32Array;
+    const out = (await engine.get(y.id)) as Float32Array;
     expect(Array.from(out)).toEqual([25, 49, 81]);
   });
 });

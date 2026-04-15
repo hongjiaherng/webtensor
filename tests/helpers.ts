@@ -8,9 +8,9 @@ import { WASMBackend } from '../packages/backend-wasm/src';
 import { WebGPUBackend } from '../packages/backend-webgpu/src';
 
 export const BACKENDS = [
-  { name: 'CPU',    create: async () => new CPUBackend() as Backend },
-  { name: 'WASM',   create: async () => await WASMBackend.create() as Backend },
-  { name: 'WebGPU', create: async () => await WebGPUBackend.create() as Backend },
+  { name: 'CPU', create: async () => new CPUBackend() as Backend },
+  { name: 'WASM', create: async () => (await WASMBackend.create()) as Backend },
+  { name: 'WebGPU', create: async () => (await WebGPUBackend.create()) as Backend },
 ];
 
 async function runGraph(backend: Backend, y: Tensor): Promise<Float32Array> {
@@ -25,7 +25,7 @@ async function runGraph(backend: Backend, y: Tensor): Promise<Float32Array> {
 export async function runUnary(
   backend: Backend,
   opFn: (a: Tensor) => Tensor,
-  data: NestedArray<number>
+  data: NestedArray<number>,
 ): Promise<Float32Array> {
   const a = tensor(data);
   return runGraph(backend, opFn(a));
@@ -35,7 +35,7 @@ export async function runBinary(
   backend: Backend,
   opFn: (a: Tensor, b: Tensor) => Tensor,
   dataA: NestedArray<number>,
-  dataB: NestedArray<number>
+  dataB: NestedArray<number>,
 ): Promise<Float32Array> {
   const a = tensor(dataA);
   const b = tensor(dataB);

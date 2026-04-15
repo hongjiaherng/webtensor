@@ -36,12 +36,14 @@ export class WASMBackend implements Backend {
   }
 
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
-    if (!isWasmTensorHandle(tensor.storage.buffer)) throw new Error('WASMBackend: expected a WASM tensor handle');
+    if (!isWasmTensorHandle(tensor.storage.buffer))
+      throw new Error('WASMBackend: expected a WASM tensor handle');
     getF32View(this.module, tensor.storage.buffer).set(data as Float32Array);
   }
 
   read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
-    if (!isWasmTensorHandle(tensor.storage.buffer)) throw new Error('WASMBackend: expected a WASM tensor handle');
+    if (!isWasmTensorHandle(tensor.storage.buffer))
+      throw new Error('WASMBackend: expected a WASM tensor handle');
     return Promise.resolve(new Float32Array(getF32View(this.module, tensor.storage.buffer)));
   }
 
@@ -52,6 +54,7 @@ export class WASMBackend implements Backend {
   }
 
   dispose(tensor: RuntimeTensor): void {
+    if (tensor.isView) return;
     if (isWasmTensorHandle(tensor.storage.buffer)) {
       const handle = tensor.storage.buffer;
       this.module.free_f32(handle.ptr, handle.elements);

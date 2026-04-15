@@ -1,5 +1,5 @@
 import { DType, Device, OpContext } from './types';
-import { add } from './ops';
+import { add, sub, mul, div, matmul, transpose, relu, reshape, slice, contiguous } from './ops';
 import { computeStrides, shapeSize } from './shape';
 
 let tensorIdCounter = 0;
@@ -18,7 +18,7 @@ export class Tensor {
   shape: (number | null)[];
   strides: number[];
   size: number;
-  
+
   dtype: DType;
   device: Device;
 
@@ -29,11 +29,11 @@ export class Tensor {
   constructor(options: TensorOptions) {
     this.id = `t_${tensorIdCounter++}`;
     this.shape = options.shape;
-    
-    const concreteShape = this.shape.map(s => s ?? 1) as number[];
+
+    const concreteShape = this.shape.map((s) => s ?? 1) as number[];
     this.strides = options.strides ?? computeStrides(concreteShape);
     this.size = shapeSize(concreteShape) ?? 0;
-    
+
     this.dtype = options.dtype ?? 'float32';
     this.device = options.device ?? 'cpu';
     this.requiresGrad = options.requiresGrad ?? false;
@@ -42,7 +42,7 @@ export class Tensor {
 
   backward() {
     if (!this.requiresGrad) {
-      throw new Error("Cannot call backward() on a tensor that does not require gradients.");
+      throw new Error('Cannot call backward() on a tensor that does not require gradients.');
     }
 
     const topo: Tensor[] = [];
@@ -75,8 +75,8 @@ export class Tensor {
         ctx: {
           op: 'Constant',
           inputs: [],
-          attributes: { data: gradData }
-        }
+          attributes: { data: gradData },
+        },
       });
     }
 
@@ -85,7 +85,7 @@ export class Tensor {
       if (!t._ctx || !t._ctx.backward || !t.grad) continue;
 
       const inputGrads = t._ctx.backward(t.grad);
-      
+
       for (let j = 0; j < t._ctx.inputs.length; j++) {
         const input = t._ctx.inputs[j] as Tensor;
         if (input.requiresGrad) {
@@ -102,8 +102,35 @@ export class Tensor {
   }
 
   // --- Convenience Methods to enable method chaining ---
-  
+
   add(other: Tensor): Tensor {
     return add(this, other);
+  }
+  sub(other: Tensor): Tensor {
+    return sub(this, other);
+  }
+  mul(other: Tensor): Tensor {
+    return mul(this, other);
+  }
+  div(other: Tensor): Tensor {
+    return div(this, other);
+  }
+  matmul(other: Tensor): Tensor {
+    return matmul(this, other);
+  }
+  transpose(): Tensor {
+    return transpose(this);
+  }
+  relu(): Tensor {
+    return relu(this);
+  }
+  reshape(shape: number[]): Tensor {
+    return reshape(this, shape);
+  }
+  slice(starts: number[], ends: number[]): Tensor {
+    return slice(this, starts, ends);
+  }
+  contiguous(): Tensor {
+    return contiguous(this);
   }
 }

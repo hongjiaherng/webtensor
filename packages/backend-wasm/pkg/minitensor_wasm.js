@@ -1,16 +1,23 @@
 /* @ts-self-types="./minitensor_wasm.d.ts" */
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Strided element-wise add.
+ *
+ * meta layout (28 × u32):
+ *   [0]      total elements in output
+ *   [1]      rank
+ *   [2..9]   out_shape[0..7]
+ *   [10..17] a_broadcast_strides[0..7]
+ *   [18]     a_offset
+ *   [19..26] b_broadcast_strides[0..7]
+ *   [27]     b_offset
  * @param {number} a_ptr
  * @param {number} b_ptr
  * @param {number} out_ptr
- * @param {number} len_a
- * @param {number} len_b
- * @param {number} len_out
+ * @param {number} meta_ptr
  */
-export function add_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out) {
-    wasm.add_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out);
+export function add_strided(a_ptr, b_ptr, out_ptr, meta_ptr) {
+    wasm.add_strided(a_ptr, b_ptr, out_ptr, meta_ptr);
 }
 
 /**
@@ -23,16 +30,25 @@ export function alloc_f32(len) {
 }
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Allocate a block of `len` u32 values for passing shape/stride meta buffers
+ * from JavaScript into strided kernels.
+ * @param {number} len
+ * @returns {number}
+ */
+export function alloc_u32(len) {
+    const ret = wasm.alloc_u32(len);
+    return ret >>> 0;
+}
+
+/**
+ * Strided element-wise divide.  Same meta layout as add_strided (28 × u32).
  * @param {number} a_ptr
  * @param {number} b_ptr
  * @param {number} out_ptr
- * @param {number} len_a
- * @param {number} len_b
- * @param {number} len_out
+ * @param {number} meta_ptr
  */
-export function div_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out) {
-    wasm.div_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out);
+export function div_strided(a_ptr, b_ptr, out_ptr, meta_ptr) {
+    wasm.div_strided(a_ptr, b_ptr, out_ptr, meta_ptr);
 }
 
 /**
@@ -44,31 +60,49 @@ export function free_f32(ptr, len) {
 }
 
 /**
- * @param {number} a_ptr
- * @param {number} b_ptr
- * @param {number} out_ptr
- * @param {number} m
- * @param {number} k
- * @param {number} n
+ * @param {number} ptr
+ * @param {number} len
  */
-export function matmul_raw(a_ptr, b_ptr, out_ptr, m, k, n) {
-    wasm.matmul_raw(a_ptr, b_ptr, out_ptr, m, k, n);
+export function free_u32(ptr, len) {
+    wasm.free_u32(ptr, len);
 }
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Strided 2-D matrix multiply.
+ *
+ * meta layout (9 × u32):
+ *   [0]  M
+ *   [1]  K
+ *   [2]  N
+ *   [3]  a_row_stride   (A.strides[rank-2])
+ *   [4]  a_col_stride   (A.strides[rank-1])
+ *   [5]  b_row_stride
+ *   [6]  b_col_stride
+ *   [7]  a_offset
+ *   [8]  b_offset
  * @param {number} a_ptr
  * @param {number} b_ptr
  * @param {number} out_ptr
- * @param {number} len_a
- * @param {number} len_b
- * @param {number} len_out
+ * @param {number} meta_ptr
  */
-export function mul_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out) {
-    wasm.mul_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out);
+export function matmul_strided(a_ptr, b_ptr, out_ptr, meta_ptr) {
+    wasm.matmul_strided(a_ptr, b_ptr, out_ptr, meta_ptr);
 }
 
 /**
+ * Strided element-wise multiply.  Same meta layout as add_strided (28 × u32).
+ * @param {number} a_ptr
+ * @param {number} b_ptr
+ * @param {number} out_ptr
+ * @param {number} meta_ptr
+ */
+export function mul_strided(a_ptr, b_ptr, out_ptr, meta_ptr) {
+    wasm.mul_strided(a_ptr, b_ptr, out_ptr, meta_ptr);
+}
+
+/**
+ * Backward pass: passes gradient where the forward input was positive, zeros elsewhere.
+ * Takes contiguous inputs (called from the autograd engine which always allocates fresh tensors).
  * @param {number} grad_ptr
  * @param {number} a_ptr
  * @param {number} out_ptr
@@ -79,35 +113,31 @@ export function relu_grad_raw(grad_ptr, a_ptr, out_ptr, len) {
 }
 
 /**
+ * Strided relu.
+ *
+ * meta layout (19 × u32):
+ *   [0]      total elements
+ *   [1]      rank
+ *   [2..9]   shape[0..7]
+ *   [10..17] strides[0..7]
+ *   [18]     offset
  * @param {number} a_ptr
  * @param {number} out_ptr
- * @param {number} len
+ * @param {number} meta_ptr
  */
-export function relu_raw(a_ptr, out_ptr, len) {
-    wasm.relu_raw(a_ptr, out_ptr, len);
+export function relu_strided(a_ptr, out_ptr, meta_ptr) {
+    wasm.relu_strided(a_ptr, out_ptr, meta_ptr);
 }
 
 /**
- * Pointer-based entry point called from JavaScript.
+ * Strided element-wise subtract.  Same meta layout as add_strided (28 × u32).
  * @param {number} a_ptr
  * @param {number} b_ptr
  * @param {number} out_ptr
- * @param {number} len_a
- * @param {number} len_b
- * @param {number} len_out
+ * @param {number} meta_ptr
  */
-export function sub_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out) {
-    wasm.sub_raw(a_ptr, b_ptr, out_ptr, len_a, len_b, len_out);
-}
-
-/**
- * @param {number} a_ptr
- * @param {number} out_ptr
- * @param {number} m
- * @param {number} n
- */
-export function transpose_raw(a_ptr, out_ptr, m, n) {
-    wasm.transpose_raw(a_ptr, out_ptr, m, n);
+export function sub_strided(a_ptr, b_ptr, out_ptr, meta_ptr) {
+    wasm.sub_strided(a_ptr, b_ptr, out_ptr, meta_ptr);
 }
 function __wbg_get_imports() {
     const import0 = {

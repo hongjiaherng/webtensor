@@ -1,11 +1,11 @@
 mod memory;
 mod ops;
+mod utils;
 
 pub use memory::*;
-pub use ops::elementwise::add::*;
-pub use ops::elementwise::sub::*;
-pub use ops::elementwise::mul::*;
-pub use ops::elementwise::div::*;
-pub use ops::elementwise::relu::*;
-pub use ops::linear::matmul::*;
-pub use ops::shape::transpose::*;
+pub use ops::binary::add::*;
+pub use ops::binary::div::*;
+pub use ops::binary::mul::*;
+pub use ops::binary::sub::*;
+pub use ops::linalg::matmul::*;
+pub use ops::unary::relu::*;

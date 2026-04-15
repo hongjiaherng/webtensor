@@ -38,8 +38,8 @@ BACKENDS.forEach(({ name, create }) => {
       ];
       const out = await runUnary(backend, relu, data);
       expect(out.length).toBe(1024);
-      expect(out.slice(0, 512).every(v => v === 0)).toBe(true);
-      expect(out.slice(512).every(v => v === 1)).toBe(true);
+      expect(out.slice(0, 512).every((v) => v === 0)).toBe(true);
+      expect(out.slice(512).every((v) => v === 1)).toBe(true);
     });
 
     it('boundary at zero', async () => {

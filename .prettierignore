@@ -1,0 +1,18 @@
+# Build outputs
+dist/
+node_modules/
+
+# WASM generated files — do not reformat auto-generated JS/TS
+packages/backend-wasm/pkg/
+
+# Rust source — handled by rustfmt, not prettier
+packages/backend-wasm/rust/
+
+# WGSL shaders — not a Prettier-supported language
+**/*.wgsl
+
+# Archive — reference code, not part of this project
+_archive/
+
+# Lockfiles
+bun.lock
