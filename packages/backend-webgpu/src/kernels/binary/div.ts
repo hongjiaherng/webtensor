@@ -1,15 +1,15 @@
-import source from './mul.wgsl?raw';
+import source from './div.wgsl?raw';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
-export const mulKernel: WebGPUKernel = {
+export const divKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'MulShader' }),
+        module: device.createShaderModule({ code: source, label: 'DivShader' }),
         entryPoint: 'main',
       },
-      label: 'MulPipeline',
+      label: 'DivPipeline',
     });
   },
 

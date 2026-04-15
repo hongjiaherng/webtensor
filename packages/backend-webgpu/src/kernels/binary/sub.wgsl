@@ -45,5 +45,5 @@ fn strided_idx_b(flat: u32) -> u32 {
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= arrayLength(&out)) { return; }
-  out[i] = a[strided_idx_a(i)] * b[strided_idx_b(i)];
+  out[i] = a[strided_idx_a(i)] - b[strided_idx_b(i)];
 }

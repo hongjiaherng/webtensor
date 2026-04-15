@@ -3,12 +3,12 @@ import { tensor, compileGraph, matmul } from '../../packages/core/src';
 import { Engine, Backend } from '../../packages/runtime/src';
 import { CPUBackend } from '../../packages/backend-cpu/src';
 import { WASMBackend } from '../../packages/backend-wasm/src';
+import { WebGPUBackend } from '../../packages/backend-webgpu/src';
 
 const backends = [
   { name: 'CPU', create: async () => new CPUBackend() },
   { name: 'WASM', create: async () => await WASMBackend.create() },
-  // WebGPU excluded: matmul backward uses transpose (now a view), and the
-  // gather pre-pass that materializes non-contiguous views has a meta[0]=0 bug.
+  { name: 'WebGPU', create: async () => await WebGPUBackend.create() },
 ];
 
 describe('Autograd Core Backpropagation', () => {

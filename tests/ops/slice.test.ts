@@ -3,9 +3,7 @@ import { tensor, compileGraph } from '../../packages/core/src';
 import { Engine, Backend } from '../../packages/runtime/src';
 import { BACKENDS, expectClose } from '../helpers';
 
-// WebGPU gather pre-pass (needed for non-contiguous views) has a known issue
-// where meta[0] reads as 0. Excluded until the root cause is diagnosed.
-const SLICE_BACKENDS = BACKENDS.filter((b) => b.name !== 'WebGPU');
+const SLICE_BACKENDS = BACKENDS;
 
 async function run(backend: Backend, output: ReturnType<typeof tensor>): Promise<Float32Array> {
   const graph = compileGraph([output]);

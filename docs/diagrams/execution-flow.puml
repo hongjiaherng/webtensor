@@ -12,12 +12,16 @@ compiler -> engine : Graph (IR nodes + values)
 engine -> engine : topological sort -> ExecutionPlan
 
 loop for each Node in plan
-  engine -> backend : allocate(output shapes)
-  engine -> backend : execute(node, inputs[], outputs[])
-  backend -> registry : lookup(node.op)
-  registry --> backend : kernel fn
-  backend -> backend : run kernel\n(fills output buffers)
-  backend --> engine : done
+  alt view op (Transpose / Reshape / Slice)
+    engine -> engine : compute new shape/strides/offset\n(zero-copy, no backend call)
+  else compute op
+    engine -> backend : allocate(output shapes)
+    engine -> backend : execute(node, inputs[], outputs[])
+    backend -> registry : lookup(node.op)
+    registry --> backend : kernel
+    backend -> backend : run kernel\n(fills output buffers)
+    backend --> engine : done
+  end
 end
 
 engine -> backend : read(output tensor)

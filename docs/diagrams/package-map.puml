@@ -33,7 +33,4 @@ onnx ..> ir : produces (planned)
 devtools ..> ir : visualizes graph (planned)
 devtools ..> runtime : reads execution trace (planned)
 
-note right of onnx : Phase 6
-note right of devtools : Phase 5
-
 @enduml

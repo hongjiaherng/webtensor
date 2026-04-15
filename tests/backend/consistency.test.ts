@@ -166,13 +166,13 @@ describe('Consistency: Transpose', () => {
         ])
           .transpose()
           .contiguous(),
-      ['CPU', 'WASM'], // WebGPU excluded: gather pre-pass meta[0]=0 issue
+      ['CPU', 'WASM', 'WebGPU'],
     );
     r.forEach((v, k) => results.set(k, v));
   });
 
   it('WASM matches CPU', () => expectClose(results.get('WASM')!, [1, 4, 2, 5, 3, 6]));
-  // WebGPU excluded: gather pre-pass meta[0]=0 issue
+  it('WebGPU matches CPU', () => expectClose(results.get('WebGPU')!, [1, 4, 2, 5, 3, 6]));
 });
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,20 @@
-# Architecture: Design Decisions
+# Architecture
 
-Non-obvious design decisions that aren't visible from reading the code. For the full picture (diagrams, package table, roadmap) see [README.md](../README.md).
+---
+
+## Diagrams
+
+### Execution Data Flow
+
+![Execution flow](diagrams/execution-flow.svg)
+
+### Backend Internals
+
+![Backend internals](diagrams/backend-internals.svg)
+
+### Target End-State
+
+![Target architecture](diagrams/target-architecture.svg)
 
 ---
 
@@ -10,19 +24,25 @@ The boundary rule exists to keep each package independently testable and replace
 
 - `core` can build graphs but must not know how a backend stores memory — otherwise swapping backends would require changing user-facing code.
 - `ir` can describe computation but must not know about autograd or devices — the same graph must be producible from hand-authored tensors and from an ONNX parser without either knowing about the other.
-- `runtime` can execute graphs but must not contain op math — otherwise adding a backend would mean touching the engine.
+- `runtime` can execute graphs but must not contain op math — otherwise adding a backend would require touching the engine.
 - `backends` can run kernels and own memory but must not define user-facing tensor semantics — user code imports from `core`, not from backend packages.
+
+---
 
 ## Backend Contract
 
 Two concepts must remain distinct:
 
 ```text
-RuntimeTensor  = backend-owned memory handle (shape + dtype + opaque buffer)
+RuntimeTensor  = backend-owned memory handle (shape + strides + offset + dtype + storage)
 Kernel         = implementation of one IR op for one backend
 ```
 
-`Engine` should only plan execution order and call kernels. It must not understand MatMul dimensions, WGSL workgroup geometry, or WASM pointer arithmetic. When `Engine.execute()` receives a node, it allocates outputs from the backend and delegates everything else. If `Engine` is growing op-specific logic, that logic belongs in the backend.
+`Engine` plans execution order and calls kernels. It must not understand MatMul dimensions, WGSL workgroup geometry, or WASM pointer arithmetic. When `Engine.execute()` receives a node, it allocates outputs from the backend and delegates everything else. If `Engine` is growing op-specific logic, that logic belongs in the backend.
+
+View ops (Transpose, Reshape, Slice) are a special case: they are handled entirely inside `Engine` by computing new shape/strides/offset metadata without any backend call or allocation.
+
+---
 
 ## Kernel Registry Pattern
 
@@ -38,7 +58,17 @@ Registry files:
 - `packages/backend-wasm/src/kernels/registry.ts`
 - `packages/backend-webgpu/src/kernels/registry.ts`
 
-**Exception:** `WebGPUBackend.execute()` in `packages/backend-webgpu/src/backend.ts` currently has op-specific dispatch logic baked in for `MatMul` and `Transpose`. These ops need a uniform buffer (shape metadata injected at binding `inputs.length + 1`) and non-standard workgroup geometry. Until that dispatch is refactored into the kernel registry, any new WebGPU op that requires a uniform buffer needs a new `if (node.op === '...')` block there. See [docs/adding-an-op.md](./adding-an-op.md) for the full procedure.
+---
+
+## Strided Tensor Model
+
+All three backends use the same strided tensor model: every `RuntimeTensor` carries `shape`, `strides`, and `offset` alongside the storage buffer. This enables zero-copy views for Transpose, Reshape, and Slice — the view just gets new metadata pointing into the same storage.
+
+Kernels are responsible for handling arbitrary strides. CPU and WASM kernels iterate using the `stridedIdx` utility. WebGPU kernels receive a `TensorMeta` uniform buffer (rank, offset, shape, strides packed as two `array<vec4<u32>, 2>`) and decompose the flat index inside the WGSL shader.
+
+Broadcasting is implemented via stride-0: a dimension that is broadcast (size 1 in the input, size > 1 in the output) gets stride 0, so repeated reads return the same element without copying.
+
+---
 
 ## WASM Backend: Memory Model
 
@@ -52,19 +82,11 @@ read()      →  copies WASM heap slice back into a new JS Float32Array
 dispose()   →  module.free_f32(ptr, elements)  frees the WASM allocation
 ```
 
-Tensors no longer cross the JS/WASM boundary on every kernel call. This is the key difference from a naive implementation where each op takes `&[f32]` slices — that pattern copies data on every call. The `_raw` suffix on Rust functions (e.g., `add_raw`) marks the pointer-based variants used at runtime.
+Tensors do not cross the JS/WASM boundary on every kernel call. The `_raw` suffix on Rust functions (e.g., `add_raw`) marks the pointer-based variants used at runtime.
 
-## WASM Generated Package Boundary
+`packages/backend-wasm/pkg/` is build output from `wasm-pack` and must not be imported directly by kernel code. `packages/backend-wasm/src/module.ts` is the only file that imports from `pkg/` — all kernel code goes through `module.ts`.
 
-`packages/backend-wasm/pkg/` is build output from `wasm-pack`. It must not be imported directly by kernel code.
-
-`packages/backend-wasm/src/module.ts` is the only TypeScript file that imports from `pkg/`:
-
-```ts
-import initWasm from '../pkg/minitensor_wasm';
-```
-
-All kernel code imports from `module.ts`. This contains the `MinitensorWasmModule` interface, the `WasmTensorHandle` type, `loadWasmModule()`, and `getF32View()`. If `wasm-pack` regenerates `pkg/` with a different structure, only `module.ts` needs updating.
+---
 
 ## Testing Strategy
 
@@ -72,10 +94,8 @@ CPU is the correctness oracle. Every op must pass:
 
 ```text
 same graph  →  CPU result
-same graph  →  WASM result     (must match CPU within tolerance)
-same graph  →  WebGPU result   (when WebGPU is available)
+same graph  →  WASM result     (must match CPU within 1e-5)
+same graph  →  WebGPU result   (must match CPU within 1e-5)
 ```
 
-Tests run in Vitest browser mode (Playwright, Chromium with `--enable-unsafe-webgpu`). Do not use `bun test` as the primary test command — it will ignore Vitest's `include` boundary and may pick up unintended files.
-
-WASM tests currently run under Node via Vitest. The WASM backend has not been validated in a real browser. Any test claiming WASM correctness is only valid under Node until browser validation is added.
+Tests run in Vitest browser mode (Playwright, Chromium). Do not use `bun test` directly — use `bun run test`, which invokes Vitest with the correct browser environment configuration.

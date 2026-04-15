@@ -3,10 +3,7 @@ import { sub } from '../../packages/core/src';
 import { Backend } from '../../packages/runtime/src';
 import { BACKENDS, runBinary, expectClose } from '../helpers';
 
-// Sub kernel is missing on WebGPU — CPU + WASM only
-const SUPPORTED = BACKENDS.filter((b) => b.name !== 'WebGPU');
-
-SUPPORTED.forEach(({ name, create }) => {
+BACKENDS.forEach(({ name, create }) => {
   describe(`Sub — ${name} Backend`, () => {
     let backend: Backend;
 

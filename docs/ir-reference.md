@@ -19,7 +19,7 @@ type AttributeValue =
   | ArrayBufferView;
 ```
 
-ONNX-style flexible attribute bag. `ArrayBuffer` is used for constant tensor data (weights, biases).
+ONNX-style flexible attribute bag. `ArrayBufferView` is used for constant tensor data (weights, biases).
 
 ### `Value`
 
@@ -34,7 +34,7 @@ interface Value {
 
   data?: ArrayBuffer; // only for weights/constants (initializers)
 
-  producer?: string; // id of the Node that outputs this value
+  producer?: string;   // id of the Node that outputs this value
   consumers?: string[]; // ids of Nodes that take this value as input
 
   debugName?: string;
@@ -66,17 +66,32 @@ interface Node {
 interface Graph {
   nodes: Node[];
   values: Record<string, Value>; // keyed by Value.name
-  inputs: string[]; // value names of graph inputs (trainable tensors)
-  outputs: string[]; // value names of graph outputs
-  initializers: string[]; // value names of fixed weights/constants (subset of values)
+  inputs: string[];       // reserved for future placeholder tensors (dynamic batch data)
+  outputs: string[];      // value names of graph outputs
+  initializers: string[]; // value names of fixed weights/constants (Constant nodes)
   name?: string;
   opset?: number; // ONNX opset version for future compatibility
 }
 ```
 
-`inputs` are tensors that vary per inference call (e.g., the batch `x`). `initializers` are fixed weights that are written once and reused. Both are retained in memory for the full duration of graph execution — only intermediate tensors are freed during execution.
+`initializers` are Constant nodes — their data is embedded in the graph and retained for the full evaluation lifetime. `inputs` is reserved for future placeholder tensors (dynamic batch data supplied per inference call); currently unused.
 
-**Note:** `compileGraph()` in `core/src/compiler.ts` currently uses `requiresGrad: true` to classify a tensor as a graph input rather than an initializer. This heuristic works for inference but will need revisiting when the training loop is built — weight tensors have `requiresGrad: true` but should be initializers during inference.
+---
+
+## Dtype System
+
+Every `Value` and `RuntimeTensor` carries a `dtype`:
+
+| Dtype     | Use case                                                       |
+| --------- | -------------------------------------------------------------- |
+| `float32` | Primary training and inference dtype                           |
+| `float16` | Half-precision; halves memory, required for WebGPU performance |
+| `int32`   | Integer arithmetic, loop indices                               |
+| `int64`   | Large indices (Gather, Scatter, embedding lookups)             |
+| `int8`    | Quantized inference                                            |
+| `bool`    | Masks, logical ops                                             |
+
+Max rank across all dtypes is 64, matching PyTorch's `MAX_TENSORIMPL_DIMS`.
 
 ---
 
@@ -106,7 +121,7 @@ Broadcasting follows ONNX right-aligned rules:
 → [1, 64]
 ```
 
-The utility `broadcastShapes(a, b)` in `packages/core/src/shape.ts` computes the output shape. Backend kernels do not yet implement full broadcasting — the current elementwise kernels only handle same-shape inputs or scalar broadcast (length-1 arrays). See the kernel support matrix in [README.md](../README.md) for current state.
+The utility `broadcastShapes(a, b)` in `packages/core/src/shape.ts` computes the output shape. All three backends implement broadcasting via stride-0: a broadcast dimension in the input gets stride 0, so the same element is reused without copying.
 
 ---
 

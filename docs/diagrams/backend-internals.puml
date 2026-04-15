@@ -8,10 +8,24 @@ interface Backend <<runtime>> {
   + dispose(tensor): void
 }
 
+interface RuntimeStorage <<runtime>> {
+  + buffer: TypedArray | WasmTensorHandle | GPUBuffer
+  + byteLength: number
+}
+
+interface RuntimeTensor <<runtime>> {
+  + storage: RuntimeStorage
+  + shape: (number | null)[]
+  + strides: number[]
+  + offset: number
+  + dtype: float32 | int32 | bool
+  + isView?: boolean
+}
+
 class CPUBackend {
   - registry: Map<string, CPUKernel>
   --
-  Synchronous. TypedArray buffers per dtype.
+  Synchronous. Float32Array buffers.
   Correctness oracle for all other backends.
 }
 
@@ -26,18 +40,15 @@ class WASMBackend {
 
 class WebGPUBackend {
   - device: GPUDevice
-  - registry: Map<string, WebGPUPipelineFactory>
+  - registry: Map<string, WebGPUKernel>
+  - pipelineCache: Map<string, GPUComputePipeline>
   --
   Tensor memory in GPUBuffers.
-  WGSL compute shaders.
+  WGSL compute shaders with strided access.
   read() is async (GPU readback).
 }
 
-interface RuntimeTensor <<runtime>> {
-  + shape: (number | null)[]
-  + dtype: float32 | float16 | int32 | int64 | int8 | bool
-  + buffer: TypedArray | WasmHandle | GPUBuffer
-}
+RuntimeTensor *-- RuntimeStorage
 
 Backend <|.. CPUBackend
 Backend <|.. WASMBackend

@@ -1,86 +1,83 @@
-# Next Steps
+# Roadmap Checklist
 
-Working context doc. The "Immediate task" section gets rewritten when the active task changes.
-
----
-
-## Current State
-
-**Verified working:**
-
-- CPU backend — all 6 ops (Add, Sub, Mul, Div, MatMul, Transpose), reference implementation
-- Autograd — reverse-mode diff for MatMul; forward pass for Add, Mul, Relu, Transpose
-- Engine — topological sort, reference-counted disposal of intermediates, retained set for inputs/outputs/initializers
-- WASM backend — same 6 ops as CPU, tensor memory in WASM heap, pointer-based kernel calls
-
-**Scaffolded but unverified:**
-
-- WASM in browser — tests run under Node via Vitest; the WASM backend has not been validated in a real browser
-- WebGPU correctness — 4 ops (Add, Mul, MatMul, Transpose) exist but have never been numerically compared to CPU output
-
-**Absent:**
-
-- Relu kernel on any backend (defined in `core/ops.ts` but no kernel implementations)
-- All other activation ops (Sigmoid, Tanh, Softmax)
-- Broadcasting for binary ops — same-shape only; `[N,D] + [D]` not supported
-- Batched MatMul (rank ≥ 3)
-- Cross-backend parity tests
-- Loss functions, optimizers, training loop
-- devtools, ONNX parser
+Check an item off (`[x]`) when it is fully implemented and tested on all target backends.
 
 ---
 
-## Immediate Task: Cross-Backend Vertical Slice
+## Ops
 
-**Goal:** `y = Relu(MatMul(x, W) + b)` produces matching outputs on CPU, WASM, and WebGPU.
+| Op                          | CPU | WASM | WebGPU |
+| --------------------------- | :-: | :--: | :----: |
+| Add                         | [x] | [x]  |  [x]   |
+| Sub                         | [x] | [x]  |  [x]   |
+| Mul                         | [x] | [x]  |  [x]   |
+| Div                         | [x] | [x]  |  [x]   |
+| MatMul (2D)                 | [x] | [x]  |  [x]   |
+| MatMul (rank ≥ 3, max 64)   | [ ] | [ ]  |  [ ]   |
+| Transpose                   | [x] | [x]  |  [x]   |
+| Relu                        | [x] | [x]  |  [x]   |
+| Sigmoid                     | [ ] | [ ]  |  [ ]   |
+| Tanh                        | [ ] | [ ]  |  [ ]   |
+| Softmax                     | [ ] | [ ]  |  [ ]   |
+| Reshape                     | [x] | [x]  |  [x]   |
+| Slice                       | [x] | [x]  |  [x]   |
+| Concat                      | [ ] | [ ]  |  [ ]   |
+| Reduce (Sum / Mean)         | [ ] | [ ]  |  [ ]   |
+| Exp                         | [ ] | [ ]  |  [ ]   |
+| Log                         | [ ] | [ ]  |  [ ]   |
 
-**Acceptance criteria:**
+## Autograd
 
-1. A single test compiles the graph once and runs it on all three backends
-2. WASM output matches CPU within `1e-5`
-3. WebGPU output matches CPU within `1e-4` (GPU float tolerance)
-4. Test is deterministic (fixed `x`, `W`, `b` values)
+| Feature                            | Done |
+| ---------------------------------- | :--: |
+| Add backward                       | [x]  |
+| Mul backward                       | [x]  |
+| MatMul backward                    | [x]  |
+| Transpose backward                 | [x]  |
+| Relu backward — CPU + WASM         | [x]  |
+| Relu backward — WebGPU             | [ ]  |
+| Sub backward                       | [ ]  |
+| Div backward                       | [ ]  |
+| Reduce backward                    | [ ]  |
+| Sigmoid / Tanh backward            | [ ]  |
+| Softmax backward                   | [ ]  |
 
-**What this requires:**
+## Training
 
-- Relu kernel on CPU, WASM (Rust + `relu_raw`), and WebGPU (WGSL)
-- Broadcasting for Add: `[N, D] + [D]` (bias addition pattern)
-- A parity test helper that runs the same graph on multiple backends and diffs the outputs
+| Feature                      | Done |
+| ---------------------------- | :--: |
+| Loss: MSE                    | [ ]  |
+| Loss: CrossEntropy           | [ ]  |
+| Optimizer: SGD               | [ ]  |
+| Optimizer: Adam              | [ ]  |
+| Training loop in `core`      | [ ]  |
 
-**Where to start:**
+## Dtypes
 
-1. CPU Relu kernel (`packages/backend-cpu/src/kernels/elementwise/relu.ts`) + register + test
-2. Write the parity helper (small utility in `tests/` that compares two `ArrayBufferView`s within tolerance)
-3. WASM Relu (Rust `relu_raw` + extend `MinitensorWasmModule` + register) + rebuild WASM
-4. WebGPU Relu (WGSL shader + pipeline factory + register) — no dispatch special case needed
-5. Broadcasting in Add — update CPU, WASM, WebGPU `executeAdd` / `add_raw` / `add.wgsl` to handle `[N,D] + [D]`
-6. Write the full vertical slice parity test
+A cell is checked when the dtype is fully supported on that backend: type system, `allocate()`, and kernels for all applicable ops.
 
-See [docs/adding-an-op.md](./adding-an-op.md) for the step-by-step procedure.
+| Dtype     | CPU | WASM | WebGPU | Notes                                            |
+| --------- | :-: | :--: | :----: | ------------------------------------------------ |
+| `float32` | [x] | [x]  |  [x]   | Primary dtype                                    |
+| `float16` | [ ] | [ ]  |  [ ]   | Half-precision; important for WebGPU efficiency  |
+| `int32`   | [ ] | [ ]  |  [ ]   | Type system + `allocate()` exist; kernels missing|
+| `int64`   | [ ] | [ ]  |  [ ]   | Needed for index ops (Gather, Scatter)           |
+| `int8`    | [ ] | [ ]  |  [ ]   | Quantization                                     |
+| `bool`    | [ ] | [ ]  |  [ ]   | Type system + `allocate()` exist; no op kernels  |
 
----
+## Infrastructure
 
-## Sharp Edges
+| Feature                                        | Done |
+| ---------------------------------------------- | :--: |
+| Strided tensor model (strides, offset, views)  | [x]  |
+| Broadcasting via stride-0                      | [x]  |
+| Cross-backend parity tests                     | [x]  |
+| Max rank = 64 (package-wide constraint)        | [ ]  |
+| Async engine execution model                   | [ ]  |
 
-These will bite you if you don't know them:
+## Packages
 
-- **WebGPU dispatch is not fully registry-driven.** `WebGPUBackend.execute()` (`packages/backend-webgpu/src/backend.ts:99–131`) has `if (node.op === 'MatMul')` and `if (node.op === 'Transpose')` blocks that inject uniform buffers outside the kernel registry. New ops that need shape metadata passed as uniforms require a new block there.
-
-- **WASM is unvalidated in a browser.** All WASM tests run under Node via Vitest. The `wasm-pack --target bundler` output has not been loaded in a real browser. There may be initialization or memory issues that Node masks.
-
-- ~~**`compileGraph()` uses `requiresGrad` to classify inputs vs initializers.**~~ **Fixed.** All `Constant` nodes are now unconditionally classified as `initializers`. `graph.inputs` is reserved for future placeholder tensors (dynamic batch data). `requiresGrad` is an autograd concern and never affects graph topology classification. See `packages/core/src/compiler.ts` for the full rationale.
-
-- **`Engine.evaluate()` is synchronous, but WebGPU `read()` is async.** `packages/runtime/src/engine.ts` calls `backend.execute()` synchronously. The `get()` method returns `ArrayBufferView | Promise<ArrayBufferView>`, but `evaluate()` itself does not await. This means callers must manually `await engine.get(outputId)` after `evaluate()`, and there is no guarantee that GPU work has completed. This is a latent inconsistency that will need a proper async execution model.
-
----
-
-## Priority Order
-
-| Phase | Work                                                                                      | Blocked by      |
-| ----- | ----------------------------------------------------------------------------------------- | --------------- |
-| 2     | Relu + broadcasting Add + cross-backend parity test                                       | nothing         |
-| 3     | Sub/Div on WebGPU; remaining activations (Sigmoid, Tanh); batched MatMul; Reshape, Concat | phase 2         |
-| 4     | Loss functions (MSE, CrossEntropy); SGD + Adam optimizers; training loop in `core`        | phase 3         |
-| 5     | `devtools` package: graph viz, weight/activation inspector, real-time loss curve          | parallel with 4 |
-| 6     | `onnx` package: protobuf parser, ONNX op → IR mapping                                     | phase 4         |
-| 7     | Kernel fusion, buffer pooling, async engine execution model                               | phase 6         |
+| Package                                              | Done |
+| ---------------------------------------------------- | :--: |
+| `packages/onnx` — protobuf parser, op mapping to IR  | [ ]  |
+| `packages/devtools` — graph viz, training dashboard  | [ ]  |
