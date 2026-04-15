@@ -9,7 +9,7 @@ export interface RuntimeTensor {
 
 export interface Backend {
   allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor;
-  read(tensor: RuntimeTensor): Promise<ArrayBufferView> | ArrayBufferView;
+  read(tensor: RuntimeTensor): Promise<ArrayBufferView>;
   write(tensor: RuntimeTensor, data: ArrayBufferView): void;
   // Execution fills the pre-allocated output buffers
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void;

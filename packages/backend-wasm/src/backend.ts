@@ -38,9 +38,9 @@ export class WASMBackend implements Backend {
     getF32View(this.module, tensor.buffer).set(data as Float32Array);
   }
 
-  read(tensor: RuntimeTensor): ArrayBufferView {
+  read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
     if (!isWasmTensorHandle(tensor.buffer)) throw new Error('WASMBackend: expected a WASM tensor handle');
-    return new Float32Array(getF32View(this.module, tensor.buffer));
+    return Promise.resolve(new Float32Array(getF32View(this.module, tensor.buffer)));
   }
 
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {

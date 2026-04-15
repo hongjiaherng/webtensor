@@ -19,9 +19,9 @@ export class Engine {
     this.registry.set(name, tensor);
   }
 
-  get(name: string): ArrayBufferView | Promise<ArrayBufferView> | undefined {
+  get(name: string): Promise<ArrayBufferView | undefined> {
     const tensor = this.registry.get(name);
-    if (!tensor) return undefined;
+    if (!tensor) return Promise.resolve(undefined);
     return this.backend.read(tensor);
   }
 

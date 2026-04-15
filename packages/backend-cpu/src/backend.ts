@@ -12,8 +12,8 @@ export class CPUBackend implements Backend {
     return { shape, dtype, buffer: new Float32Array(size) };
   }
 
-  read(tensor: RuntimeTensor): ArrayBufferView {
-    return tensor.buffer as ArrayBufferView;
+  read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
+    return Promise.resolve(tensor.buffer as ArrayBufferView);
   }
 
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
