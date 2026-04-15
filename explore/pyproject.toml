@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "explore"
+version = "0.1.0"
+description = "Exploring neural network in Python."
+authors = ["hongjiaherng <jiaherng2001@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+numpy = "^1.25.0"
+pandas = "^2.0.2"
+torch = { version = "2.0.1", source = "torch" }
+torchaudio = { version = "2.0.2", source = "torch" }
+torchvision = { version = "0.15.2", source = "torch" }
+ipywidgets = "^8.0.6"
+notebook = "^7.0.1"
+matplotlib = "^3.7.1"
+scipy = "^1.10.1"
+scikit-learn = "^1.3.0"
+seaborn = "^0.12.2"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu118"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
