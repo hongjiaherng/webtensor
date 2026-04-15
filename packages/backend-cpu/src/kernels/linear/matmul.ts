@@ -22,9 +22,9 @@ export const matmulKernel: CPUKernel = (_node, inputs, outputs) => {
   const k = shapeA[shapeA.length - 1];
   const n = shapeB[shapeB.length - 1];
   executeMatMul(
-    inputs[0].buffer as Float32Array,
-    inputs[1].buffer as Float32Array,
-    outputs[0].buffer as Float32Array,
+    inputs[0].storage.buffer as Float32Array,
+    inputs[1].storage.buffer as Float32Array,
+    outputs[0].storage.buffer as Float32Array,
     m, k, n,
   );
 };

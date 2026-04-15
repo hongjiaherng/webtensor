@@ -7,5 +7,5 @@ export function executeAdd(a: Float32Array, b: Float32Array, out: Float32Array):
 }
 
 export const addKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeAdd(inputs[0].buffer as Float32Array, inputs[1].buffer as Float32Array, outputs[0].buffer as Float32Array);
+  executeAdd(inputs[0].storage.buffer as Float32Array, inputs[1].storage.buffer as Float32Array, outputs[0].storage.buffer as Float32Array);
 };

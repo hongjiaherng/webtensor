@@ -1,6 +1,6 @@
 import { Node } from '@minitensor/ir';
 import { Backend, RuntimeTensor } from '@minitensor/runtime';
-import { getShapeSize } from './kernels/utils';
+import { getShapeSize, computeContiguousStrides } from './kernels/utils';
 import { webgpuKernelRegistry, WebGPUKernel } from './kernels/registry';
 
 export class WebGPUBackend implements Backend {
@@ -30,16 +30,22 @@ export class WebGPUBackend implements Backend {
     const size = getShapeSize(shape);
     const byteSize = Math.ceil(size * 4 / 4) * 4;
 
-    const buffer = this.device.createBuffer({
+    const gpuBuffer = this.device.createBuffer({
       size: byteSize,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
 
-    return { shape, dtype, buffer };
+    return {
+      storage: { buffer: gpuBuffer, byteLength: byteSize },
+      shape,
+      strides: computeContiguousStrides(shape as number[]),
+      offset: 0,
+      dtype,
+    };
   }
 
   async read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
-    const srcBuffer = tensor.buffer as GPUBuffer;
+    const srcBuffer = tensor.storage.buffer as GPUBuffer;
 
     const stagingBuffer = this.device.createBuffer({
       size: srcBuffer.size,
@@ -63,7 +69,7 @@ export class WebGPUBackend implements Backend {
   }
 
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
-    const destBuffer = tensor.buffer as GPUBuffer;
+    const destBuffer = tensor.storage.buffer as GPUBuffer;
     this.device.queue.writeBuffer(destBuffer, 0, data.buffer, data.byteOffset, data.byteLength);
   }
 
@@ -91,12 +97,12 @@ export class WebGPUBackend implements Backend {
   }
 
   dispose(tensor: RuntimeTensor): void {
-    if (tensor.buffer) {
-      const bufferToDestroy = tensor.buffer as GPUBuffer;
+    if (tensor.storage.buffer) {
+      const bufferToDestroy = tensor.storage.buffer as GPUBuffer;
       this.device.queue.onSubmittedWorkDone().then(() => {
         bufferToDestroy.destroy();
       });
-      tensor.buffer = null;
+      tensor.storage.buffer = null;
     }
   }
 

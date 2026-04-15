@@ -10,6 +10,17 @@ export function getShapeSize(shape: (number | null)[]): number {
   return size;
 }
 
+/** C-order (row-major) strides for a concrete shape. */
+export function computeContiguousStrides(shape: number[]): number[] {
+  const strides = new Array<number>(shape.length);
+  let stride = 1;
+  for (let i = shape.length - 1; i >= 0; i--) {
+    strides[i] = stride;
+    stride *= shape[i];
+  }
+  return strides;
+}
+
 export function alignTo(value: number, alignment: number): number {
   return Math.ceil(value / alignment) * alignment;
 }
@@ -47,8 +58,8 @@ export function elementwiseBindGroupEntries(
   outputs: RuntimeTensor[],
 ): GPUBindGroupEntry[] {
   return [
-    ...inputs.map((t, i) => ({ binding: i, resource: { buffer: t.buffer as GPUBuffer } })),
-    { binding: inputs.length, resource: { buffer: outputs[0].buffer as GPUBuffer } },
+    ...inputs.map((t, i) => ({ binding: i, resource: { buffer: t.storage.buffer as GPUBuffer } })),
+    { binding: inputs.length, resource: { buffer: outputs[0].storage.buffer as GPUBuffer } },
   ];
 }
 

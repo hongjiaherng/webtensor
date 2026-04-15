@@ -15,13 +15,13 @@ export function executeReluGrad(grad: Float32Array, a: Float32Array, out: Float3
 }
 
 export const reluKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeRelu(inputs[0].buffer as Float32Array, outputs[0].buffer as Float32Array);
+  executeRelu(inputs[0].storage.buffer as Float32Array, outputs[0].storage.buffer as Float32Array);
 };
 
 export const reluGradKernel: CPUKernel = (_node, inputs, outputs) => {
   executeReluGrad(
-    inputs[0].buffer as Float32Array,  // grad
-    inputs[1].buffer as Float32Array,  // original input a
-    outputs[0].buffer as Float32Array,
+    inputs[0].storage.buffer as Float32Array,  // grad
+    inputs[1].storage.buffer as Float32Array,  // original input a
+    outputs[0].storage.buffer as Float32Array,
   );
 };

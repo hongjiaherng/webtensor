@@ -1,6 +1,6 @@
 import { Node } from '@minitensor/ir';
 import { Backend, RuntimeTensor } from '@minitensor/runtime';
-import { getShapeSize } from './kernels/utils';
+import { getShapeSize, computeContiguousStrides } from './kernels/utils';
 import { cpuKernelRegistry } from './kernels/registry';
 
 export class CPUBackend implements Backend {
@@ -9,16 +9,22 @@ export class CPUBackend implements Backend {
       throw new Error(`CPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`);
     }
     const size = getShapeSize(shape);
-    return { shape, dtype, buffer: new Float32Array(size) };
+    const buffer = new Float32Array(size);
+    return {
+      storage: { buffer, byteLength: buffer.byteLength },
+      shape,
+      strides: computeContiguousStrides(shape as number[]),
+      offset: 0,
+      dtype,
+    };
   }
 
   read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
-    return Promise.resolve(tensor.buffer as ArrayBufferView);
+    return Promise.resolve(tensor.storage.buffer as Float32Array);
   }
 
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
-    const view = tensor.buffer as any;
-    view.set(data as any);
+    (tensor.storage.buffer as Float32Array).set(data as Float32Array);
   }
 
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {
@@ -28,6 +34,6 @@ export class CPUBackend implements Backend {
   }
 
   dispose(tensor: RuntimeTensor): void {
-    tensor.buffer = null;
+    tensor.storage.buffer = null;
   }
 }

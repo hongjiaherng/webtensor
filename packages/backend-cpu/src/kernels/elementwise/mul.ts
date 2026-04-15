@@ -7,5 +7,5 @@ export function executeMul(a: Float32Array, b: Float32Array, out: Float32Array):
 }
 
 export const mulKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeMul(inputs[0].buffer as Float32Array, inputs[1].buffer as Float32Array, outputs[0].buffer as Float32Array);
+  executeMul(inputs[0].storage.buffer as Float32Array, inputs[1].storage.buffer as Float32Array, outputs[0].storage.buffer as Float32Array);
 };

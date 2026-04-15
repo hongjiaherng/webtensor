@@ -17,9 +17,9 @@ export const matmulKernel: WebGPUKernel = {
     const N = shapeB[shapeB.length - 1];
     const uniforms = createUniformBuffer(device, [M, K, N, 0]);
     return [
-      { binding: 0, resource: { buffer: inputs[0].buffer as GPUBuffer } },
-      { binding: 1, resource: { buffer: inputs[1].buffer as GPUBuffer } },
-      { binding: 2, resource: { buffer: outputs[0].buffer as GPUBuffer } },
+      { binding: 0, resource: { buffer: inputs[0].storage.buffer as GPUBuffer } },
+      { binding: 1, resource: { buffer: inputs[1].storage.buffer as GPUBuffer } },
+      { binding: 2, resource: { buffer: outputs[0].storage.buffer as GPUBuffer } },
       { binding: 3, resource: { buffer: uniforms } },
     ];
   },

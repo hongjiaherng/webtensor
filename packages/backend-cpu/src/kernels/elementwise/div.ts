@@ -7,5 +7,5 @@ export function executeDiv(a: Float32Array, b: Float32Array, out: Float32Array):
 }
 
 export const divKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeDiv(inputs[0].buffer as Float32Array, inputs[1].buffer as Float32Array, outputs[0].buffer as Float32Array);
+  executeDiv(inputs[0].storage.buffer as Float32Array, inputs[1].storage.buffer as Float32Array, outputs[0].storage.buffer as Float32Array);
 };

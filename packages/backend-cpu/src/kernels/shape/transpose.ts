@@ -16,8 +16,8 @@ export const transposeKernel: CPUKernel = (_node, inputs, outputs) => {
   const m = shape[shape.length - 2] || 1;
   const n = shape[shape.length - 1];
   executeTranspose(
-    inputs[0].buffer as Float32Array,
-    outputs[0].buffer as Float32Array,
+    inputs[0].storage.buffer as Float32Array,
+    outputs[0].storage.buffer as Float32Array,
     m, n,
   );
 };
