@@ -59,20 +59,6 @@ describe('JIT Garbage Collection & Memory Sweeps', () => {
         // If we request t2 again, the engine gracefully denies reading physically dead buffers!
         const deadBuffer = await engine.get(t2.id);
         expect(deadBuffer).toBeUndefined();
-
-        // Inject visual feedback into the browser's DOM for watch mode!
-        if (typeof document !== 'undefined') {
-          const el = document.createElement('div');
-          el.style.padding = '20px';
-          el.style.fontFamily = 'monospace';
-          el.innerHTML = `
-            <h2 style="color: #4ade80">JIT Garbage Collection Evaluated Successfully!</h2>
-            <p><strong>Target:</strong> ${name}</p>
-            <p><strong>Live Node Bounds:</strong> Cleaned up implicit buffers!</p>
-            <p><strong>Destructors Triggered:</strong> ${disposeSpy.mock.calls.length} Sweeps Intercepted</p>
-          `;
-          document.body.appendChild(el);
-        }
       });
     });
   });

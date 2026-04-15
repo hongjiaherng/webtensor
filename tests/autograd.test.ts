@@ -57,21 +57,6 @@ describe('Autograd Core Backpropagation', () => {
         const gradB = await engine.get(b.grad!.id) as Float32Array;
         expect(gradB).toBeDefined();
         expect(Array.from(gradB)).toEqual([2, 3]);
-
-        // Inject visual feedback into the browser's DOM for watch mode!
-        if (typeof document !== 'undefined') {
-          const el = document.createElement('div');
-          el.style.padding = '20px';
-          el.style.fontFamily = 'monospace';
-          el.innerHTML = `
-            <h2 style="color: #4ade80">Autograd & Chain Rule Executed Successfully!</h2>
-            <p><strong>Target:</strong> ${name}</p>
-            <p><strong>Graph:</strong> y = matmul(a, b)</p>
-            <p><strong>grad(a):</strong> [${gradA.join(', ')}]</p>
-            <p><strong>grad(b):</strong> [${gradB.join(', ')}]</p>
-          `;
-          document.body.appendChild(el);
-        }
       });
     });
   });
