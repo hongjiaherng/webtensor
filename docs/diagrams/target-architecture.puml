@@ -1,0 +1,44 @@
+@startuml target-architecture
+
+package "React App" #E8F0FF {
+  [User code\n(import { tensor, train } from 'minitensor')] as usercode
+}
+
+package "Authoring" #EEF4FF {
+  [core\nTensor API - autograd - optimizer loop] as core
+}
+
+package "Import" #FFF0F8 {
+  [onnx\nprotobuf parser -> IR] as onnx
+}
+
+package "Graph" #FFF8EE {
+  [ir\nONNX-aligned graph schema] as ir
+}
+
+package "Execution" #EEFFF0 {
+  [runtime\nEngine + Backend dispatch] as runtime
+}
+
+package "Backends" #FFF0F0 {
+  [backend-cpu\n(correctness / Node.js)] as cpu
+  [backend-wasm\n(browser CPU)] as wasm
+  [backend-webgpu\n(browser GPU - primary)] as webgpu
+}
+
+package "Visualization" #F0F4FF {
+  [devtools\nGraph view - weight heatmaps\nactivation inspector - loss curve] as devtools
+}
+
+usercode --> core
+usercode --> devtools : subscribes to training events
+core --> ir : compiles to
+onnx --> ir : parses to
+runtime --> ir : executes
+cpu ..|> runtime
+wasm ..|> runtime
+webgpu ..|> runtime
+devtools --> runtime : reads execution trace
+devtools --> ir : renders graph
+
+@enduml

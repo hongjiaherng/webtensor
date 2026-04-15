@@ -1,0 +1,49 @@
+@startuml backend-internals
+
+interface Backend <<runtime>> {
+  + allocate(shape, dtype): RuntimeTensor
+  + read(tensor): ArrayBufferView | Promise<ArrayBufferView>
+  + write(tensor, data): void
+  + execute(node, inputs[], outputs[]): void
+  + dispose(tensor): void
+}
+
+class CPUBackend {
+  - registry: Map<string, CPUKernel>
+  --
+  Synchronous. TypedArray buffers per dtype.
+  Correctness oracle for all other backends.
+}
+
+class WASMBackend {
+  - module: MinitensorWasmModule
+  - registry: Map<string, WASMKernel>
+  --
+  Tensor memory in WASM heap (pointer handles).
+  Rust kernels via wasm-bindgen.
+  Avoids JS/WASM boundary per element.
+}
+
+class WebGPUBackend {
+  - device: GPUDevice
+  - registry: Map<string, WebGPUPipelineFactory>
+  --
+  Tensor memory in GPUBuffers.
+  WGSL compute shaders.
+  read() is async (GPU readback).
+}
+
+interface RuntimeTensor <<runtime>> {
+  + shape: (number | null)[]
+  + dtype: float32 | float16 | int32 | int64 | int8 | bool
+  + buffer: TypedArray | WasmHandle | GPUBuffer
+}
+
+Backend <|.. CPUBackend
+Backend <|.. WASMBackend
+Backend <|.. WebGPUBackend
+CPUBackend ..> RuntimeTensor
+WASMBackend ..> RuntimeTensor
+WebGPUBackend ..> RuntimeTensor
+
+@enduml

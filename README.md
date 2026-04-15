@@ -19,51 +19,7 @@ A tensor library that runs entirely in the browser. Train, visualize, and run in
 
 ### 1. Package Dependency Map
 
-```plantuml
-@startuml package-map
-!theme plain
-skinparam defaultFontName monospace
-skinparam componentStyle rectangle
-skinparam ArrowColor #555555
-skinparam ComponentBorderColor #888888
-
-package "Authoring" #EEF4FF {
-  [core\n(Tensor, ops, autograd, compiler)] as core
-}
-
-package "Graph Description" #FFF8EE {
-  [ir\n(Node, Value, Graph — ONNX-aligned)] as ir
-}
-
-package "Execution" #EEFFF0 {
-  [runtime\n(Engine, Backend interface, lifecycle)] as runtime
-}
-
-package "Backends" #FFF0F0 {
-  [backend-cpu\n(TypeScript kernels)] as cpu
-  [backend-wasm\n(Rust via wasm-bindgen)] as wasm
-  [backend-webgpu\n(WGSL compute shaders)] as webgpu
-}
-
-package "Planned" #F5F5F5 {
-  [onnx\n(protobuf → IR)] as onnx #DDDDDD
-  [devtools\n(graph UI, training viz)] as devtools #DDDDDD
-}
-
-core -down-> ir : builds Graph
-runtime -right-> ir : reads Node/Value
-cpu .up.|> runtime : implements Backend
-wasm .up.|> runtime : implements Backend
-webgpu .up.|> runtime : implements Backend
-
-onnx ..> ir : produces (planned)
-devtools ..> ir : visualizes graph (planned)
-devtools ..> runtime : reads execution trace (planned)
-
-note right of onnx : Phase 6
-note right of devtools : Phase 5
-@enduml
-```
+![Package map](docs/diagrams/package-map.svg)
 
 **Boundary rules — do not violate:**
 
@@ -78,153 +34,19 @@ note right of devtools : Phase 5
 
 ### 2. Execution Data Flow
 
-```plantuml
-@startuml execution-flow
-!theme plain
-skinparam defaultFontName monospace
-skinparam SequenceArrowColor #555555
-skinparam ParticipantBorderColor #888888
-
-participant "User\n(core API)" as user
-participant "Compiler\n(core)" as compiler
-participant "Runtime\nEngine" as engine
-participant "Backend\n(cpu/wasm/webgpu)" as backend
-participant "Kernel\nRegistry" as registry
-
-user -> compiler : tensor ops (eager or traced)
-compiler -> engine : Graph (IR nodes + values)
-
-engine -> engine : topological sort → ExecutionPlan
-
-loop for each Node in plan
-  engine -> backend : allocate(output shapes)
-  engine -> backend : execute(node, inputs[], outputs[])
-  backend -> registry : lookup(node.op)
-  registry --> backend : kernel fn
-  backend -> backend : run kernel\n(fills output buffers)
-  backend --> engine : done
-end
-
-engine -> backend : read(output tensor)
-backend --> user : ArrayBufferView (typed by dtype)
-
-engine -> backend : dispose(intermediate tensors)
-@enduml
-```
+![Execution flow](docs/diagrams/execution-flow.svg)
 
 ---
 
 ### 3. Backend Internal Structure
 
-```plantuml
-@startuml backend-internals
-!theme plain
-skinparam defaultFontName monospace
-skinparam ClassBorderColor #888888
-skinparam ArrowColor #555555
-
-interface Backend <<runtime>> {
-  + allocate(shape, dtype): RuntimeTensor
-  + read(tensor): ArrayBufferView | Promise<ArrayBufferView>
-  + write(tensor, data): void
-  + execute(node, inputs[], outputs[]): void
-  + dispose(tensor): void
-}
-
-class CPUBackend {
-  - registry: Map<string, CPUKernel>
-  --
-  Synchronous. TypedArray buffers per dtype.
-  Correctness oracle for all other backends.
-}
-
-class WASMBackend {
-  - module: MinitensorWasmModule
-  - registry: Map<string, WASMKernel>
-  --
-  Tensor memory in WASM heap (pointer handles).
-  Rust kernels via wasm-bindgen.
-  Avoids JS/WASM boundary per element.
-}
-
-class WebGPUBackend {
-  - device: GPUDevice
-  - registry: Map<string, WebGPUPipelineFactory>
-  --
-  Tensor memory in GPUBuffers.
-  WGSL compute shaders.
-  read() is async (GPU readback).
-}
-
-interface RuntimeTensor <<runtime>> {
-  + shape: (number | null)[]
-  + dtype: 'float32' | 'float16' | 'int32' | 'int64' | 'int8' | 'bool'
-  + buffer: TypedArray | WasmHandle | GPUBuffer
-}
-
-Backend <|.. CPUBackend
-Backend <|.. WASMBackend
-Backend <|.. WebGPUBackend
-CPUBackend ..> RuntimeTensor
-WASMBackend ..> RuntimeTensor
-WebGPUBackend ..> RuntimeTensor
-@enduml
-```
+![Backend internals](docs/diagrams/backend-internals.svg)
 
 ---
 
 ### 4. Target End-State Architecture
 
-```plantuml
-@startuml target-architecture
-!theme plain
-skinparam defaultFontName monospace
-skinparam componentStyle rectangle
-skinparam ArrowColor #555555
-skinparam ComponentBorderColor #888888
-
-package "React App" #E8F0FF {
-  [User code\n(import { tensor, train } from 'minitensor')] as usercode
-}
-
-package "Authoring" #EEF4FF {
-  [core\nTensor API · autograd · optimizer loop] as core
-}
-
-package "Import" #FFF0F8 {
-  [onnx\nprotobuf parser → IR] as onnx
-}
-
-package "Graph" #FFF8EE {
-  [ir\nONNX-aligned graph schema] as ir
-}
-
-package "Execution" #EEFFF0 {
-  [runtime\nEngine + Backend dispatch] as runtime
-}
-
-package "Backends" #FFF0F0 {
-  [backend-cpu\n(correctness / Node.js)] as cpu
-  [backend-wasm\n(browser CPU)] as wasm
-  [backend-webgpu\n(browser GPU — primary)] as webgpu
-}
-
-package "Visualization" #F0F4FF {
-  [devtools\nGraph view · weight heatmaps\nactivation inspector · loss curve] as devtools
-}
-
-usercode --> core
-usercode --> devtools : subscribes to training events
-core --> ir : compiles to
-onnx --> ir : parses to
-runtime --> ir : executes
-cpu ..|> runtime
-wasm ..|> runtime
-webgpu ..|> runtime
-devtools --> runtime : reads execution trace
-devtools --> ir : renders graph
-@enduml
-```
+![Target architecture](docs/diagrams/target-architecture.svg)
 
 ---
 
@@ -348,3 +170,10 @@ These block the path to training and inference:
 - [docs/ir-reference.md](docs/ir-reference.md) — IR schema: Node/Value/Graph types, shape system, ONNX alignment
 - [docs/adding-an-op.md](docs/adding-an-op.md) — checklist for adding a kernel across all three backends
 - [docs/next.md](docs/next.md) — current state, immediate task, sharp edges
+
+Diagram sources are in [docs/diagrams/](docs/diagrams/) as `.puml` files. To regenerate SVGs after editing:
+
+```sh
+# Requires plantuml on PATH (https://plantuml.com/download)
+make diagrams
+```

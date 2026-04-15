@@ -1,0 +1,28 @@
+@startuml execution-flow
+
+participant "User\n(core API)" as user
+participant "Compiler\n(core)" as compiler
+participant "Runtime\nEngine" as engine
+participant "Backend\n(cpu/wasm/webgpu)" as backend
+participant "Kernel\nRegistry" as registry
+
+user -> compiler : tensor ops (eager or traced)
+compiler -> engine : Graph (IR nodes + values)
+
+engine -> engine : topological sort -> ExecutionPlan
+
+loop for each Node in plan
+  engine -> backend : allocate(output shapes)
+  engine -> backend : execute(node, inputs[], outputs[])
+  backend -> registry : lookup(node.op)
+  registry --> backend : kernel fn
+  backend -> backend : run kernel\n(fills output buffers)
+  backend --> engine : done
+end
+
+engine -> backend : read(output tensor)
+backend --> user : ArrayBufferView (typed by dtype)
+
+engine -> backend : dispose(intermediate tensors)
+
+@enduml

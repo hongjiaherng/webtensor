@@ -1,0 +1,39 @@
+@startuml package-map
+
+package "Authoring" #EEF4FF {
+  [core\n(Tensor, ops, autograd, compiler)] as core
+}
+
+package "Graph Description" #FFF8EE {
+  [ir\n(Node, Value, Graph - ONNX-aligned)] as ir
+}
+
+package "Execution" #EEFFF0 {
+  [runtime\n(Engine, Backend interface, lifecycle)] as runtime
+}
+
+package "Backends" #FFF0F0 {
+  [backend-cpu\n(TypeScript kernels)] as cpu
+  [backend-wasm\n(Rust via wasm-bindgen)] as wasm
+  [backend-webgpu\n(WGSL compute shaders)] as webgpu
+}
+
+package "Planned" #F5F5F5 {
+  [onnx\n(protobuf -> IR)] as onnx #DDDDDD
+  [devtools\n(graph UI, training viz)] as devtools #DDDDDD
+}
+
+core -down-> ir : builds Graph
+runtime -right-> ir : reads Node/Value
+cpu .up.|> runtime : implements Backend
+wasm .up.|> runtime : implements Backend
+webgpu .up.|> runtime : implements Backend
+
+onnx ..> ir : produces (planned)
+devtools ..> ir : visualizes graph (planned)
+devtools ..> runtime : reads execution trace (planned)
+
+note right of onnx : Phase 6
+note right of devtools : Phase 5
+
+@enduml
