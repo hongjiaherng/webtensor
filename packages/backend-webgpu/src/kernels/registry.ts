@@ -1,15 +1,16 @@
-import { getAddPipeline } from './elementwise/add';
-import { getMulPipeline } from './elementwise/mul';
-import { getReluPipeline } from './elementwise/relu';
-import { getMatMulPipeline } from './linear/matmul';
-import { getTransposePipeline } from './shape/transpose';
+import { WebGPUKernel } from './utils';
+import { addKernel } from './elementwise/add';
+import { mulKernel } from './elementwise/mul';
+import { reluKernel } from './elementwise/relu';
+import { matmulKernel } from './linear/matmul';
+import { transposeKernel } from './shape/transpose';
 
-export type WebGPUPipelineFactory = (device: GPUDevice) => GPUComputePipeline;
+export type { WebGPUKernel };
 
-export const webgpuKernelRegistry = new Map<string, WebGPUPipelineFactory>([
-  ['Add', getAddPipeline],
-  ['Mul', getMulPipeline],
-  ['Relu', getReluPipeline],
-  ['MatMul', getMatMulPipeline],
-  ['Transpose', getTransposePipeline],
+export const webgpuKernelRegistry = new Map<string, WebGPUKernel>([
+  ['Add', addKernel],
+  ['Mul', mulKernel],
+  ['Relu', reluKernel],
+  ['MatMul', matmulKernel],
+  ['Transpose', transposeKernel],
 ]);
