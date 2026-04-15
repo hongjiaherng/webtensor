@@ -1,3 +1,6 @@
+import { Node } from '@minitensor/ir';
+import { RuntimeTensor } from '@minitensor/runtime';
+
 export function getShapeSize(shape: (number | null)[]): number {
   let size = 1;
   for (const dim of shape) {
@@ -6,3 +9,5 @@ export function getShapeSize(shape: (number | null)[]): number {
   }
   return size;
 }
+
+export type CPUKernel = (node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]) => void;

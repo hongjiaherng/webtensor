@@ -9,9 +9,13 @@ pub fn alloc_f32(len: usize) -> *mut f32 {
 }
 
 #[wasm_bindgen]
-pub unsafe fn free_f32(ptr: *mut f32, len: usize) {
+pub fn free_f32(ptr: *mut f32, len: usize) {
     if ptr.is_null() {
         return;
     }
-    drop(Vec::from_raw_parts(ptr, 0, len));
+    // SAFETY: ptr was allocated by alloc_f32 with the same capacity.
+    // Reconstructing the Vec transfers ownership back to Rust so it is freed on drop.
+    unsafe {
+        drop(Vec::from_raw_parts(ptr, len, len));
+    }
 }
