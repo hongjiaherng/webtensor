@@ -3,15 +3,13 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@minitensor/*": ["packages/*/src"]
+      "@minitensor/*": ["./packages/*/src"]
     },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "ignoreDeprecations": "6.0",
     "declaration": true,
     "outDir": "dist",
     "lib": ["ES2022", "DOM"]

@@ -1,11 +1,15 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "..",
     "types": [
-      "bun"
+      "bun",
+      "@webgpu/types"
     ]
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "../packages/backend-webgpu/src/env.d.ts",
+    "../packages/backend-webgpu/src/shaders.d.ts"
   ]
 }

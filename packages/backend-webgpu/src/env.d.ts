@@ -1,4 +1,23 @@
-declare module '*?raw' {
-  const content: string;
-  export default content;
+/// <reference types="@webgpu/types" />
+
+export {};
+
+declare global {
+  const GPUBufferUsage: {
+    readonly MAP_READ: number;
+    readonly MAP_WRITE: number;
+    readonly COPY_SRC: number;
+    readonly COPY_DST: number;
+    readonly INDEX: number;
+    readonly VERTEX: number;
+    readonly UNIFORM: number;
+    readonly STORAGE: number;
+    readonly INDIRECT: number;
+    readonly QUERY_RESOLVE: number;
+  };
+
+  const GPUMapMode: {
+    readonly READ: number;
+    readonly WRITE: number;
+  };
 }
