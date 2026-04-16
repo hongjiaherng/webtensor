@@ -62,10 +62,7 @@ BACKENDS.forEach(({ name, create }) => {
         [1, 2, 3],
         [4, 5, 6],
       ];
-      const autoPath = await runGraph(
-        backend,
-        tensor(data).transpose().reshape([6]),
-      );
+      const autoPath = await runGraph(backend, tensor(data).transpose().reshape([6]));
       const explicitPath = await runGraph(
         backend,
         tensor(data).transpose().contiguous().reshape([6]),

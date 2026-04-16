@@ -34,7 +34,7 @@ interface Value {
 
   data?: ArrayBuffer; // only for weights/constants (initializers)
 
-  producer?: string;   // id of the Node that outputs this value
+  producer?: string; // id of the Node that outputs this value
   consumers?: string[]; // ids of Nodes that take this value as input
 
   debugName?: string;
@@ -66,8 +66,8 @@ interface Node {
 interface Graph {
   nodes: Node[];
   values: Record<string, Value>; // keyed by Value.name
-  inputs: string[];       // reserved for future placeholder tensors (dynamic batch data)
-  outputs: string[];      // value names of graph outputs
+  inputs: string[]; // reserved for future placeholder tensors (dynamic batch data)
+  outputs: string[]; // value names of graph outputs
   initializers: string[]; // value names of fixed weights/constants (Constant nodes)
   name?: string;
   opset?: number; // ONNX opset version for future compatibility
@@ -86,11 +86,11 @@ interface Graph {
 type DType = 'float32' | 'int32' | 'bool';
 ```
 
-| Dtype     | JS backing type    | Use case                                | Kernel support |
-| --------- | ------------------ | --------------------------------------- | -------------- |
-| `float32` | `Float32Array`     | Primary training and inference dtype    | All backends   |
-| `int32`   | `Int32Array`       | Integer arithmetic, loop indices        | Allocation only|
-| `bool`    | `Uint8Array`       | Masks, logical ops                      | Allocation only|
+| Dtype     | JS backing type | Use case                             | Kernel support  |
+| --------- | --------------- | ------------------------------------ | --------------- |
+| `float32` | `Float32Array`  | Primary training and inference dtype | All backends    |
+| `int32`   | `Int32Array`    | Integer arithmetic, loop indices     | Allocation only |
+| `bool`    | `Uint8Array`    | Masks, logical ops                   | Allocation only |
 
 All dtypes flow through the type system, `allocate()`, `read()`, and `write()`. Op kernels currently only support `float32` — other dtypes will throw at `execute()` time until per-dtype kernels are added.
 

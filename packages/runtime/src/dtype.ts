@@ -4,17 +4,25 @@ export type TypedArray = Float32Array | Int32Array | Uint8Array;
 
 export function bytesPerElement(dtype: DType): number {
   switch (dtype) {
-    case 'float32': return 4;
-    case 'int32': return 4;
-    case 'bool': return 1;
+    case 'float32':
+      return 4;
+    case 'int32':
+      return 4;
+    case 'bool':
+      return 1;
   }
 }
 
-export function typedArrayCtor(dtype: DType): Float32ArrayConstructor | Int32ArrayConstructor | Uint8ArrayConstructor {
+export function typedArrayCtor(
+  dtype: DType,
+): Float32ArrayConstructor | Int32ArrayConstructor | Uint8ArrayConstructor {
   switch (dtype) {
-    case 'float32': return Float32Array;
-    case 'int32': return Int32Array;
-    case 'bool': return Uint8Array;
+    case 'float32':
+      return Float32Array;
+    case 'int32':
+      return Int32Array;
+    case 'bool':
+      return Uint8Array;
   }
 }
 

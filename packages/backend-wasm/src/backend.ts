@@ -1,12 +1,14 @@
 import { Node, DType } from '@webtensor/ir';
-import { Backend, RuntimeTensor, TypedArray, bytesPerElement, copyBuffer, typedArrayCtor } from '@webtensor/runtime';
-import { getShapeSize, computeContiguousStrides } from './kernels/utils';
 import {
-  getTypedView,
-  isWasmTensorHandle,
-  loadWasmModule,
-  WebtensorWasmModule,
-} from './module';
+  Backend,
+  RuntimeTensor,
+  TypedArray,
+  bytesPerElement,
+  copyBuffer,
+  typedArrayCtor,
+} from '@webtensor/runtime';
+import { getShapeSize, computeContiguousStrides } from './kernels/utils';
+import { getTypedView, isWasmTensorHandle, loadWasmModule, WebtensorWasmModule } from './module';
 import { wasmKernelRegistry } from './kernels/registry';
 
 export class WASMBackend implements Backend {

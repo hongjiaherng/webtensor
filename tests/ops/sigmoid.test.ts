@@ -44,7 +44,11 @@ BACKENDS.forEach(({ name, create }) => {
       const engine = new Engine(backend);
       await engine.evaluate(graph);
       const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, vals.map((v) => 1 / (1 + Math.exp(-v))), 1e-4);
+      expectClose(
+        out,
+        vals.map((v) => 1 / (1 + Math.exp(-v))),
+        1e-4,
+      );
     });
   });
 });

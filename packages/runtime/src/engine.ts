@@ -35,12 +35,7 @@ export class Engine {
     return engine;
   }
 
-  set(
-    name: string,
-    data: ArrayBufferView,
-    shape: (number | null)[],
-    dtype: DType = 'float32',
-  ) {
+  set(name: string, data: ArrayBufferView, shape: (number | null)[], dtype: DType = 'float32') {
     if (this.registry.has(name)) {
       this.backend.dispose(this.registry.get(name)!);
     }
@@ -154,7 +149,13 @@ export class Engine {
           // Non-contiguous: execute a Contiguous copy then reshape
           const contiguousTensor = this.backend.allocate(src.shape, src.dtype);
           this.backend.execute(
-            { id: `${node.id}_auto_contig`, op: 'Contiguous', inputs: [], outputs: [], name: 'auto_contiguous' },
+            {
+              id: `${node.id}_auto_contig`,
+              op: 'Contiguous',
+              inputs: [],
+              outputs: [],
+              name: 'auto_contiguous',
+            },
             [src],
             [contiguousTensor],
           );

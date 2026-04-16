@@ -28,7 +28,9 @@ export function sigmoid(a: Tensor): Tensor {
       inputs: [a],
       backward: (grad: Tensor) => {
         // d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
-        return [/* gradA */];
+        return [
+          /* gradA */
+        ];
       },
     },
   });
@@ -203,11 +205,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 Implements the `WebGPUKernel` interface from `../utils`:
 
-| Method | Responsibility |
-| ------ | -------------- |
-| `createPipeline(device)` | Compile the WGSL shader into a `GPUComputePipeline`. |
+| Method                                                 | Responsibility                                                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createPipeline(device)`                               | Compile the WGSL shader into a `GPUComputePipeline`.                                                                                               |
 | `buildBindGroupEntries(device, node, inputs, outputs)` | Wire GPU buffers and meta uniform buffers to binding slots. Returns `{ entries, tempBuffers }` — `tempBuffers` are destroyed after GPU submission. |
-| `getDispatch(node, inputs, outputs)` | Return `[x, y, z]` workgroup counts. |
+| `getDispatch(node, inputs, outputs)`                   | Return `[x, y, z]` workgroup counts.                                                                                                               |
 
 **Unary example:**
 

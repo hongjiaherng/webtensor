@@ -51,14 +51,14 @@ Tests use [Vitest](https://vitest.dev/). Browser/WebGPU tests run via Playwright
 
 All ops run on CPU, WASM (Rust), and WebGPU with cross-backend parity tests.
 
-| Category | Ops |
-| --- | --- |
-| Binary | add, sub, mul, div |
-| Linalg | matmul (2D) |
-| Unary math | neg, exp, log, sqrt, abs, pow |
-| Activations | relu, sigmoid, tanh |
+| Category         | Ops                                                                           |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Binary           | add, sub, mul, div                                                            |
+| Linalg           | matmul (2D)                                                                   |
+| Unary math       | neg, exp, log, sqrt, abs, pow                                                 |
+| Activations      | relu, sigmoid, tanh                                                           |
 | View (zero-copy) | transpose, reshape, view, slice, unsqueeze, squeeze, permute, expand, flatten |
-| Memory | contiguous, clone, detach |
+| Memory           | contiguous, clone, detach                                                     |
 
 **Autograd:** backward through add, sub, mul, div, matmul, transpose, relu, sigmoid, tanh, reshape, contiguous, neg, exp, log, sqrt, abs, pow.
 

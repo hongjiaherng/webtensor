@@ -1,10 +1,32 @@
 import { DType } from '@webtensor/ir';
 import { Device, OpContext } from './types';
 import {
-  add, sub, mul, div, matmul, transpose, relu, reshape, slice, contiguous,
-  view, unsqueeze, squeeze, permute, flatten, expand,
-  neg, exp, log, sqrt, abs, pow, sigmoid, tanh,
-  clone, detach,
+  add,
+  sub,
+  mul,
+  div,
+  matmul,
+  transpose,
+  relu,
+  reshape,
+  slice,
+  contiguous,
+  view,
+  unsqueeze,
+  squeeze,
+  permute,
+  flatten,
+  expand,
+  neg,
+  exp,
+  log,
+  sqrt,
+  abs,
+  pow,
+  sigmoid,
+  tanh,
+  clone,
+  detach,
 } from './ops';
 import { computeContiguousStrides } from '@webtensor/ir';
 import { shapeSize } from './shape';

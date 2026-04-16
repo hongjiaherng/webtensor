@@ -40,14 +40,21 @@ TRANSPOSE_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[1,4] row vector → [4,1] col vector', async () => {
-      const out = await runGraph(backend, tensor([[10, 20, 30, 40]]).transpose().contiguous());
+      const out = await runGraph(
+        backend,
+        tensor([[10, 20, 30, 40]])
+          .transpose()
+          .contiguous(),
+      );
       expectClose(out, [10, 20, 30, 40]);
     });
 
     it('[4,1] col vector → [1,4] row vector', async () => {
       const out = await runGraph(
         backend,
-        tensor([[10], [20], [30], [40]]).transpose().contiguous(),
+        tensor([[10], [20], [30], [40]])
+          .transpose()
+          .contiguous(),
       );
       expectClose(out, [10, 20, 30, 40]);
     });

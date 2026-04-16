@@ -51,81 +51,81 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 
 ## Ops
 
-| Op                          | CPU | WASM | WebGPU |
-| --------------------------- | :-: | :--: | :----: |
-| Add                         | [x] | [x]  |  [x]   |
-| Sub                         | [x] | [x]  |  [x]   |
-| Mul                         | [x] | [x]  |  [x]   |
-| Div                         | [x] | [x]  |  [x]   |
-| MatMul (2D)                 | [x] | [x]  |  [x]   |
-| MatMul (rank ≥ 3, max 64)   | [ ] | [ ]  |  [ ]   |
-| Transpose                   | [x] | [x]  |  [x]   |
-| Relu                        | [x] | [x]  |  [x]   |
-| Neg                         | [x] | [x]  |  [x]   |
-| Exp                         | [x] | [x]  |  [x]   |
-| Log                         | [x] | [x]  |  [x]   |
-| Sqrt                        | [x] | [x]  |  [x]   |
-| Abs                         | [x] | [x]  |  [x]   |
-| Pow                         | [x] | [x]  |  [x]   |
-| Sigmoid                     | [x] | [x]  |  [x]   |
-| Tanh                        | [x] | [x]  |  [x]   |
-| Softmax                     | [ ] | [ ]  |  [ ]   |
-| Reshape                     | [x] | [x]  |  [x]   |
-| Slice                       | [x] | [x]  |  [x]   |
-| Concat                      | [ ] | [ ]  |  [ ]   |
-| Reduce (Sum / Mean)         | [ ] | [ ]  |  [ ]   |
+| Op                        | CPU | WASM | WebGPU |
+| ------------------------- | :-: | :--: | :----: |
+| Add                       | [x] | [x]  |  [x]   |
+| Sub                       | [x] | [x]  |  [x]   |
+| Mul                       | [x] | [x]  |  [x]   |
+| Div                       | [x] | [x]  |  [x]   |
+| MatMul (2D)               | [x] | [x]  |  [x]   |
+| MatMul (rank ≥ 3, max 64) | [ ] | [ ]  |  [ ]   |
+| Transpose                 | [x] | [x]  |  [x]   |
+| Relu                      | [x] | [x]  |  [x]   |
+| Neg                       | [x] | [x]  |  [x]   |
+| Exp                       | [x] | [x]  |  [x]   |
+| Log                       | [x] | [x]  |  [x]   |
+| Sqrt                      | [x] | [x]  |  [x]   |
+| Abs                       | [x] | [x]  |  [x]   |
+| Pow                       | [x] | [x]  |  [x]   |
+| Sigmoid                   | [x] | [x]  |  [x]   |
+| Tanh                      | [x] | [x]  |  [x]   |
+| Softmax                   | [ ] | [ ]  |  [ ]   |
+| Reshape                   | [x] | [x]  |  [x]   |
+| Slice                     | [x] | [x]  |  [x]   |
+| Concat                    | [ ] | [ ]  |  [ ]   |
+| Reduce (Sum / Mean)       | [ ] | [ ]  |  [ ]   |
 
 ## Autograd
 
-| Feature                            | Done |
-| ---------------------------------- | :--: |
-| Add backward                       | [x]  |
-| Mul backward                       | [x]  |
-| MatMul backward                    | [x]  |
-| Transpose backward                 | [x]  |
-| Relu backward — CPU + WASM         | [x]  |
-| Relu backward — WebGPU             | [x]  |
-| Sub backward                       | [x]  |
-| Div backward                       | [x]  |
-| Reduce backward                    | [ ]  |
-| Sigmoid / Tanh backward            | [x]  |
-| Softmax backward                   | [ ]  |
+| Feature                    | Done |
+| -------------------------- | :--: |
+| Add backward               | [x]  |
+| Mul backward               | [x]  |
+| MatMul backward            | [x]  |
+| Transpose backward         | [x]  |
+| Relu backward — CPU + WASM | [x]  |
+| Relu backward — WebGPU     | [x]  |
+| Sub backward               | [x]  |
+| Div backward               | [x]  |
+| Reduce backward            | [ ]  |
+| Sigmoid / Tanh backward    | [x]  |
+| Softmax backward           | [ ]  |
 
 ## Training
 
-| Feature                      | Done |
-| ---------------------------- | :--: |
-| Loss: MSE                    | [ ]  |
-| Loss: CrossEntropy           | [ ]  |
-| Optimizer: SGD               | [ ]  |
-| Optimizer: Adam              | [ ]  |
-| Training loop in `core`      | [ ]  |
+| Feature                 | Done |
+| ----------------------- | :--: |
+| Loss: MSE               | [ ]  |
+| Loss: CrossEntropy      | [ ]  |
+| Optimizer: SGD          | [ ]  |
+| Optimizer: Adam         | [ ]  |
+| Training loop in `core` | [ ]  |
 
 ## Dtypes
 
 A cell is checked when the dtype is fully supported on that backend: type system, `allocate()`, and kernels for all applicable ops.
 
-| Dtype     | CPU | WASM | WebGPU | Notes                                                  |
-| --------- | :-: | :--: | :----: | ------------------------------------------------------ |
-| `float32` | [x] | [x]  |  [x]   | Primary dtype — full kernel support                    |
-| `int32`   | [ ] | [ ]  |  [ ]   | Allocate + round-trip works; op kernels missing        |
-| `bool`    | [ ] | [ ]  |  [ ]   | Allocate + round-trip works; no op kernels             |
+| Dtype     | CPU | WASM | WebGPU | Notes                                           |
+| --------- | :-: | :--: | :----: | ----------------------------------------------- |
+| `float32` | [x] | [x]  |  [x]   | Primary dtype — full kernel support             |
+| `int32`   | [ ] | [ ]  |  [ ]   | Allocate + round-trip works; op kernels missing |
+| `bool`    | [ ] | [ ]  |  [ ]   | Allocate + round-trip works; no op kernels      |
 
 ## Infrastructure
 
-| Feature                                        | Done |
-| ---------------------------------------------- | :--: |
-| Strided tensor model (strides, offset, views)  | [x]  |
-| Broadcasting via stride-0                      | [x]  |
-| Cross-backend parity tests                     | [x]  |
-| Max rank = 64 (package-wide constraint)        | [ ]  |
-| Single async `evaluate()` (awaits all backends)| [x]  |
-| Device dispatch via `Engine.create(device)`    | [x]  |
-| DType infrastructure (TypedArray, utilities)   | [x]  |
+| Feature                                         | Done |
+| ----------------------------------------------- | :--: |
+| Strided tensor model (strides, offset, views)   | [x]  |
+| Broadcasting via stride-0                       | [x]  |
+| Cross-backend parity tests                      | [x]  |
+| Max rank = 64 (package-wide constraint)         | [ ]  |
+| Single async `evaluate()` (awaits all backends) | [x]  |
+| Device dispatch via `Engine.create(device)`     | [x]  |
+| DType infrastructure (TypedArray, utilities)    | [x]  |
 
 ## Packages
 
-| Package                                              | Done |
-| ---------------------------------------------------- | :--: |
-| `packages/onnx` — protobuf parser, op mapping to IR  | [ ]  |
-| `packages/devtools` — graph viz, training dashboard  | [ ]  |
+| Package                                             | Done |
+| --------------------------------------------------- | :--: |
+| `packages/onnx` — protobuf parser, op mapping to IR | [ ]  |
+| `packages/devtools` — graph viz, training dashboard | [ ]  |

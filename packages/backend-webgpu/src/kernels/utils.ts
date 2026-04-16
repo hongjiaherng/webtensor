@@ -1,9 +1,5 @@
 import { Node, computeContiguousStrides } from '@webtensor/ir';
-import {
-  RuntimeTensor,
-  getShapeSize,
-  broadcastStridesOf,
-} from '@webtensor/runtime';
+import { RuntimeTensor, getShapeSize, broadcastStridesOf } from '@webtensor/runtime';
 
 export { computeContiguousStrides, getShapeSize, broadcastStridesOf };
 
@@ -44,10 +40,7 @@ const META_BYTES = 80;
  * When `outShape` is provided, strides are broadcast-adjusted: any dimension
  * where the tensor has size 1 but the output has size > 1 gets stride 0.
  */
-export function packMeta(
-  tensor: RuntimeTensor,
-  outShape?: number[],
-): Uint32Array {
+export function packMeta(tensor: RuntimeTensor, outShape?: number[]): Uint32Array {
   const shape = (outShape ?? tensor.shape) as number[];
   const rank = shape.length;
   const strides = outShape

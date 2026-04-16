@@ -47,7 +47,9 @@ SLICE_BACKENDS.forEach(({ name, create }) => {
     it('slice → add (strided input to kernel)', async () => {
       const out = await runGraph(
         backend,
-        tensor([0, 1, 2, 3, 4, 5]).slice([2], [5]).add(tensor([10, 10, 10])),
+        tensor([0, 1, 2, 3, 4, 5])
+          .slice([2], [5])
+          .add(tensor([10, 10, 10])),
       );
       expectClose(out, [12, 13, 14]);
     });
