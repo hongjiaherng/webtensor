@@ -11,16 +11,6 @@ export function inferShape(arr: NestedArray<number>): number[] {
   return shape;
 }
 
-export function computeStrides(shape: number[]): number[] {
-  const strides = new Array(shape.length);
-  let stride = 1;
-  for (let i = shape.length - 1; i >= 0; i--) {
-    strides[i] = stride;
-    stride *= shape[i] || 1; // Handle null just in case, though shape shouldn't have nulls dynamically
-  }
-  return strides;
-}
-
 export function flattenArray(arr: NestedArray<number>): number[] {
   if (!Array.isArray(arr)) return [arr];
   const out: number[] = [];

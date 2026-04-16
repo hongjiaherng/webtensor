@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "paths": {
-      "@minitensor/*": ["./packages/*/src"]
+      "@webtensor/*": ["./packages/*/src"]
     },
     "strict": true,
     "esModuleInterop": true,

@@ -1,17 +1,13 @@
-import { Node } from '@minitensor/ir';
-import { Backend, RuntimeTensor } from '@minitensor/runtime';
+import { Node, DType } from '@webtensor/ir';
+import { Backend, RuntimeTensor, typedArrayCtor } from '@webtensor/runtime';
 import { getShapeSize, computeContiguousStrides } from './kernels/utils';
 import { cpuKernelRegistry } from './kernels/registry';
 
 export class CPUBackend implements Backend {
-  allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor {
-    if (dtype !== 'float32') {
-      throw new Error(
-        `CPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`,
-      );
-    }
+  allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
     const size = getShapeSize(shape);
-    const buffer = new Float32Array(size);
+    const Ctor = typedArrayCtor(dtype);
+    const buffer = new Ctor(size);
     return {
       storage: { buffer, byteLength: buffer.byteLength },
       shape,
@@ -22,11 +18,12 @@ export class CPUBackend implements Backend {
   }
 
   read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
-    return Promise.resolve(tensor.storage.buffer as Float32Array);
+    return Promise.resolve(tensor.storage.buffer as ArrayBufferView);
   }
 
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
-    (tensor.storage.buffer as Float32Array).set(data as Float32Array);
+    const buf = tensor.storage.buffer as { set(src: ArrayBufferView): void };
+    buf.set(data);
   }
 
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {

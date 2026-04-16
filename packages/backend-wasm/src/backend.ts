@@ -1,13 +1,18 @@
-import { Node } from '@minitensor/ir';
-import { Backend, RuntimeTensor } from '@minitensor/runtime';
+import { Node, DType } from '@webtensor/ir';
+import { Backend, RuntimeTensor, TypedArray, bytesPerElement, copyBuffer, typedArrayCtor } from '@webtensor/runtime';
 import { getShapeSize, computeContiguousStrides } from './kernels/utils';
-import { getF32View, isWasmTensorHandle, loadWasmModule, MinitensorWasmModule } from './module';
+import {
+  getTypedView,
+  isWasmTensorHandle,
+  loadWasmModule,
+  WebtensorWasmModule,
+} from './module';
 import { wasmKernelRegistry } from './kernels/registry';
 
 export class WASMBackend implements Backend {
-  private module: MinitensorWasmModule;
+  private module: WebtensorWasmModule;
 
-  private constructor(module: MinitensorWasmModule) {
+  private constructor(module: WebtensorWasmModule) {
     this.module = module;
   }
 
@@ -16,13 +21,13 @@ export class WASMBackend implements Backend {
     return new WASMBackend(module);
   }
 
-  allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor {
+  allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
     if (dtype !== 'float32') {
       throw new Error('WASMBackend currently supports float32 tensors only');
     }
     const size = getShapeSize(shape);
     const ptr = this.module.alloc_f32(size);
-    const byteLength = size * Float32Array.BYTES_PER_ELEMENT;
+    const byteLength = size * bytesPerElement(dtype);
     return {
       storage: {
         buffer: { ptr, elements: size, byteLength },
@@ -38,13 +43,20 @@ export class WASMBackend implements Backend {
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
     if (!isWasmTensorHandle(tensor.storage.buffer))
       throw new Error('WASMBackend: expected a WASM tensor handle');
-    getF32View(this.module, tensor.storage.buffer).set(data as Float32Array);
+    const view = getTypedView(this.module, tensor.storage.buffer, tensor.dtype);
+    copyBuffer(view, data);
   }
 
   read(tensor: RuntimeTensor): Promise<ArrayBufferView> {
     if (!isWasmTensorHandle(tensor.storage.buffer))
       throw new Error('WASMBackend: expected a WASM tensor handle');
-    return Promise.resolve(new Float32Array(getF32View(this.module, tensor.storage.buffer)));
+    const handle = tensor.storage.buffer;
+    // Copy out of WASM memory into a standalone JS TypedArray
+    const Ctor = typedArrayCtor(tensor.dtype);
+    const result = new Ctor(handle.elements);
+    const view = getTypedView(this.module, handle, tensor.dtype);
+    copyBuffer(result as TypedArray, view);
+    return Promise.resolve(result as ArrayBufferView);
   }
 
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {

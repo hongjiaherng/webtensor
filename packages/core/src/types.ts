@@ -1,7 +1,6 @@
-// minitensor/packages/core/src/types.ts
+// webtensor/packages/core/src/types.ts
 
-export type DType = 'float32' | 'int32' | 'bool';
-export type Device = 'cpu' | 'webgpu';
+export type Device = 'cpu' | 'wasm' | 'webgpu';
 
 export interface OpContext<T = any> {
   op: string; // "Add", "MatMul", etc.

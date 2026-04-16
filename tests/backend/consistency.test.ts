@@ -1,9 +1,9 @@
 import { describe, it, beforeAll } from 'vitest';
-import { tensor, compileGraph, add, sub, mul, div, matmul, relu } from '../../packages/core/src';
-import { Engine } from '../../packages/runtime/src';
-import { CPUBackend } from '../../packages/backend-cpu/src';
-import { WASMBackend } from '../../packages/backend-wasm/src';
-import { WebGPUBackend } from '../../packages/backend-webgpu/src';
+import { tensor, compileGraph, add, sub, mul, div, matmul, relu } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { CPUBackend } from '@webtensor/backend-cpu';
+import { WASMBackend } from '@webtensor/backend-wasm';
+import { WebGPUBackend } from '@webtensor/backend-webgpu';
 import { expectClose } from '../helpers';
 
 /**
@@ -34,7 +34,7 @@ async function collectResults(
     const graph = compileGraph([y]);
     const backend = await backends[name]();
     const engine = new Engine(backend);
-    engine.evaluate(graph);
+    await engine.evaluate(graph);
     const out = (await engine.get(y.id)) as Float32Array;
     results.set(name, out);
   }
@@ -67,12 +67,13 @@ describe('Consistency: Sub', () => {
   beforeAll(async () => {
     const r = await collectResults(
       () => sub(tensor([10, 20, 30]), tensor([1, 2, 3])),
-      ['CPU', 'WASM'],
+      ['CPU', 'WASM', 'WebGPU'],
     );
     r.forEach((v, k) => results.set(k, v));
   });
 
   it('WASM matches CPU', () => expectClose(results.get('WASM')!, [9, 18, 27]));
+  it('WebGPU matches CPU', () => expectClose(results.get('WebGPU')!, [9, 18, 27]));
 });
 
 // ---------------------------------------------------------------------------
@@ -100,12 +101,13 @@ describe('Consistency: Div', () => {
   beforeAll(async () => {
     const r = await collectResults(
       () => div(tensor([10, 6, 8]), tensor([2, 3, 4])),
-      ['CPU', 'WASM'],
+      ['CPU', 'WASM', 'WebGPU'],
     );
     r.forEach((v, k) => results.set(k, v));
   });
 
   it('WASM matches CPU', () => expectClose(results.get('WASM')!, [5, 2, 2]));
+  it('WebGPU matches CPU', () => expectClose(results.get('WebGPU')!, [5, 2, 2]));
 });
 
 // ---------------------------------------------------------------------------

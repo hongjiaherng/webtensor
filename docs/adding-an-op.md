@@ -43,27 +43,31 @@ The op string (`'Sigmoid'`) is what the kernel registries key on. It is already 
 
 **File:** `packages/backend-cpu/src/kernels/<category>/<OpName>.ts`
 
-Categories: `elementwise/`, `linear/`, `shape/`, `reduction/`.
+Categories: `binary/`, `unary/`, `linalg/`, `memory/`.
 
 ```ts
-// packages/backend-cpu/src/kernels/elementwise/sigmoid.ts
-import { CPUKernel } from '../utils';
-
-export function executeSigmoid(a: Float32Array, out: Float32Array): void {
-  for (let i = 0; i < out.length; i++) {
-    out[i] = 1 / (1 + Math.exp(-a[i]));
-  }
-}
+// packages/backend-cpu/src/kernels/unary/sigmoid.ts
+import { CPUKernel, stridedIdx, buf } from '../utils';
 
 export const sigmoidKernel: CPUKernel = (_node, inputs, outputs) => {
-  executeSigmoid(inputs[0].buffer as Float32Array, outputs[0].buffer as Float32Array);
+  const shape = inputs[0].shape as number[];
+  const strides = inputs[0].strides;
+  const offset = inputs[0].offset;
+  const inBuf = buf(inputs[0]);
+  const outBuf = buf(outputs[0]);
+  for (let i = 0; i < outBuf.length; i++) {
+    const x = inBuf[stridedIdx(shape, strides, offset, i)];
+    outBuf[i] = 1 / (1 + Math.exp(-x));
+  }
 };
 ```
+
+> **Note:** `buf(tensor)` returns the dtype-aware `TypedArray` (from `@webtensor/runtime`). Never cast `storage.buffer as Float32Array` directly — use `buf()` so kernels work with any dtype.
 
 **Register in `packages/backend-cpu/src/kernels/registry.ts`:**
 
 ```ts
-import { sigmoidKernel } from './elementwise/sigmoid';
+import { sigmoidKernel } from './unary/sigmoid';
 // ...
 ['Sigmoid', sigmoidKernel],
 ```
@@ -84,14 +88,20 @@ BACKENDS.filter((b) => b.name !== 'WebGPU').forEach(({ name, create }) => { ... 
 
 **Rust function** in `packages/backend-wasm/rust/src/ops/<category>/<opname>.rs`:
 
+Unary ops use a strided meta buffer (19 `u32` values) for arbitrary stride support:
+
 ```rust
+use crate::utils::strided_idx;
 use std::slice;
 
-pub unsafe fn sigmoid_raw(a_ptr: *const f32, out_ptr: *mut f32, len: usize) {
-    let a = slice::from_raw_parts(a_ptr, len);
-    let out = slice::from_raw_parts_mut(out_ptr, len);
-    for i in 0..len {
-        out[i] = 1.0 / (1.0 + (-a[i]).exp());
+pub unsafe fn sigmoid_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *const u32) {
+    let meta = slice::from_raw_parts(meta_ptr, 19);
+    let total = meta[0] as usize;
+    let a = slice::from_raw_parts(a_ptr, total);
+    let out = slice::from_raw_parts_mut(out_ptr, total);
+    for i in 0..total {
+        let idx = strided_idx(meta, i);
+        out[i] = 1.0 / (1.0 + (-a[idx]).exp());
     }
 }
 ```
@@ -100,26 +110,29 @@ Expose it via `wasm_bindgen` in `lib.rs`:
 
 ```rust
 #[wasm_bindgen]
-pub unsafe fn sigmoid_raw(a_ptr: *const f32, out_ptr: *mut f32, len: usize) {
-    ops::elementwise::sigmoid::sigmoid_raw(a_ptr, out_ptr, len);
+pub unsafe fn sigmoid_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *const u32) {
+    ops::unary::sigmoid::sigmoid_strided(a_ptr, out_ptr, meta_ptr);
 }
 ```
 
-**Extend `MinitensorWasmModule`** in `packages/backend-wasm/src/module.ts`:
+**Extend `WebtensorWasmModule`** in `packages/backend-wasm/src/module.ts`:
 
 ```ts
-readonly sigmoid_raw: (aPtr: number, outPtr: number, len: number) => void;
+readonly sigmoid_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
 ```
 
-**TypeScript kernel** in `packages/backend-wasm/src/kernels/<category>/sigmoid.ts`:
+**TypeScript kernel** in `packages/backend-wasm/src/kernels/unary/sigmoid.ts`:
 
 ```ts
-import { WASMKernel, handleOf } from '../utils';
+import { WASMKernel, handleOf, buildUnaryMetaData, allocMeta } from '../utils';
 
 export const sigmoidKernel: WASMKernel = (module, _node, inputs, outputs) => {
   const a = handleOf(inputs[0]);
   const out = handleOf(outputs[0]);
-  module.sigmoid_raw(a.ptr, out.ptr, out.elements);
+  const meta = buildUnaryMetaData(inputs);
+  const metaPtr = allocMeta(module, meta);
+  module.sigmoid_strided(a.ptr, out.ptr, metaPtr);
+  module.free_u32(metaPtr, meta.length);
 };
 ```
 

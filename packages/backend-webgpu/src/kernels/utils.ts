@@ -1,20 +1,11 @@
-import { Node } from '@minitensor/ir';
+import { Node, computeContiguousStrides } from '@webtensor/ir';
 import {
   RuntimeTensor,
-  computeContiguousStrides,
+  getShapeSize,
   broadcastStridesOf,
-} from '@minitensor/runtime';
+} from '@webtensor/runtime';
 
-export { computeContiguousStrides, broadcastStridesOf };
-
-export function getShapeSize(shape: (number | null)[]): number {
-  let size = 1;
-  for (const dim of shape) {
-    if (dim === null) throw new Error('Dynamic dimensions not yet supported in WebGPU backend');
-    size *= dim;
-  }
-  return size;
-}
+export { computeContiguousStrides, getShapeSize, broadcastStridesOf };
 
 // ---------------------------------------------------------------------------
 // TensorMeta uniform buffer

@@ -1,18 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { tensor, compileGraph } from '../../packages/core/src';
-import { Engine, Backend } from '../../packages/runtime/src';
-import { BACKENDS, expectClose } from '../helpers';
+import { tensor } from '@webtensor/core';
+import { Backend } from '@webtensor/runtime';
+import { BACKENDS, runGraph, expectClose } from '../helpers';
 
 const SLICE_BACKENDS = BACKENDS;
-
-async function run(backend: Backend, output: ReturnType<typeof tensor>): Promise<Float32Array> {
-  const graph = compileGraph([output]);
-  const engine = new Engine(backend);
-  engine.evaluate(graph);
-  const data = await engine.get(output.id);
-  if (!data) throw new Error(`engine.get(${output.id}) returned undefined`);
-  return data as Float32Array;
-}
 
 SLICE_BACKENDS.forEach(({ name, create }) => {
   describe(`Slice — ${name}`, () => {
@@ -22,12 +13,12 @@ SLICE_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[4] → slice([1],[3]) → contiguous', async () => {
-      const out = await run(backend, tensor([10, 20, 30, 40]).slice([1], [3]).contiguous());
+      const out = await runGraph(backend, tensor([10, 20, 30, 40]).slice([1], [3]).contiguous());
       expectClose(out, [20, 30]);
     });
 
     it('[2,4] → slice rows 0:2, cols 1:3 → contiguous', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([
           [1, 2, 3, 4],
@@ -40,7 +31,7 @@ SLICE_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[3,3] → slice row 1:3, col 0:2 → contiguous', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([
           [1, 2, 3],
@@ -54,7 +45,7 @@ SLICE_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('slice → add (strided input to kernel)', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([0, 1, 2, 3, 4, 5]).slice([2], [5]).add(tensor([10, 10, 10])),
       );
@@ -62,7 +53,7 @@ SLICE_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('slice → relu (mixed positive/negative)', async () => {
-      const out = await run(backend, tensor([-3, -2, -1, 0, 1, 2, 3]).slice([2], [6]).relu());
+      const out = await runGraph(backend, tensor([-3, -2, -1, 0, 1, 2, 3]).slice([2], [6]).relu());
       expectClose(out, [0, 0, 1, 2]);
     });
 

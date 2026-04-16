@@ -1,82 +1,45 @@
-import { Graph, Node } from '@minitensor/ir';
-import { Backend, RuntimeTensor, computeContiguousStrides } from './backend';
+import { Graph, Node, DType, computeContiguousStrides } from '@webtensor/ir';
+import { Backend, RuntimeTensor, isContiguous } from './backend';
+import { viewRegistry } from './views/registry';
+
+export type BackendFactory = () => Promise<Backend>;
+
+const backendRegistry = new Map<string, BackendFactory>();
+
+export function registerBackend(device: string, factory: BackendFactory): void {
+  backendRegistry.set(device, factory);
+}
 
 // ---------------------------------------------------------------------------
-// View op computation (pure metadata — no backend allocation or kernel needed)
+// View ops: Reshape and View are handled specially (not in the view registry)
+// because Reshape may auto-copy and View must verify contiguity.
 
-const VIEW_OPS = new Set(['Transpose', 'Reshape', 'Slice']);
-
-function computeView(node: Node, inputs: RuntimeTensor[]): RuntimeTensor {
-  const src = inputs[0];
-  switch (node.op) {
-    case 'Transpose': {
-      // Swap the last two axes of shape and strides.
-      const rank = src.shape.length;
-      const newShape = [...src.shape];
-      const newStrides = [...src.strides];
-      newShape[rank - 1] = src.shape[rank - 2];
-      newShape[rank - 2] = src.shape[rank - 1];
-      newStrides[rank - 1] = src.strides[rank - 2];
-      newStrides[rank - 2] = src.strides[rank - 1];
-      return {
-        storage: src.storage,
-        shape: newShape,
-        strides: newStrides,
-        offset: src.offset,
-        dtype: src.dtype,
-        isView: true,
-      };
-    }
-
-    case 'Reshape': {
-      const newShape = (node.attributes!.shape as number[]).slice();
-      // Total element count must be preserved. Only valid for contiguous tensors
-      // (non-contiguous tensors must be copied first with .contiguous()).
-      return {
-        storage: src.storage,
-        shape: newShape,
-        strides: computeContiguousStrides(newShape),
-        offset: src.offset,
-        dtype: src.dtype,
-        isView: true,
-      };
-    }
-
-    case 'Slice': {
-      const starts = node.attributes!.starts as number[];
-      const ends = node.attributes!.ends as number[];
-      const newShape = starts.map((s, i) => ends[i] - s);
-      const newOffset = src.offset + starts.reduce((acc, s, i) => acc + s * src.strides[i], 0);
-      return {
-        storage: src.storage,
-        shape: newShape,
-        strides: [...src.strides],
-        offset: newOffset,
-        dtype: src.dtype,
-        isView: true,
-      };
-    }
-
-    default:
-      throw new Error(`computeView: unknown view op '${node.op}'`);
-  }
-}
+const RESHAPE_OPS = new Set(['Reshape', 'View']);
 
 // ---------------------------------------------------------------------------
 
 export class Engine {
   private backend: Backend;
   private registry = new Map<string, RuntimeTensor>();
+  readonly device?: string;
 
   constructor(backend: Backend) {
     this.backend = backend;
+  }
+
+  static async create(device: string): Promise<Engine> {
+    const factory = backendRegistry.get(device);
+    if (!factory) throw new Error(`No backend registered for device '${device}'`);
+    const engine = new Engine(await factory());
+    (engine as { device: string }).device = device;
+    return engine;
   }
 
   set(
     name: string,
     data: ArrayBufferView,
     shape: (number | null)[],
-    dtype: 'float32' | 'int32' | 'bool' = 'float32',
+    dtype: DType = 'float32',
   ) {
     if (this.registry.has(name)) {
       this.backend.dispose(this.registry.get(name)!);
@@ -100,7 +63,7 @@ export class Engine {
     }
   }
 
-  evaluate(graph: Graph): void {
+  async evaluate(graph: Graph): Promise<void> {
     const topoNodes = this.topologicalSort(graph);
 
     const retained = new Set<string>([...graph.outputs, ...graph.inputs, ...graph.initializers]);
@@ -111,9 +74,6 @@ export class Engine {
       refCounts.set(key, consumers.length);
     }
 
-    // viewParents: view tensor id → source tensor id.
-    // When a view is freed (refcount 0), we propagate the decrement to the source
-    // so the source's storage is not freed until no view or other consumer needs it.
     const viewParents = new Map<string, string>();
 
     const decrementRef = (id: string) => {
@@ -121,7 +81,6 @@ export class Engine {
       refCounts.set(id, cnt);
       if (cnt === 0 && !retained.has(id)) {
         this.dispose(id);
-        // If this was a view, propagate to the source once the view is gone.
         const srcId = viewParents.get(id);
         if (srcId !== undefined) {
           viewParents.delete(id);
@@ -146,15 +105,71 @@ export class Engine {
         return t;
       });
 
-      // View ops: create a zero-copy RuntimeTensor view without allocating or executing.
-      // The source tensor's refcount is NOT decremented here; instead it is decremented
-      // transitively when the view itself is freed (via viewParents).
-      if (VIEW_OPS.has(node.op)) {
+      // View registry dispatch (zero-copy metadata ops)
+      const viewFn = viewRegistry.get(node.op);
+      if (viewFn) {
         const srcId = node.inputs[0];
         const viewId = node.outputs[0];
-        this.registry.set(viewId, computeView(node, inputs));
+        this.registry.set(viewId, viewFn(node, inputs[0]));
         viewParents.set(viewId, srcId);
-        // Do NOT decrement srcId's refcount — we'll do it when the view is freed.
+        continue;
+      }
+
+      // Reshape / View — special handling for contiguity
+      if (RESHAPE_OPS.has(node.op)) {
+        const src = inputs[0];
+        const srcId = node.inputs[0];
+        const outId = node.outputs[0];
+        const newShape = (node.attributes!.shape as number[]).slice();
+
+        if (node.op === 'View') {
+          // View is strict: throw if non-contiguous
+          if (!isContiguous(src.shape as number[], src.strides, src.offset)) {
+            throw new Error('view() requires a contiguous tensor; call .contiguous() first');
+          }
+          this.registry.set(outId, {
+            storage: src.storage,
+            shape: newShape,
+            strides: computeContiguousStrides(newShape),
+            offset: src.offset,
+            dtype: src.dtype,
+            isView: true,
+          });
+          viewParents.set(outId, srcId);
+          continue;
+        }
+
+        // Reshape: auto-copy if non-contiguous (PyTorch semantics)
+        if (isContiguous(src.shape as number[], src.strides, src.offset)) {
+          this.registry.set(outId, {
+            storage: src.storage,
+            shape: newShape,
+            strides: computeContiguousStrides(newShape),
+            offset: src.offset,
+            dtype: src.dtype,
+            isView: true,
+          });
+          viewParents.set(outId, srcId);
+        } else {
+          // Non-contiguous: execute a Contiguous copy then reshape
+          const contiguousTensor = this.backend.allocate(src.shape, src.dtype);
+          this.backend.execute(
+            { id: `${node.id}_auto_contig`, op: 'Contiguous', inputs: [], outputs: [], name: 'auto_contiguous' },
+            [src],
+            [contiguousTensor],
+          );
+          this.registry.set(outId, {
+            storage: contiguousTensor.storage,
+            shape: newShape,
+            strides: computeContiguousStrides(newShape),
+            offset: 0,
+            dtype: src.dtype,
+            isView: false,
+          });
+          for (const inId of node.inputs) {
+            decrementRef(inId);
+          }
+        }
         continue;
       }
 
@@ -167,7 +182,7 @@ export class Engine {
         outputs.push(t);
       }
 
-      this.backend.execute(node, inputs, outputs);
+      await this.backend.execute(node, inputs, outputs);
 
       for (const inId of node.inputs) {
         decrementRef(inId);

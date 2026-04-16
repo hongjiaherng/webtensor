@@ -1,5 +1,5 @@
 {
-  "name": "minitensor-workspace",
+  "name": "webtensor-workspace",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -21,15 +21,20 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.8",
     "vite-plugin-wasm": "^3.6.0",
-    "vitest": "^4.1.4",
-    "wasm-pack": "^0.14.0"
+    "vitest": "^4.1.4"
   },
   "scripts": {
+    "build": "bun run build:ir && bun run build:runtime && bun run build:core && bun run build:backends",
+    "build:ir": "bun run --cwd packages/ir build",
+    "build:runtime": "bun run --cwd packages/runtime build",
+    "build:core": "bun run --cwd packages/core build",
+    "build:backends": "bun run --cwd packages/backend-cpu build && bun run --cwd packages/backend-webgpu build && bun run --cwd packages/backend-wasm build",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "diagrams": "plantuml -tsvg docs/diagrams/*.puml"
   }
 }

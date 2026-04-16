@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { tensor, compileGraph, add, mul, matmul, relu } from '../../packages/core/src';
-import { Engine } from '../../packages/runtime/src';
-import { CPUBackend } from '../../packages/backend-cpu/src';
+import { tensor, compileGraph, add, mul, matmul, relu } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { CPUBackend } from '@webtensor/backend-cpu';
 import { expectClose } from '../helpers';
 
 // All integration tests run on CPU (simplest, synchronous, no setup)
@@ -9,7 +9,7 @@ import { expectClose } from '../helpers';
 async function run(y: ReturnType<typeof tensor>): Promise<Float32Array> {
   const graph = compileGraph([y]);
   const engine = new Engine(new CPUBackend());
-  engine.evaluate(graph);
+  await engine.evaluate(graph);
   return (await engine.get(y.id)) as Float32Array;
 }
 
@@ -34,7 +34,7 @@ describe('Graph: (a + b) * c', () => {
     expect(graph.nodes.length).toBe(5);
 
     const engine = new Engine(new CPUBackend());
-    engine.evaluate(graph);
+    await engine.evaluate(graph);
     const out = (await engine.get(y.id)) as Float32Array;
     expect(Array.from(out)).toEqual([80, 70]);
   });
@@ -60,7 +60,7 @@ describe('Graph: relu(matmul(x,W) + b)', () => {
     expect(graph.nodes.length).toBe(6);
 
     const engine = new Engine(new CPUBackend());
-    engine.evaluate(graph);
+    await engine.evaluate(graph);
     const out = (await engine.get(y.id)) as Float32Array;
     expectClose(out, [0.5, 0, 0.5, 0.5, 2.5, 0.5]);
   });
@@ -77,7 +77,7 @@ describe('Graph: two outputs from shared inputs', () => {
     expect(graph.outputs.length).toBe(2);
 
     const engine = new Engine(new CPUBackend());
-    engine.evaluate(graph);
+    await engine.evaluate(graph);
 
     const out1 = (await engine.get(y1.id)) as Float32Array;
     const out2 = (await engine.get(y2.id)) as Float32Array;
@@ -98,7 +98,7 @@ describe('Graph: diamond DAG (shared intermediate)', () => {
     expect(graph.nodes.length).toBe(4);
 
     const engine = new Engine(new CPUBackend());
-    engine.evaluate(graph);
+    await engine.evaluate(graph);
     const out = (await engine.get(y.id)) as Float32Array;
     expect(Array.from(out)).toEqual([25, 49, 81]);
   });

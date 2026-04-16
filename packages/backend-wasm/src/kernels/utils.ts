@@ -1,26 +1,17 @@
-import { Node } from '@minitensor/ir';
+import { Node, computeContiguousStrides } from '@webtensor/ir';
 import {
   RuntimeTensor,
-  computeContiguousStrides,
+  getShapeSize,
   stridedIdx,
   isContiguous,
   broadcastStridesOf,
-} from '@minitensor/runtime';
-import { MinitensorWasmModule, WasmTensorHandle, isWasmTensorHandle } from '../module';
+} from '@webtensor/runtime';
+import { WebtensorWasmModule, WasmTensorHandle, isWasmTensorHandle } from '../module';
 
-export { computeContiguousStrides, stridedIdx, isContiguous };
-
-export function getShapeSize(shape: (number | null)[]): number {
-  let size = 1;
-  for (const dim of shape) {
-    if (dim === null) throw new Error('Dynamic dimensions not yet supported in WASM backend');
-    size *= dim;
-  }
-  return size;
-}
+export { computeContiguousStrides, getShapeSize, stridedIdx, isContiguous };
 
 export type WASMKernel = (
-  module: MinitensorWasmModule,
+  module: WebtensorWasmModule,
   node: Node,
   inputs: RuntimeTensor[],
   outputs: RuntimeTensor[],
@@ -40,7 +31,7 @@ export function handleOf(tensor: RuntimeTensor): WasmTensorHandle {
  * Allocate a u32 meta block in WASM linear memory, fill it with `data`,
  * and return the pointer. The caller must call `module.free_u32(ptr, len)`.
  */
-export function allocMeta(module: MinitensorWasmModule, data: Uint32Array): number {
+export function allocMeta(module: WebtensorWasmModule, data: Uint32Array): number {
   const ptr = module.alloc_u32(data.length);
   new Uint32Array(module.memory.buffer, ptr, data.length).set(data);
   return ptr;
@@ -133,25 +124,5 @@ export function buildMatmulMetaData(inputs: RuntimeTensor[]): Uint32Array {
   data[6] = bStrides[bStrides.length - 1];
   data[7] = inputs[0].offset;
   data[8] = inputs[1].offset;
-  return data;
-}
-
-/**
- * Build a 5-u32 meta block for transpose.
- * Layout:
- *   [0]  M   [1]  N   [2]  row_stride   [3]  col_stride   [4]  offset
- */
-export function buildTransposeMetaData(inputs: RuntimeTensor[]): Uint32Array {
-  const shape = inputs[0].shape as number[];
-  const strides = inputs[0].strides;
-  const M = shape[shape.length - 2] ?? 1;
-  const N = shape[shape.length - 1];
-
-  const data = new Uint32Array(5);
-  data[0] = M;
-  data[1] = N;
-  data[2] = strides[strides.length - 2] ?? N;
-  data[3] = strides[strides.length - 1];
-  data[4] = inputs[0].offset;
   return data;
 }

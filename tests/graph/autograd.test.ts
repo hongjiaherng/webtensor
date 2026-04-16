@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { tensor, compileGraph, matmul } from '../../packages/core/src';
-import { Engine, Backend } from '../../packages/runtime/src';
-import { CPUBackend } from '../../packages/backend-cpu/src';
-import { WASMBackend } from '../../packages/backend-wasm/src';
-import { WebGPUBackend } from '../../packages/backend-webgpu/src';
+import { tensor, compileGraph, matmul } from '@webtensor/core';
+import { Engine, Backend } from '@webtensor/runtime';
+import { CPUBackend } from '@webtensor/backend-cpu';
+import { WASMBackend } from '@webtensor/backend-wasm';
+import { WebGPUBackend } from '@webtensor/backend-webgpu';
 
 const backends = [
   { name: 'CPU', create: async () => new CPUBackend() },
@@ -34,7 +34,7 @@ describe('Autograd Core Backpropagation', () => {
         // Evaluate Forward Pass!
         // Result = 2*4 + 3*5 = 23
         const engine = new Engine(backend);
-        engine.evaluate(compileGraph([y]));
+        await engine.evaluate(compileGraph([y]));
 
         const yOut = (await engine.get(y.id)) as Float32Array;
         expect(yOut[0]).toBe(23.0);
@@ -42,7 +42,7 @@ describe('Autograd Core Backpropagation', () => {
         // Evaluate Backward Pass dynamically tracing chain rule
         y.backward();
 
-        engine.evaluate(compileGraph([a.grad!, b.grad!]));
+        await engine.evaluate(compileGraph([a.grad!, b.grad!]));
 
         const gradA = (await engine.get(a.grad!.id)) as Float32Array;
         expect(gradA).toBeDefined();

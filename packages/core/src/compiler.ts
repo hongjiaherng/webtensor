@@ -1,5 +1,5 @@
 import { Tensor } from './tensor';
-import { Graph, Node, Value } from '@minitensor/ir';
+import { Graph, Node, Value } from '@webtensor/ir';
 
 /**
  * Compiles a set of output tensors into a pure IR Graph by tracing the

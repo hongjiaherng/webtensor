@@ -1,16 +1,7 @@
 import { describe, it, beforeAll } from 'vitest';
-import { tensor, compileGraph } from '../../packages/core/src';
-import { Engine, Backend } from '../../packages/runtime/src';
-import { BACKENDS, expectClose } from '../helpers';
-
-async function run(backend: Backend, output: ReturnType<typeof tensor>): Promise<Float32Array> {
-  const graph = compileGraph([output]);
-  const engine = new Engine(backend);
-  engine.evaluate(graph);
-  const data = await engine.get(output.id);
-  if (!data) throw new Error(`engine.get(${output.id}) returned undefined`);
-  return data as Float32Array;
-}
+import { tensor } from '@webtensor/core';
+import { Backend } from '@webtensor/runtime';
+import { BACKENDS, runGraph, expectClose } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
   describe(`Reshape — ${name}`, () => {
@@ -20,12 +11,12 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[6] → reshape([2,3]) → contiguous', async () => {
-      const out = await run(backend, tensor([1, 2, 3, 4, 5, 6]).reshape([2, 3]).contiguous());
+      const out = await runGraph(backend, tensor([1, 2, 3, 4, 5, 6]).reshape([2, 3]).contiguous());
       expectClose(out, [1, 2, 3, 4, 5, 6]);
     });
 
     it('[2,3] → reshape([3,2]) → contiguous', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([
           [1, 2, 3],
@@ -38,7 +29,7 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[2,3] → reshape([6]) → add [6]', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([
           [1, 2, 3],
@@ -51,7 +42,7 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[2,2,2] → reshape([4,2]) → contiguous', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([
           [
@@ -70,7 +61,7 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[4,2] → reshape([2,4]) → matmul([4,1]) → [2,1]', async () => {
-      const out = await run(
+      const out = await runGraph(
         backend,
         tensor([
           [1, 2],

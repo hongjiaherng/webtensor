@@ -30,7 +30,7 @@ class CPUBackend {
 }
 
 class WASMBackend {
-  - module: MinitensorWasmModule
+  - module: WebtensorWasmModule
   - registry: Map<string, WASMKernel>
   --
   Tensor memory in WASM heap (pointer handles).

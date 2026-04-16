@@ -1,12 +1,12 @@
-import { CPUKernel, broadcastStridesOf, stridedIdx } from '../utils';
+import { CPUKernel, broadcastStridesOf, stridedIdx, buf } from '../utils';
 
 export const subKernel: CPUKernel = (_node, inputs, outputs) => {
   const aShape = inputs[0].shape as number[];
   const bShape = inputs[1].shape as number[];
   const outShape = outputs[0].shape as number[];
-  const aBuf = inputs[0].storage.buffer as Float32Array;
-  const bBuf = inputs[1].storage.buffer as Float32Array;
-  const outBuf = outputs[0].storage.buffer as Float32Array;
+  const aBuf = buf(inputs[0]);
+  const bBuf = buf(inputs[1]);
+  const outBuf = buf(outputs[0]);
   const total = outBuf.length;
 
   const aBcast = broadcastStridesOf(outShape, aShape, inputs[0].strides);

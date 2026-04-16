@@ -1,15 +1,31 @@
 {
-  "name": "@minitensor/backend-wasm",
+  "name": "@webtensor/backend-wasm",
   "version": "0.1.0",
-  "description": "WASM backend for minitensor using wasm-bindgen",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "description": "WASM backend for webtensor using wasm-bindgen",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "pkg/webtensor_wasm.js",
+    "pkg/webtensor_wasm.d.ts",
+    "pkg/webtensor_wasm_bg.js",
+    "pkg/webtensor_wasm_bg.wasm",
+    "pkg/webtensor_wasm_bg.wasm.d.ts"
+  ],
   "scripts": {
-    "build:wasm": "bunx wasm-pack build rust --target web --out-dir ../pkg",
-    "build": "bun run build:wasm"
+    "build:wasm": "wasm-pack build rust --target bundler --out-dir ../pkg",
+    "build:ts": "tsc",
+    "build": "bun run build:wasm && bun run build:ts"
   },
   "dependencies": {
-    "@minitensor/core": "workspace:*",
-    "@minitensor/runtime": "workspace:*"
+    "@webtensor/ir": "workspace:*",
+    "@webtensor/runtime": "workspace:*"
   }
 }

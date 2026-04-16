@@ -1,3 +1,5 @@
+export type DType = 'float32' | 'int32' | 'bool';
+
 export type AttributeValue =
   | number
   | string
@@ -19,7 +21,7 @@ export interface Node {
 export interface Value {
   name: string;
   shape: (number | null)[];
-  dtype: 'float32' | 'int32' | 'bool';
+  dtype: DType;
   data?: ArrayBuffer; // only for weights/constants
   producer?: string; // Node ID
   consumers?: string[]; // Node IDs

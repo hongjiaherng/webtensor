@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { relu } from '../../packages/core/src';
-import { Backend } from '../../packages/runtime/src';
+import { relu } from '@webtensor/core';
+import { Backend } from '@webtensor/runtime';
 import { BACKENDS, runUnary, expectClose } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {

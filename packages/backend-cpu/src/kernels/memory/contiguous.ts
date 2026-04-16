@@ -1,9 +1,9 @@
-import { CPUKernel, getShapeSize, stridedIdx } from '../utils';
+import { CPUKernel, getShapeSize, stridedIdx, buf } from '../utils';
 
 export const contiguousKernel: CPUKernel = (_node, inputs, outputs) => {
   const src = inputs[0];
-  const srcBuf = src.storage.buffer as Float32Array;
-  const dstBuf = outputs[0].storage.buffer as Float32Array;
+  const srcBuf = buf(src);
+  const dstBuf = buf(outputs[0]);
   const shape = src.shape as number[];
   const total = getShapeSize(shape);
   for (let i = 0; i < total; i++) {

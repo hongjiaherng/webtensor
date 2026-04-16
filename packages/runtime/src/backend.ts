@@ -1,4 +1,4 @@
-import { Node } from '@minitensor/ir';
+import { Node, DType } from '@webtensor/ir';
 
 /**
  * Physical memory backing a tensor. Each backend stores its native handle here:
@@ -27,7 +27,7 @@ export interface RuntimeTensor {
   shape: (number | null)[];
   strides: number[];
   offset: number; // element offset into storage (0 for contiguous tensors)
-  dtype: 'float32' | 'int32' | 'bool';
+  dtype: DType;
   /**
    * True when this tensor is a zero-copy view of another tensor's storage.
    * The engine tracks the source tensor separately and ensures the source outlives
@@ -42,20 +42,14 @@ export interface RuntimeTensor {
 // from a single source of truth. Backends must not redefine these.
 
 /**
- * Compute C-order (row-major) strides for the given concrete shape.
- * The innermost dimension has stride 1; each outer dimension has stride equal
- * to the product of all inner dimensions.
- *
- * Example: shape [2, 3, 4] → strides [12, 4, 1]
+ * Compute the total number of elements in a shape.
  */
-export function computeContiguousStrides(shape: number[]): number[] {
-  const strides = new Array<number>(shape.length);
-  let stride = 1;
-  for (let i = shape.length - 1; i >= 0; i--) {
-    strides[i] = stride;
-    stride *= shape[i];
+export function getShapeSize(shape: (number | null)[]): number {
+  let size = 1;
+  for (const dim of shape) {
+    size *= dim ?? 1;
   }
-  return strides;
+  return size;
 }
 
 /**
@@ -120,9 +114,9 @@ export function isContiguous(shape: number[], strides: number[], offset: number)
 // ---------------------------------------------------------------------------
 
 export interface Backend {
-  allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor;
+  allocate(shape: (number | null)[], dtype: DType): RuntimeTensor;
   read(tensor: RuntimeTensor): Promise<ArrayBufferView>;
   write(tensor: RuntimeTensor, data: ArrayBufferView): void;
-  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void;
+  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void | Promise<void>;
   dispose(tensor: RuntimeTensor): void;
 }

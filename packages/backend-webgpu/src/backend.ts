@@ -1,5 +1,5 @@
-import { Node } from '@minitensor/ir';
-import { Backend, RuntimeTensor } from '@minitensor/runtime';
+import { Node, DType } from '@webtensor/ir';
+import { Backend, RuntimeTensor, bytesPerElement, typedArrayCtor } from '@webtensor/runtime';
 import { getShapeSize, computeContiguousStrides } from './kernels/utils';
 import { webgpuKernelRegistry, WebGPUKernel } from './kernels/registry';
 
@@ -23,14 +23,14 @@ export class WebGPUBackend implements Backend {
     return new WebGPUBackend(device);
   }
 
-  allocate(shape: (number | null)[], dtype: 'float32' | 'int32' | 'bool'): RuntimeTensor {
+  allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
     if (dtype !== 'float32') {
       throw new Error(
         `WebGPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`,
       );
     }
     const size = getShapeSize(shape);
-    const byteSize = size * 4;
+    const byteSize = size * bytesPerElement(dtype);
 
     const gpuBuffer = this.device.createBuffer({
       size: byteSize,
@@ -62,7 +62,9 @@ export class WebGPUBackend implements Backend {
     const arrayBuffer = stagingBuffer.getMappedRange();
 
     const size = getShapeSize(tensor.shape);
-    const view = new Float32Array(arrayBuffer.slice(0, size * 4));
+    const bpe = bytesPerElement(tensor.dtype);
+    const Ctor = typedArrayCtor(tensor.dtype);
+    const view = new Ctor(arrayBuffer.slice(0, size * bpe));
 
     stagingBuffer.unmap();
     stagingBuffer.destroy();

@@ -1,21 +1,18 @@
-import { Node } from '@minitensor/ir';
+import { Node, computeContiguousStrides } from '@webtensor/ir';
 import {
   RuntimeTensor,
-  computeContiguousStrides,
+  TypedArray,
+  getShapeSize,
   stridedIdx,
   broadcastStridesOf,
   isContiguous,
-} from '@minitensor/runtime';
+} from '@webtensor/runtime';
 
-export { computeContiguousStrides, stridedIdx, broadcastStridesOf, isContiguous };
+export { computeContiguousStrides, getShapeSize, stridedIdx, broadcastStridesOf, isContiguous };
 
-export function getShapeSize(shape: (number | null)[]): number {
-  let size = 1;
-  for (const dim of shape) {
-    if (dim === null) throw new Error('Dynamic dimensions not yet supported in CPU backend');
-    size *= dim;
-  }
-  return size;
+/** Extract the typed buffer from a RuntimeTensor. */
+export function buf(tensor: RuntimeTensor): TypedArray {
+  return tensor.storage.buffer as TypedArray;
 }
 
 export type CPUKernel = (node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]) => void;

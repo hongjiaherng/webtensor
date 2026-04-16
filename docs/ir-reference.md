@@ -30,7 +30,7 @@ interface Value {
   name: string;
 
   shape: (number | null)[]; // null = dynamic dimension
-  dtype: 'float32' | 'int32' | 'bool';
+  dtype: DType; // 'float32' | 'int32' | 'bool'
 
   data?: ArrayBuffer; // only for weights/constants (initializers)
 
@@ -80,18 +80,19 @@ interface Graph {
 
 ## Dtype System
 
-Every `Value` and `RuntimeTensor` carries a `dtype`:
+`DType` is defined once in `packages/ir/src/types.ts` and re-exported by all packages. Every `Value` and `RuntimeTensor` carries a `dtype`:
 
-| Dtype     | Use case                                                       |
-| --------- | -------------------------------------------------------------- |
-| `float32` | Primary training and inference dtype                           |
-| `float16` | Half-precision; halves memory, required for WebGPU performance |
-| `int32`   | Integer arithmetic, loop indices                               |
-| `int64`   | Large indices (Gather, Scatter, embedding lookups)             |
-| `int8`    | Quantized inference                                            |
-| `bool`    | Masks, logical ops                                             |
+```ts
+type DType = 'float32' | 'int32' | 'bool';
+```
 
-Max rank across all dtypes is 64, matching PyTorch's `MAX_TENSORIMPL_DIMS`.
+| Dtype     | JS backing type    | Use case                                | Kernel support |
+| --------- | ------------------ | --------------------------------------- | -------------- |
+| `float32` | `Float32Array`     | Primary training and inference dtype    | All backends   |
+| `int32`   | `Int32Array`       | Integer arithmetic, loop indices        | Allocation only|
+| `bool`    | `Uint8Array`       | Masks, logical ops                      | Allocation only|
+
+All dtypes flow through the type system, `allocate()`, `read()`, and `write()`. Op kernels currently only support `float32` — other dtypes will throw at `execute()` time until per-dtype kernels are added.
 
 ---
 

@@ -26,17 +26,17 @@ struct TensorMeta {
 @group(0) @binding(0) var<storage, read>       a:      array<f32>;
 @group(0) @binding(1) var<storage, read>       b:      array<f32>;
 @group(0) @binding(2) var<storage, read_write> out:    array<f32>;
-@group(0) @binding(3) var<uniform>             meta_a: TensorMeta;
-@group(0) @binding(4) var<uniform>             meta_b: TensorMeta;
+@group(0) @binding(3) var<uniform>             u_meta_a: TensorMeta;
+@group(0) @binding(4) var<uniform>             u_meta_b: TensorMeta;
 
 fn strided_idx_a(flat: u32) -> u32 {
-  let rank = meta_a.rank;
+  let rank = u_meta_a.rank;
   var rem = flat;
-  var idx = meta_a.offset;
+  var idx = u_meta_a.offset;
   for (var d = rank; d > 0u; d--) {
     let ax  = d - 1u;
-    let dim = meta_a.shape[ax / 4u][ax % 4u];
-    let s   = meta_a.strides[ax / 4u][ax % 4u];
+    let dim = u_meta_a.shape[ax / 4u][ax % 4u];
+    let s   = u_meta_a.strides[ax / 4u][ax % 4u];
     idx += (rem % dim) * s;
     rem  /= dim;
   }
@@ -44,13 +44,13 @@ fn strided_idx_a(flat: u32) -> u32 {
 }
 
 fn strided_idx_b(flat: u32) -> u32 {
-  let rank = meta_b.rank;
+  let rank = u_meta_b.rank;
   var rem = flat;
-  var idx = meta_b.offset;
+  var idx = u_meta_b.offset;
   for (var d = rank; d > 0u; d--) {
     let ax  = d - 1u;
-    let dim = meta_b.shape[ax / 4u][ax % 4u];
-    let s   = meta_b.strides[ax / 4u][ax % 4u];
+    let dim = u_meta_b.shape[ax / 4u][ax % 4u];
+    let s   = u_meta_b.strides[ax / 4u][ax % 4u];
     idx += (rem % dim) * s;
     rem  /= dim;
   }

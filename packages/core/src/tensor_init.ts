@@ -1,5 +1,6 @@
 import { Tensor } from './tensor';
-import { DType, Device, NestedArray } from './types';
+import { DType } from '@webtensor/ir';
+import { Device, NestedArray } from './types';
 import { inferShape, flattenArray } from './shape';
 
 export interface InitOptions {
@@ -26,7 +27,7 @@ export function tensor(data: NestedArray<number>, options?: InitOptions): Tensor
 
   return new Tensor({
     shape,
-    dtype: options?.dtype,
+    dtype,
     device: options?.device,
     requiresGrad: options?.requiresGrad,
     ctx: {
@@ -42,7 +43,7 @@ export function tensor(data: NestedArray<number>, options?: InitOptions): Tensor
 export function zeros(shape: (number | null)[], options?: InitOptions): Tensor {
   return new Tensor({
     shape,
-    dtype: options?.dtype,
+    dtype: options?.dtype ?? 'float32',
     device: options?.device,
     requiresGrad: options?.requiresGrad,
     ctx: {
@@ -55,7 +56,7 @@ export function zeros(shape: (number | null)[], options?: InitOptions): Tensor {
 export function ones(shape: (number | null)[], options?: InitOptions): Tensor {
   return new Tensor({
     shape,
-    dtype: options?.dtype,
+    dtype: options?.dtype ?? 'float32',
     device: options?.device,
     requiresGrad: options?.requiresGrad,
     ctx: {

@@ -21,26 +21,26 @@ struct TensorMeta {
 @group(0) @binding(0) var<storage, read>       a:      array<f32>;
 @group(0) @binding(1) var<storage, read>       b:      array<f32>;
 @group(0) @binding(2) var<storage, read_write> out:    array<f32>;
-@group(0) @binding(3) var<uniform>             meta_a: TensorMeta;
-@group(0) @binding(4) var<uniform>             meta_b: TensorMeta;
+@group(0) @binding(3) var<uniform>             u_meta_a: TensorMeta;
+@group(0) @binding(4) var<uniform>             u_meta_b: TensorMeta;
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let row = gid.x;
   let col = gid.y;
 
-  let M = meta_a.shape[0u][0u];   // A rows
-  let K = meta_a.shape[0u][1u];   // A cols = B rows
-  let N = meta_b.shape[0u][1u];   // B cols
+  let M = u_meta_a.shape[0u][0u];   // A rows
+  let K = u_meta_a.shape[0u][1u];   // A cols = B rows
+  let N = u_meta_b.shape[0u][1u];   // B cols
 
   if (row >= M || col >= N) { return; }
 
-  let a_row_stride = meta_a.strides[0u][0u];
-  let a_col_stride = meta_a.strides[0u][1u];
-  let b_row_stride = meta_b.strides[0u][0u];
-  let b_col_stride = meta_b.strides[0u][1u];
-  let a_off        = meta_a.offset;
-  let b_off        = meta_b.offset;
+  let a_row_stride = u_meta_a.strides[0u][0u];
+  let a_col_stride = u_meta_a.strides[0u][1u];
+  let b_row_stride = u_meta_b.strides[0u][0u];
+  let b_col_stride = u_meta_b.strides[0u][1u];
+  let a_off        = u_meta_a.offset;
+  let b_off        = u_meta_b.offset;
 
   var sum = 0.0f;
   for (var k = 0u; k < K; k++) {

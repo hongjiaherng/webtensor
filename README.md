@@ -1,4 +1,4 @@
-# minitensor
+# webtensor
 
 A tensor library that runs entirely in the browser. Train, visualize, and run inference with WebGPU acceleration as a TypeScript library.
 
@@ -47,9 +47,30 @@ Tests use [Vitest](https://vitest.dev/). Browser/WebGPU tests run via Playwright
 
 ---
 
+## What's Implemented
+
+All ops run on CPU, WASM (Rust), and WebGPU with cross-backend parity tests.
+
+| Category | Ops |
+| --- | --- |
+| Binary | add, sub, mul, div |
+| Linalg | matmul (2D) |
+| Unary math | neg, exp, log, sqrt, abs, pow |
+| Activations | relu, sigmoid, tanh |
+| View (zero-copy) | transpose, reshape, view, slice, unsqueeze, squeeze, permute, expand, flatten |
+| Memory | contiguous, clone, detach |
+
+**Autograd:** backward through add, sub, mul, div, matmul, transpose, relu, sigmoid, tanh, reshape, contiguous, neg, exp, log, sqrt, abs, pow.
+
+**Dtype system:** `float32 | int32 | bool` — all three can be allocated and round-tripped across all backends. Op kernels currently run on `float32` only.
+
+**Not yet implemented:** softmax, concat, reduce (sum/mean), batched matmul (rank >= 3), loss functions, optimizers, training loop.
+
+---
+
 ## Docs
 
 - [docs/next.md](docs/next.md) — implementation roadmap and checklist
 - [docs/architecture.md](docs/architecture.md) — diagrams, design decisions, backend contract
-- [docs/ir-reference.md](docs/ir-reference.md) — IR schema: Node/Value/Graph types, shape system
+- [docs/ir-reference.md](docs/ir-reference.md) — IR schema: Node/Value/Graph types, shape system, dtype reference
 - [docs/adding-an-op.md](docs/adding-an-op.md) — how to add a kernel across all three backends

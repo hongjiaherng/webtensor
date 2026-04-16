@@ -1,4 +1,4 @@
-import { stridedIdx } from '@minitensor/runtime';
+import { stridedIdx } from '@webtensor/runtime';
 import { WASMKernel, handleOf, getShapeSize } from '../utils';
 import { getF32View } from '../../module';
 

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
-import { tensor, compileGraph, mul } from '../../packages/core/src';
-import { Engine, Backend } from '../../packages/runtime/src';
-import { CPUBackend } from '../../packages/backend-cpu/src';
-import { WebGPUBackend } from '../../packages/backend-webgpu/src';
-import { WASMBackend } from '../../packages/backend-wasm/src';
+import { tensor, compileGraph, mul } from '@webtensor/core';
+import { Engine, Backend } from '@webtensor/runtime';
+import { CPUBackend } from '@webtensor/backend-cpu';
+import { WebGPUBackend } from '@webtensor/backend-webgpu';
+import { WASMBackend } from '@webtensor/backend-wasm';
 
 const backends = [
   { name: 'CPU', create: async () => new CPUBackend() },
@@ -41,7 +41,7 @@ describe('JIT Garbage Collection & Memory Sweeps', () => {
         const disposeSpy = vi.spyOn(backend, 'dispose');
 
         const engine = new Engine(backend);
-        engine.evaluate(graph);
+        await engine.evaluate(graph);
 
         // Assert the mathematical execution correctly resolved despite cleanup
         const out = (await engine.get(t2.id)) as Float32Array;

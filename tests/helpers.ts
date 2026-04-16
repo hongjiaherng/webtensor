@@ -1,11 +1,11 @@
 import { expect } from 'vitest';
-import { tensor, compileGraph } from '../packages/core/src';
-import type { Tensor } from '../packages/core/src';
-import type { NestedArray } from '../packages/core/src';
-import { Engine, Backend } from '../packages/runtime/src';
-import { CPUBackend } from '../packages/backend-cpu/src';
-import { WASMBackend } from '../packages/backend-wasm/src';
-import { WebGPUBackend } from '../packages/backend-webgpu/src';
+import { tensor, compileGraph } from '@webtensor/core';
+import type { Tensor } from '@webtensor/core';
+import type { NestedArray } from '@webtensor/core';
+import { Engine, Backend, TypedArray } from '@webtensor/runtime';
+import { CPUBackend } from '@webtensor/backend-cpu';
+import { WASMBackend } from '@webtensor/backend-wasm';
+import { WebGPUBackend } from '@webtensor/backend-webgpu';
 
 export const BACKENDS = [
   { name: 'CPU', create: async () => new CPUBackend() as Backend },
@@ -13,20 +13,20 @@ export const BACKENDS = [
   { name: 'WebGPU', create: async () => (await WebGPUBackend.create()) as Backend },
 ];
 
-async function runGraph(backend: Backend, y: Tensor): Promise<Float32Array> {
+export async function runGraph(backend: Backend, y: Tensor): Promise<TypedArray> {
   const graph = compileGraph([y]);
   const engine = new Engine(backend);
-  engine.evaluate(graph);
+  await engine.evaluate(graph);
   const out = await engine.get(y.id);
   if (!out) throw new Error(`engine.get(${y.id}) returned undefined`);
-  return out as Float32Array;
+  return out as TypedArray;
 }
 
 export async function runUnary(
   backend: Backend,
   opFn: (a: Tensor) => Tensor,
   data: NestedArray<number>,
-): Promise<Float32Array> {
+): Promise<TypedArray> {
   const a = tensor(data);
   return runGraph(backend, opFn(a));
 }
@@ -36,13 +36,13 @@ export async function runBinary(
   opFn: (a: Tensor, b: Tensor) => Tensor,
   dataA: NestedArray<number>,
   dataB: NestedArray<number>,
-): Promise<Float32Array> {
+): Promise<TypedArray> {
   const a = tensor(dataA);
   const b = tensor(dataB);
   return runGraph(backend, opFn(a, b));
 }
 
-export function expectClose(actual: Float32Array, expected: number[], tol = 1e-5): void {
+export function expectClose(actual: TypedArray, expected: number[], tol = 1e-5): void {
   expect(actual.length).toBe(expected.length);
   for (let i = 0; i < expected.length; i++) {
     expect(Math.abs(actual[i] - expected[i])).toBeLessThan(tol);

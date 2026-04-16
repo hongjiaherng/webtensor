@@ -1,4 +1,4 @@
-import { CPUKernel } from '../utils';
+import { CPUKernel, buf } from '../utils';
 
 export const matmulKernel: CPUKernel = (_node, inputs, outputs) => {
   const shapeA = inputs[0].shape as number[];
@@ -17,9 +17,9 @@ export const matmulKernel: CPUKernel = (_node, inputs, outputs) => {
   const bRowStride = bStrides[bStrides.length - 2] ?? N;
   const bColStride = bStrides[bStrides.length - 1];
 
-  const aBuf = inputs[0].storage.buffer as Float32Array;
-  const bBuf = inputs[1].storage.buffer as Float32Array;
-  const outBuf = outputs[0].storage.buffer as Float32Array;
+  const aBuf = buf(inputs[0]);
+  const bBuf = buf(inputs[1]);
+  const outBuf = buf(outputs[0]);
 
   for (let row = 0; row < M; row++) {
     for (let col = 0; col < N; col++) {

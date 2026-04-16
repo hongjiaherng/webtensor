@@ -1,6 +1,13 @@
-import { DType, Device, OpContext } from './types';
-import { add, sub, mul, div, matmul, transpose, relu, reshape, slice, contiguous } from './ops';
-import { computeStrides, shapeSize } from './shape';
+import { DType } from '@webtensor/ir';
+import { Device, OpContext } from './types';
+import {
+  add, sub, mul, div, matmul, transpose, relu, reshape, slice, contiguous,
+  view, unsqueeze, squeeze, permute, flatten, expand,
+  neg, exp, log, sqrt, abs, pow, sigmoid, tanh,
+  clone, detach,
+} from './ops';
+import { computeContiguousStrides } from '@webtensor/ir';
+import { shapeSize } from './shape';
 
 let tensorIdCounter = 0;
 
@@ -31,7 +38,7 @@ export class Tensor {
     this.shape = options.shape;
 
     const concreteShape = this.shape.map((s) => s ?? 1) as number[];
-    this.strides = options.strides ?? computeStrides(concreteShape);
+    this.strides = options.strides ?? computeContiguousStrides(concreteShape);
     this.size = shapeSize(concreteShape) ?? 0;
 
     this.dtype = options.dtype ?? 'float32';
@@ -101,6 +108,30 @@ export class Tensor {
     }
   }
 
+  // --- Accessor Methods (PyTorch API parity) ---
+
+  dim(): number {
+    return this.shape.length;
+  }
+
+  numel(): number {
+    return this.size;
+  }
+
+  isContiguous(): boolean {
+    const concreteShape = this.shape.map((s) => s ?? 1) as number[];
+    const expected = computeContiguousStrides(concreteShape);
+    if (this.strides.length !== expected.length) return false;
+    for (let i = 0; i < expected.length; i++) {
+      if (this.strides[i] !== expected[i]) return false;
+    }
+    return true;
+  }
+
+  stride(): number[] {
+    return this.strides;
+  }
+
   // --- Convenience Methods to enable method chaining ---
 
   add(other: Tensor): Tensor {
@@ -132,5 +163,53 @@ export class Tensor {
   }
   contiguous(): Tensor {
     return contiguous(this);
+  }
+  view(shape: number[]): Tensor {
+    return view(this, shape);
+  }
+  unsqueeze(dim: number): Tensor {
+    return unsqueeze(this, dim);
+  }
+  squeeze(dim?: number): Tensor {
+    return squeeze(this, dim);
+  }
+  permute(axes: number[]): Tensor {
+    return permute(this, axes);
+  }
+  flatten(startDim: number = 0, endDim: number = -1): Tensor {
+    return flatten(this, startDim, endDim);
+  }
+  expand(shape: number[]): Tensor {
+    return expand(this, shape);
+  }
+  neg(): Tensor {
+    return neg(this);
+  }
+  exp(): Tensor {
+    return exp(this);
+  }
+  log(): Tensor {
+    return log(this);
+  }
+  sqrt(): Tensor {
+    return sqrt(this);
+  }
+  abs(): Tensor {
+    return abs(this);
+  }
+  pow(exponent: number): Tensor {
+    return pow(this, exponent);
+  }
+  sigmoid(): Tensor {
+    return sigmoid(this);
+  }
+  tanh(): Tensor {
+    return tanh(this);
+  }
+  clone(): Tensor {
+    return clone(this);
+  }
+  detach(): Tensor {
+    return detach(this);
   }
 }
