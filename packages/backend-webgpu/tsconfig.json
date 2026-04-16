@@ -4,6 +4,7 @@
     "rootDir": "src",
     "outDir": "./dist",
     "paths": {},
+    "typeRoots": ["../../node_modules"],
     "types": ["@webgpu/types"]
   },
   "include": ["src/**/*"]
