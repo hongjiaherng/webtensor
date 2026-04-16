@@ -24,17 +24,14 @@
     "vitest": "^4.1.4"
   },
   "scripts": {
-    "build": "bun run build:ir && bun run build:runtime && bun run build:core && bun run build:backends",
-    "build:ir": "bun run --cwd packages/ir build",
-    "build:runtime": "bun run --cwd packages/runtime build",
-    "build:core": "bun run --cwd packages/core build",
-    "build:backends": "bun run --cwd packages/backend-cpu build && bun run --cwd packages/backend-webgpu build && bun run --cwd packages/backend-wasm build",
+    "build": "bun run --cwd packages/ir build && bun run --cwd packages/runtime build && bun run --cwd packages/core build && bun run --cwd packages/backend-cpu build && bun run --cwd packages/backend-webgpu build && bun run --cwd packages/backend-wasm build",
+    "clean": "node scripts/clean.mjs",
+    "clean:all": "node scripts/clean.mjs --all",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "diagrams": "plantuml -tsvg docs/diagrams/*.puml"
+    "lint:fix": "eslint . --fix"
   }
 }
