@@ -1,4 +1,4 @@
-import source from './contiguous.wgsl?raw';
+import source from './contiguous.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const contiguousKernel: WebGPUKernel = {

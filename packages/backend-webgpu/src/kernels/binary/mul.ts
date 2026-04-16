@@ -1,4 +1,4 @@
-import source from './mul.wgsl?raw';
+import source from './mul.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const mulKernel: WebGPUKernel = {

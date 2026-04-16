@@ -14,7 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "bun build src/index.ts --outdir dist --target browser --external @webtensor/ir && tsc --emitDeclarationOnly"
   },
   "dependencies": {
     "@webtensor/ir": "workspace:*"

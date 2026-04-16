@@ -1,4 +1,4 @@
-import source from './relu.wgsl?raw';
+import source from './relu.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const reluKernel: WebGPUKernel = {

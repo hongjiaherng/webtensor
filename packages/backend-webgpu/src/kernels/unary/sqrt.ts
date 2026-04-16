@@ -1,4 +1,4 @@
-import source from './sqrt.wgsl?raw';
+import source from './sqrt.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const sqrtKernel: WebGPUKernel = {

@@ -1,4 +1,4 @@
-import source from './neg.wgsl?raw';
+import source from './neg.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const negKernel: WebGPUKernel = {

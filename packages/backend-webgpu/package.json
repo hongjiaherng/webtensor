@@ -10,11 +10,9 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
-    "build": "tsc"
+    "build": "bun build src/index.ts --outdir dist --target browser --loader .wgsl:text --external @webtensor/ir --external @webtensor/runtime && tsc --emitDeclarationOnly"
   },
   "dependencies": {
     "@webtensor/ir": "workspace:*",

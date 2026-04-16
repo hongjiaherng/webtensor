@@ -1,4 +1,4 @@
-import source from './sigmoid.wgsl?raw';
+import source from './sigmoid.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const sigmoidKernel: WebGPUKernel = {

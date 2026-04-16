@@ -1,4 +1,4 @@
-import source from './pow.wgsl?raw';
+import source from './pow.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const powKernel: WebGPUKernel = {

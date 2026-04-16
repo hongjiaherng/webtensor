@@ -1,4 +1,4 @@
-import source from './matmul.wgsl?raw';
+import source from './matmul.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer } from '../utils';
 
 export const matmulKernel: WebGPUKernel = {

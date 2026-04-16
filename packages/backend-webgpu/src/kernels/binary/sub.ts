@@ -1,4 +1,4 @@
-import source from './sub.wgsl?raw';
+import source from './sub.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const subKernel: WebGPUKernel = {

@@ -1,10 +1,24 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, Plugin } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import wasm from 'vite-plugin-wasm';
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+
+/** Load .wgsl files as text (mirrors bun build --loader:.wgsl=text) */
+function wgslTextPlugin(): Plugin {
+  return {
+    name: 'wgsl-text',
+    transform(_code, id) {
+      if (id.endsWith('.wgsl')) {
+        const src = readFileSync(id, 'utf8');
+        return { code: `export default ${JSON.stringify(src)};`, map: null };
+      }
+    },
+  };
+}
 
 export default defineConfig({
-  plugins: [wasm()],
+  plugins: [wasm(), wgslTextPlugin()],
   resolve: {
     alias: {
       // Resolve all workspace packages directly to TypeScript source so that

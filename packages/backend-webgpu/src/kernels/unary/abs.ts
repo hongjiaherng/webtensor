@@ -1,4 +1,4 @@
-import source from './abs.wgsl?raw';
+import source from './abs.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const absKernel: WebGPUKernel = {

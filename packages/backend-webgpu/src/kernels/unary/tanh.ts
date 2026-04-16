@@ -1,4 +1,4 @@
-import source from './tanh.wgsl?raw';
+import source from './tanh.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const tanhKernel: WebGPUKernel = {

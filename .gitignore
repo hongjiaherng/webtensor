@@ -16,3 +16,4 @@ packages/backend-wasm/rust/target/
 Thumbs.db
 
 .vscode/
+.claude/

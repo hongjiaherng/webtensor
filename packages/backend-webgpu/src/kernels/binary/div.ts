@@ -1,4 +1,4 @@
-import source from './div.wgsl?raw';
+import source from './div.wgsl';
 import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
 
 export const divKernel: WebGPUKernel = {
