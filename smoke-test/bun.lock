@@ -5,11 +5,12 @@
     "": {
       "name": "bun-react-template",
       "dependencies": {
-        "@webtensor/backend-cpu": "latest",
-        "@webtensor/backend-wasm": "latest",
-        "@webtensor/backend-webgpu": "latest",
-        "@webtensor/core": "latest",
-        "@webtensor/runtime": "latest",
+        "@webtensor/backend-cpu": "^0.3.2",
+        "@webtensor/backend-wasm": "^0.3.2",
+        "@webtensor/backend-webgpu": "^0.3.2",
+        "@webtensor/core": "^0.3.2",
+        "@webtensor/ir": "^0.3.2",
+        "@webtensor/runtime": "^0.3.2",
         "react": "^19.2.5",
         "react-dom": "^19.2.5",
       },
@@ -29,17 +30,17 @@
 
     "@types/react-dom": ["@types/react-dom@19.2.3", "", { "peerDependencies": { "@types/react": "^19.2.0" } }, "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ=="],
 
-    "@webtensor/backend-cpu": ["@webtensor/backend-cpu@0.3.0", "", { "dependencies": { "@webtensor/ir": "0.0.0", "@webtensor/runtime": "0.0.0" } }, "sha512-EyrnBzDAvt63JfgwnQrKMjYID8mjnxl2vo3jWroIz0Wk+MrzA1nUWyj0pFfDgzfPB+Q6OUQ6o1lj1J6HGSc4Vw=="],
+    "@webtensor/backend-cpu": ["@webtensor/backend-cpu@0.3.2", "", { "dependencies": { "@webtensor/ir": "^0.0.0", "@webtensor/runtime": "^0.0.0" } }, "sha512-3T2X+5D9yCx3HkT/GYdL5pgfMIYw1klMyaIIVi+SftGZJN3gJC/yF+KlGxNkPbqZzwBBsC+IJLQsj+uZoez3sg=="],
 
-    "@webtensor/backend-wasm": ["@webtensor/backend-wasm@0.3.0", "", { "dependencies": { "@webtensor/ir": "0.0.0", "@webtensor/runtime": "0.0.0" } }, "sha512-DV1J8MQZvCd6dSfplkroPUrmwxUdzG+lNYmDVAYbllOo6YiLZRWjdQmZrm13CcJ5trW2aBXKwvV6PvdY+GKkew=="],
+    "@webtensor/backend-wasm": ["@webtensor/backend-wasm@0.3.2", "", { "dependencies": { "@webtensor/ir": "^0.0.0", "@webtensor/runtime": "^0.0.0" } }, "sha512-oJ0Y/LuzsqxXRqrLm4CCvvf9iH9f3SWuuH0wbOBA+ztWs4Gq/C8L8PwwsV+9x5gyJZnllFKxtkfJRSHEcJYu1w=="],
 
-    "@webtensor/backend-webgpu": ["@webtensor/backend-webgpu@0.3.0", "", { "dependencies": { "@webtensor/ir": "0.0.0", "@webtensor/runtime": "0.0.0" } }, "sha512-eaoDdoOprMDjf6nL68w0nIu/I3a2r3LLn2LQRSFI1luYttM6S6M15g2YLYUDQyy4RCeqOLV4GiA/Qyy4HnWpHw=="],
+    "@webtensor/backend-webgpu": ["@webtensor/backend-webgpu@0.3.2", "", { "dependencies": { "@webtensor/ir": "^0.0.0", "@webtensor/runtime": "^0.0.0" } }, "sha512-WfArXjNbxE4MCxHxZ4EHmxcEd/YpcEQJ1Og/v+EV3BwjZnPlpqDUP/s+gPrjZxbpMTtIyzJrdyLDhOCu7xMarg=="],
 
-    "@webtensor/core": ["@webtensor/core@0.3.0", "", { "dependencies": { "@webtensor/ir": "0.0.0", "@webtensor/runtime": "0.0.0" } }, "sha512-Gja/4rClae47rAxzqFDyXkiGee8+sRO13G3/4stasvdeoZsMrPOY4FEe3Vq34kir+EPPt8vmGlIDf4fxOwHs3Q=="],
+    "@webtensor/core": ["@webtensor/core@0.3.2", "", { "dependencies": { "@webtensor/ir": "^0.0.0", "@webtensor/runtime": "^0.0.0" } }, "sha512-5i3DAVyBa97tT03NyanNU+w3Q5p5+dj6m+xBugGZklT2oeLPlEzn4UpzSDlPCh0aFGghtWYFMqU3lbI+WDKUiw=="],
 
-    "@webtensor/ir": ["@webtensor/ir@0.0.0", "", {}, "sha512-Oy8BN8X5+7y3yacmQkmy5WFj6X8cAUIIobTJxWvwWnWY+H1tTH45d9GF+lJxGbn+gI1GID4rL/HAkJDA+peJmg=="],
+    "@webtensor/ir": ["@webtensor/ir@0.3.2", "", {}, "sha512-PlHLFGA0UL6EWuhiB9xOsG9xNNJ4Z2Qf1O42YUFCLaYRmUSvpMmKvb8+X5OcoaLSM9vWFxTJhCTRLOUNTzHYpA=="],
 
-    "@webtensor/runtime": ["@webtensor/runtime@0.3.0", "", { "dependencies": { "@webtensor/ir": "0.0.0" } }, "sha512-3R2Y9/zSKkg+9KmJfWHzcHCToAeDqGvsXzafeQ1NKQ8lrLWep4OfJAOWRZ74ozbivWRafXWuwwDRavp66CUABg=="],
+    "@webtensor/runtime": ["@webtensor/runtime@0.3.2", "", { "dependencies": { "@webtensor/ir": "^0.0.0" } }, "sha512-SJaMjKj3YagnzMACFI16to+JEPBAk3KzQAc7jAmVtaTkU1ewf3+JZVV5gq3KzxCncwIJESWROnjvU2wLe18dyA=="],
 
     "bun-types": ["bun-types@1.3.12", "", { "dependencies": { "@types/node": "*" } }, "sha512-HqOLj5PoFajAQciOMRiIZGNoKxDJSr6qigAttOX40vJuSp6DN/CxWp9s3C1Xwm4oH7ybueITwiaOcWXoYVoRkA=="],
 
@@ -53,12 +54,22 @@
 
     "undici-types": ["undici-types@7.19.2", "", {}, "sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg=="],
 
+    "@webtensor/backend-cpu/@webtensor/ir": ["@webtensor/ir@0.0.0", "", {}, "sha512-Oy8BN8X5+7y3yacmQkmy5WFj6X8cAUIIobTJxWvwWnWY+H1tTH45d9GF+lJxGbn+gI1GID4rL/HAkJDA+peJmg=="],
+
     "@webtensor/backend-cpu/@webtensor/runtime": ["@webtensor/runtime@0.0.0", "", { "dependencies": { "@webtensor/ir": "0.0.0" } }, "sha512-7gxD0nF7vljVKy+rz8gzZxBsLbXNfsImDBDuG9o3Vp0v2E6c5uFV1CitC/b6TLFyWCb7R4l/b4WgMsqhEDEnew=="],
+
+    "@webtensor/backend-wasm/@webtensor/ir": ["@webtensor/ir@0.0.0", "", {}, "sha512-Oy8BN8X5+7y3yacmQkmy5WFj6X8cAUIIobTJxWvwWnWY+H1tTH45d9GF+lJxGbn+gI1GID4rL/HAkJDA+peJmg=="],
 
     "@webtensor/backend-wasm/@webtensor/runtime": ["@webtensor/runtime@0.0.0", "", { "dependencies": { "@webtensor/ir": "0.0.0" } }, "sha512-7gxD0nF7vljVKy+rz8gzZxBsLbXNfsImDBDuG9o3Vp0v2E6c5uFV1CitC/b6TLFyWCb7R4l/b4WgMsqhEDEnew=="],
 
+    "@webtensor/backend-webgpu/@webtensor/ir": ["@webtensor/ir@0.0.0", "", {}, "sha512-Oy8BN8X5+7y3yacmQkmy5WFj6X8cAUIIobTJxWvwWnWY+H1tTH45d9GF+lJxGbn+gI1GID4rL/HAkJDA+peJmg=="],
+
     "@webtensor/backend-webgpu/@webtensor/runtime": ["@webtensor/runtime@0.0.0", "", { "dependencies": { "@webtensor/ir": "0.0.0" } }, "sha512-7gxD0nF7vljVKy+rz8gzZxBsLbXNfsImDBDuG9o3Vp0v2E6c5uFV1CitC/b6TLFyWCb7R4l/b4WgMsqhEDEnew=="],
 
+    "@webtensor/core/@webtensor/ir": ["@webtensor/ir@0.0.0", "", {}, "sha512-Oy8BN8X5+7y3yacmQkmy5WFj6X8cAUIIobTJxWvwWnWY+H1tTH45d9GF+lJxGbn+gI1GID4rL/HAkJDA+peJmg=="],
+
     "@webtensor/core/@webtensor/runtime": ["@webtensor/runtime@0.0.0", "", { "dependencies": { "@webtensor/ir": "0.0.0" } }, "sha512-7gxD0nF7vljVKy+rz8gzZxBsLbXNfsImDBDuG9o3Vp0v2E6c5uFV1CitC/b6TLFyWCb7R4l/b4WgMsqhEDEnew=="],
+
+    "@webtensor/runtime/@webtensor/ir": ["@webtensor/ir@0.0.0", "", {}, "sha512-Oy8BN8X5+7y3yacmQkmy5WFj6X8cAUIIobTJxWvwWnWY+H1tTH45d9GF+lJxGbn+gI1GID4rL/HAkJDA+peJmg=="],
   }
 }

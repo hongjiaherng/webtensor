@@ -1,6 +1,6 @@
 {
   "name": "@webtensor/backend-webgpu",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,8 +17,8 @@
     "build": "bun build src/index.ts --outdir dist --target browser --loader .wgsl:text --external @webtensor/ir --external @webtensor/runtime && tsc --emitDeclarationOnly"
   },
   "dependencies": {
-    "@webtensor/ir": "workspace:*",
-    "@webtensor/runtime": "workspace:*"
+    "@webtensor/ir": "workspace:^",
+    "@webtensor/runtime": "workspace:^"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.40"
