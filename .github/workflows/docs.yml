@@ -35,6 +35,8 @@ jobs:
       - name: Build (static export)
         run: bun run build
         working-directory: docs
+        env:
+          DEPLOY_BASE_PATH: /webtensor
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

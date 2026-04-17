@@ -6,11 +6,12 @@ const inter = Inter({
   subsets: ['latin'],
 });
 
-const baseUrl = process.env.NODE_ENV === 'production'
-  ? 'https://hongjiaherng.github.io/webtensor'
+const deployBasePath = process.env.DEPLOY_BASE_PATH ?? '';
+const baseUrl = deployBasePath
+  ? `https://hongjiaherng.github.io${deployBasePath}`
   : 'http://localhost:3000';
 
-const faviconPath = process.env.NODE_ENV === 'production' ? '/webtensor/favicon.svg' : '/favicon.svg';
+const faviconPath = `${deployBasePath}/favicon.svg`;
 
 export const metadata = {
   title: 'webtensor',
