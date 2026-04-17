@@ -133,7 +133,7 @@ This is why `backend.dispose(tensor)` must be a no-op for views — the parent o
 `Backend.execute()` returns `void | Promise<void>`.
 
 - **CPU and WASM** return synchronously — the kernel finishes before `execute()` returns.
-- **WebGPU** queues work on the GPU and returns immediately; you only know it's done when you call `device.queue.onSubmittedWorkDone()` (the engine awaits it implicitly via `engine.evaluateAsync` patterns and inside `read()`).
+- **WebGPU** queues work on the GPU and returns immediately; you only know it's done when you call `device.queue.onSubmittedWorkDone()` (the engine awaits it implicitly inside `evaluate()` and `read()`).
 
 `engine.evaluate(graph)` is `async` and `await`s `backend.execute()` uniformly. For training loops on WebGPU you must keep awaiting evaluate so the queue drains correctly between iterations.
 
