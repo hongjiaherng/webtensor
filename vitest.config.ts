@@ -1,6 +1,5 @@
 import { defineConfig, Plugin } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import wasm from 'vite-plugin-wasm';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 
@@ -17,8 +16,23 @@ function wgslTextPlugin(): Plugin {
   };
 }
 
+/** Inline .wasm as a base64 string default export — mirrors backend-wasm/build.ts */
+function wasmInlineBase64Plugin(): Plugin {
+  return {
+    name: 'wasm-inline-base64',
+    enforce: 'pre',
+    load(id) {
+      const path = id.split('?')[0];
+      if (path.endsWith('.wasm')) {
+        const base64 = readFileSync(path).toString('base64');
+        return `export default ${JSON.stringify(base64)};`;
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [wasm(), wgslTextPlugin()],
+  plugins: [wasmInlineBase64Plugin(), wgslTextPlugin()],
   resolve: {
     alias: {
       // Resolve all workspace packages directly to TypeScript source so that
