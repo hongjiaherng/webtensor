@@ -17,7 +17,7 @@ A tensor library that runs entirely in the browser. Train, visualize, and run in
 
 ## Architecture
 
-![Package map](https://raw.githubusercontent.com/hongjiaherng/webtensor/main/docs/public/diagrams/package-map.svg)
+![Package map](/docs/public/diagrams/package-map.svg)
 
 **Boundary rules:**
 

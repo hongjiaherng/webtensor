@@ -40,7 +40,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public",
-    "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o docs/public/diagrams",
+    "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../../public/diagrams",
     "docs:dev": "cd docs && bun run dev",
     "docs:build": "cd docs && bun run build",
     "docs:start": "cd docs && bun run start",

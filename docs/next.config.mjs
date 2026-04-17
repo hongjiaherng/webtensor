@@ -5,7 +5,7 @@ const withMDX = createMDX();
 /** @type {import('next').NextConfig} */
 const config = {
   output: 'export',
-  basePath: '/webtensor',
+  basePath: process.env.NODE_ENV === 'production' ? '/webtensor' : '',
   reactStrictMode: true,
 };
 
