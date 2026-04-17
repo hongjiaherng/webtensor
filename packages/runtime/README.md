@@ -48,7 +48,7 @@ const engine = await Engine.create('webgpu');
 
 ## API
 
-**Engine**
+### Engine
 
 - `new Engine(backend: Backend)`
 - `static async create(device: string): Promise<Engine>` — uses registry
@@ -57,7 +57,7 @@ const engine = await Engine.create('webgpu');
 - `dispose(name)` — release tensor
 - `async evaluate(graph: Graph)` — execute the compiled graph
 
-**Backend interface** (implement this to add a custom backend)
+### Backend interface (implement this to add a custom backend)
 
 - `allocate(shape, dtype): RuntimeTensor`
 - `read(tensor): Promise<ArrayBufferView>`
@@ -65,11 +65,11 @@ const engine = await Engine.create('webgpu');
 - `execute(node, inputs, outputs): void | Promise<void>`
 - `dispose(tensor): void`
 
-**Backend registry**
+### Backend registry
 
 - `registerBackend(device: string, factory: () => Promise<Backend>)`
 
-**Other exports**
+### Other exports
 
 - `RuntimeTensor`, `RuntimeStorage` — execution-level tensor model (PyTorch Tensor/Storage split)
 - Stride utils: `getShapeSize`, `stridedIdx`, `broadcastStridesOf`, `isContiguous`, `computeContiguousStrides`
