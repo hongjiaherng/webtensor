@@ -10,15 +10,17 @@ const baseUrl = process.env.NODE_ENV === 'production'
   ? 'https://hongjiaherng.github.io/webtensor'
   : 'http://localhost:3000';
 
+const faviconPath = process.env.NODE_ENV === 'production' ? '/webtensor/favicon.svg' : '/favicon.svg';
+
 export const metadata = {
   title: 'webtensor',
   description: 'A tensor library that runs entirely in the browser',
   metadataBase: new URL(baseUrl),
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: faviconPath, type: 'image/svg+xml' },
     ],
-    apple: '/favicon.svg',
+    apple: faviconPath,
   },
 };
 
