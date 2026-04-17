@@ -43,6 +43,7 @@
     "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o docs/public/diagrams",
     "docs:dev": "cd docs && bun run dev",
     "docs:build": "cd docs && bun run build",
+    "docs:start": "cd docs && bun run start",
     "assets:logo": "cd assets/logo && uv run main.py"
   }
 }
