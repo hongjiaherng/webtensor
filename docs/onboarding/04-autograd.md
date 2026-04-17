@@ -2,37 +2,7 @@
 
 Webtensor uses **eager, dynamic autograd**. Each forward op captures a backward closure inside `Tensor._ctx`. Calling `.backward()` walks the captured graph in reverse and accumulates gradients by **constructing more graph nodes** — the gradient itself is a deferred computation.
 
-See [diagrams/autograd-backward.md](../diagrams/autograd-backward.md).
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant Loss as loss (Tensor)
-    participant Topo as buildTopo()
-    participant Bwd as _ctx.backward() per node
-    participant Acc as add() accumulator
-
-    User->>Loss: loss.backward()
-    Loss->>Loss: check requiresGrad
-    Loss->>Topo: DFS through _ctx.inputs
-    Topo-->>Loss: topo[] (post-order)
-    Loss->>Loss: seed grad = ones(loss.shape)
-
-    loop reverse topo (i = N-1 .. 0)
-        Loss->>Bwd: t._ctx.backward(t.grad)
-        Note right of Bwd: backward returns NEW Tensors that are themselves graph nodes. Grad graph is built eagerly — not yet executed.
-        Bwd-->>Loss: inputGrads[]
-        loop for each input that requiresGrad
-            alt input.grad already set
-                Loss->>Acc: input.grad = add(input.grad, g)
-            else first time
-                Loss->>Loss: input.grad = g
-            end
-        end
-    end
-
-    Note over Loss: After backward(), x.grad is unevaluated. To get numbers: compileGraph([x.grad]) → engine.evaluate → engine.get.
-```
+![Autograd backward](../diagrams/autograd-backward.svg)
 
 ---
 

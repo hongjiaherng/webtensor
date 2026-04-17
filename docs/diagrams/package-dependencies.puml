@@ -1,0 +1,40 @@
+@startuml package-dependencies
+title Webtensor — Package Dependency Layers
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam DefaultFontName "Segoe UI"
+skinparam ArrowColor #555
+
+rectangle "**ir**\npure types — no runtime" as ir #FFF8EE
+
+rectangle "**runtime**\nEngine, Backend interface, view ops" as runtime #EEFFF0
+
+rectangle "**core**\nuser-facing API\n(Tensor, ops, autograd, compileGraph)" as core #EEF4FF
+
+rectangle "**backend-cpu**\nTypeScript kernels" as cpu #FFF0F0
+rectangle "**backend-wasm**\nRust via wasm-bindgen" as wasm #FFF0F0
+rectangle "**backend-webgpu**\nWGSL compute shaders" as webgpu #FFF0F0
+
+rectangle "**user code**\nimports core +\nside-effect imports a backend" as user #F5F5F5
+
+ir <-- runtime
+ir <-- core
+runtime <-- core
+runtime <|.. cpu : implements Backend
+runtime <|.. wasm : implements Backend
+runtime <|.. webgpu : implements Backend
+
+core <-- user
+cpu <-- user : side-effect register
+wasm <-- user : side-effect register
+webgpu <-- user : side-effect register
+
+note right of core
+  core is unaware of backends —
+  the user picks one and imports
+  for the side-effect register
+end note
+
+@enduml

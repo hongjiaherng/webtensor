@@ -2,54 +2,7 @@
 
 End-to-end tour of how a tensor expression becomes a number. We follow one concrete example through every layer.
 
-See [diagrams/tensor-lifecycle.md](../diagrams/tensor-lifecycle.md).
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant Init as tensor()
-    participant Op as Op fn (add/mul/...)
-    participant T as Tensor (core)
-    participant Compile as compileGraph()
-    participant Engine as Engine (runtime)
-    participant Backend as Backend (cpu/wasm/webgpu)
-
-    Note over User,Backend: Build phase (eager, no compute)
-    User->>Init: tensor([1,2,3])
-    Init->>T: new Tensor({ ctx: { op:'Constant', data } })
-    Init-->>User: t_0
-    User->>Op: add(a, b)
-    Op->>T: new Tensor({ ctx: { op:'Add', inputs:[a,b], backward } })
-    Op-->>User: t_2
-
-    Note over User,Backend: Compile phase
-    User->>Compile: compileGraph([y])
-    Compile->>Compile: DFS through _ctx.inputs
-    Compile-->>User: Graph IR
-
-    Note over User,Backend: Execute phase
-    User->>Engine: Engine.create(device)
-    Engine->>Backend: factory()  (async)
-    Backend-->>Engine: Backend instance
-    User->>Engine: evaluate(graph)
-    Engine->>Engine: topologicalSort
-    loop for each node in topo order
-        alt Constant
-            Engine->>Backend: allocate + write(initializer)
-        else View op
-            Engine->>Engine: viewRegistry — metadata only
-        else Reshape (non-contiguous)
-            Engine->>Backend: Contiguous kernel + reshape
-        else Kernel op
-            Engine->>Backend: allocate(output) + execute
-        end
-        Engine->>Engine: decrement refcounts → dispose if 0
-    end
-
-    User->>Engine: get(y.id)
-    Engine->>Backend: read(tensor)
-    Backend-->>User: ArrayBufferView
-```
+![Tensor lifecycle](../diagrams/tensor-lifecycle.svg)
 
 ---
 
@@ -128,40 +81,7 @@ outputs:      [t_4]
 
 [`Engine.evaluate(graph)`](../../packages/runtime/src/engine.ts#L61) does a topological sort ([engine.ts:194](../../packages/runtime/src/engine.ts#L194)) then walks nodes in order. For each node it picks one of four paths:
 
-See [diagrams/backend-dispatch.md](../diagrams/backend-dispatch.md).
-
-```mermaid
-flowchart TD
-    Start([Engine.evaluate graph]) --> Topo[topologicalSort]
-    Topo --> Loop{more nodes?}
-    Loop -->|no| End([done])
-    Loop -->|yes| Pop[pop next node]
-
-    Pop --> IsConst{op == Constant?}
-    IsConst -->|yes| ConstAlloc[backend.allocate + write initializer]
-    ConstAlloc --> Refs
-
-    IsConst -->|no| IsView{op in viewRegistry?<br/>Transpose / Slice / Permute /<br/>Expand / Squeeze / Unsqueeze}
-    IsView -->|yes| ViewMeta[viewRegistry op - metadata only]
-    ViewMeta --> Refs
-
-    IsView -->|no| IsReshape{op in Reshape, View?}
-    IsReshape -->|yes| Cont{isContiguous src?}
-    Cont -->|yes| ZeroCopy[zero-copy view]
-    Cont -->|no| IsViewOp{op == View?}
-    IsViewOp -->|yes throws| End
-    IsViewOp -->|no - Reshape| Contig[backend.execute Contiguous + reshape]
-    ZeroCopy --> Refs
-    Contig --> Refs
-
-    IsReshape -->|no| Kernel[backend.allocate + execute via kernel registry]
-    Kernel --> Refs
-
-    Refs[decrement refcounts] --> Zero{refcount == 0 and not retained?}
-    Zero -->|yes| Dispose[dispose - cascade parent if view]
-    Zero -->|no| Loop
-    Dispose --> Loop
-```
+![Backend dispatch](../diagrams/backend-dispatch.svg)
 
 | Path                         | Trigger                          | What happens                                                                                                                                                                                                                          |
 | ---------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

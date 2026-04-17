@@ -1,0 +1,44 @@
+@startuml mental-model
+title Webtensor — One-Screen Mental Model
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam DefaultFontName "Segoe UI"
+skinparam ArrowColor #555
+skinparam package {
+  BorderColor #777
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle {
+  BorderColor #555
+  BackgroundColor #FFFFFF
+}
+
+package "Packages" #EEF4FF {
+  rectangle "<b>packages/core</b>\nTensor, ops (eager), autograd, compileGraph" as core
+  rectangle "<b>packages/ir</b>\nPure types: Node, Value, Graph (no devices)" as ir
+  rectangle "<b>packages/runtime</b>\nEngine, Backend interface, view ops, GC" as runtime
+  rectangle "<b>packages/backend-*</b>\nCPU (TS) | WASM (Rust) | WebGPU (WGSL)" as backends
+}
+
+package "Execution flow" #EEFFF0 {
+  rectangle "User code" as u
+  rectangle "Eager ops build a Tensor graph\neach Tensor carries a ~_ctx" as eager
+  rectangle "compileGraph\n→ IR Graph: nodes, values, initializers" as compile
+  rectangle "Engine.evaluate graph" as eval
+  rectangle "Topo sort" as topo
+  rectangle "Constant load /\nView fast-path /\nReshape contiguity branch /\nKernel dispatch via Backend" as dispatch
+  rectangle "Refcount GC + cascade view cleanup" as gc
+  rectangle "engine.get id\n→ ArrayBufferView" as read
+
+  u --> eager
+  eager --> compile
+  compile --> eval
+  eval --> topo
+  topo --> dispatch
+  dispatch --> gc
+  gc --> read
+}
+
+@enduml

@@ -24,19 +24,19 @@ The WASM build step is **required** before any test that uses `WASMBackend`. It 
 
 ### Day-to-day commands
 
-| Command                              | What it does                                                                                                                                                   |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bun run test`                       | Run the full Vitest suite in headed Chromium. **Do not use `bun test`** — that bypasses the browser config and WebGPU tests fail.                              |
-| `bun run test:watch`                 | Vitest in watch mode.                                                                                                                                          |
-| `bun run test tests/ops/add.test.ts` | Run one test file.                                                                                                                                             |
-| `bun run lint`                       | ESLint (currently has 1 known error — see [06-bugs-and-gaps.md](06-bugs-and-gaps.md)).                                                                         |
-| `bun run lint:fix`                   | ESLint with auto-fix.                                                                                                                                          |
-| `bun run format`                     | Prettier write.                                                                                                                                                |
-| `bun run format:check`               | Prettier check (CI-style).                                                                                                                                     |
-| `bun run build`                      | Build all six packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm`.                                      |
-| `bun run clean`                      | Delete `dist/` outputs.                                                                                                                                        |
-| `bun run clean:all`                  | Also delete `node_modules` and the `pkg/` WASM bundle.                                                                                                         |
-| `bun run render:diagrams`            | Legacy — renders archived `docs/diagrams/_archive-puml/*.puml` to SVG. Diagrams now use Mermaid (`docs/diagrams/*.md`), rendered natively in markdown preview. |
+| Command                              | What it does                                                                                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run test`                       | Run the full Vitest suite in headed Chromium. **Do not use `bun test`** — that bypasses the browser config and WebGPU tests fail. |
+| `bun run test:watch`                 | Vitest in watch mode.                                                                                                             |
+| `bun run test tests/ops/add.test.ts` | Run one test file.                                                                                                                |
+| `bun run lint`                       | ESLint (currently has 1 known error — see [06-bugs-and-gaps.md](06-bugs-and-gaps.md)).                                            |
+| `bun run lint:fix`                   | ESLint with auto-fix.                                                                                                             |
+| `bun run format`                     | Prettier write.                                                                                                                   |
+| `bun run format:check`               | Prettier check (CI-style).                                                                                                        |
+| `bun run build`                      | Build all six packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm`.         |
+| `bun run clean`                      | Delete `dist/` outputs.                                                                                                           |
+| `bun run clean:all`                  | Also delete `node_modules` and the `pkg/` WASM bundle.                                                                            |
+| `bun run render:diagrams`            | Render `docs/diagrams/*.puml` to `*.svg` via PlantUML.                                                                            |
 
 ---
 

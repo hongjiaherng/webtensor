@@ -2,24 +2,7 @@
 
 Webtensor is a Bun workspace with six packages. The dependency graph is strictly layered: `backend-* → runtime → ir`, and `core → runtime → ir`. Backends never depend on `core`; `core` never depends on a specific backend.
 
-```
-                       ┌───────┐
-                       │  ir   │  pure types — no runtime
-                       └───┬───┘
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-        ┌─────────┐              ┌──────────┐
-        │ runtime │              │   core   │  user-facing API
-        └────┬────┘              └─────┬────┘
-             │                          │
-   ┌─────────┼─────────┐                │  (core is unaware of backends —
-   ▼         ▼         ▼                │   the user picks one and imports
-backend-cpu  -wasm   -webgpu            │   for the side-effect register)
-                                        │
-                                        ▼
-                                   user code
-```
+![Package dependencies](../diagrams/package-dependencies.svg)
 
 For the boundary contract see [architecture.md](../architecture.md). This file is the field guide: what types live where, what the public surface is, what to avoid.
 
