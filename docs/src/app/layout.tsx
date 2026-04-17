@@ -6,9 +6,14 @@ const inter = Inter({
   subsets: ['latin'],
 });
 
+const baseUrl = process.env.NODE_ENV === 'production'
+  ? 'https://hongjiaherng.github.io/webtensor'
+  : 'http://localhost:3000';
+
 export const metadata = {
   title: 'webtensor',
   description: 'A tensor library that runs entirely in the browser',
+  metadataBase: new URL(baseUrl),
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },

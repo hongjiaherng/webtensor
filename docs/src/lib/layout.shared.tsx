@@ -15,6 +15,7 @@ export function baseOptions(): BaseLayoutProps {
             unoptimized
             priority
             className="dark:hidden h-8 w-auto"
+            style={{ width: 'auto', height: 'auto' }}
           />
           <Image
             src="/logo-dark.svg"
@@ -24,6 +25,7 @@ export function baseOptions(): BaseLayoutProps {
             unoptimized
             priority
             className="hidden dark:block h-8 w-auto"
+            style={{ width: 'auto', height: 'auto' }}
           />
         </div>
       ),
