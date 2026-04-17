@@ -18,9 +18,7 @@ export const metadata = {
   description: 'A tensor library that runs entirely in the browser',
   metadataBase: new URL(baseUrl),
   icons: {
-    icon: [
-      { url: faviconPath, type: 'image/svg+xml' },
-    ],
+    icon: [{ url: faviconPath, type: 'image/svg+xml' }],
     apple: faviconPath,
   },
 };

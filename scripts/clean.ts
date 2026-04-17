@@ -32,5 +32,7 @@ for (const d of dirs) {
 
 if (all) {
   // Remind user to delete node_modules manually (node_modules, docs/node_modules)
-  console.log('Please delete node_modules and docs/node_modules manually if you want to clean them as well.');
+  console.log(
+    'Please delete node_modules and docs/node_modules manually if you want to clean them as well.',
+  );
 }

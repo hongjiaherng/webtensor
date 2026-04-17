@@ -19,11 +19,17 @@ import { WASMBackend } from '@webtensor/backend-wasm';
 import { Engine } from '@webtensor/runtime';
 import { add, tensor, compileGraph } from '@webtensor/core';
 
-const backend = await WASMBackend.create();   // async — instantiates WASM
+const backend = await WASMBackend.create(); // async — instantiates WASM
 const engine = new Engine(backend);
 
-const a = tensor([[1, 2], [3, 4]]);
-const b = tensor([[5, 6], [7, 8]]);
+const a = tensor([
+  [1, 2],
+  [3, 4],
+]);
+const b = tensor([
+  [5, 6],
+  [7, 8],
+]);
 const c = add(a, b);
 
 await engine.evaluate(compileGraph([c]));

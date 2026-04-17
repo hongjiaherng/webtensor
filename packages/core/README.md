@@ -20,8 +20,14 @@ import { add, matmul, tensor, compileGraph } from '@webtensor/core';
 import { Engine } from '@webtensor/runtime';
 import { CPUBackend } from '@webtensor/backend-cpu';
 
-const a = tensor([[1, 2], [3, 4]]);
-const b = tensor([[5, 6], [7, 8]]);
+const a = tensor([
+  [1, 2],
+  [3, 4],
+]);
+const b = tensor([
+  [5, 6],
+  [7, 8],
+]);
 const c = matmul(add(a, b), a); // builds a graph; nothing runs yet
 
 const engine = new Engine(new CPUBackend());
@@ -34,28 +40,31 @@ Ops are also chainable as methods: `a.add(b).matmul(a)`.
 ## API
 
 **Tensor factories**
+
 - `tensor(data, options?)` — from nested array literal
 - `zeros(shape, options?)`
 - `ones(shape, options?)`
 - `InitOptions = { shape?, dtype?, device?, requiresGrad? }`
 
 **Tensor class** (24+ chainable methods including all ops below)
+
 - Properties: `id`, `shape`, `strides`, `size`, `dtype`, `device`, `requiresGrad`, `grad?`
 - `backward()` — accumulates gradients
 - Inspection: `dim()`, `numel()`, `isContiguous()`, `stride()`
 
 **Ops** (also exported as standalone functions)
 
-| Category | Ops |
-|---|---|
-| Binary | `add`, `sub`, `mul`, `div` |
-| Linalg | `matmul` (2D only) |
-| Unary math | `neg`, `exp`, `log`, `sqrt`, `abs`, `pow` |
-| Activations | `relu`, `sigmoid`, `tanh` |
+| Category         | Ops                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| Binary           | `add`, `sub`, `mul`, `div`                                                                      |
+| Linalg           | `matmul` (2D only)                                                                              |
+| Unary math       | `neg`, `exp`, `log`, `sqrt`, `abs`, `pow`                                                       |
+| Activations      | `relu`, `sigmoid`, `tanh`                                                                       |
 | View (zero-copy) | `transpose`, `reshape`, `view`, `slice`, `unsqueeze`, `squeeze`, `permute`, `expand`, `flatten` |
-| Memory | `contiguous`, `clone`, `detach` |
+| Memory           | `contiguous`, `clone`, `detach`                                                                 |
 
 **Compiler**
+
 - `compileGraph(outputs: Tensor[]): Graph` — trace the graph, classify constants vs inputs, compute consumer references for ref-count GC
 
 **Re-exports** — All of `@webtensor/ir` and `@webtensor/runtime` are re-exported.

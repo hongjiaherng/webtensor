@@ -41,11 +41,11 @@ No Vite, no `vite-plugin-wasm` — pure Bun bundler. This proves the packages wo
 
 **Test cases** (one click runs all 12):
 
-| Test | Backends | Expected |
-|---|---|---|
-| `add [2×2]` | CPU, WASM, WebGPU | `[6, 8, 10, 12]` |
-| `mul [1×3]` | CPU, WASM, WebGPU | `[10, 18, 28]` |
-| `matmul identity [2×2]` | CPU, WASM, WebGPU | `[1, 2, 3, 4]` |
+| Test                           | Backends          | Expected           |
+| ------------------------------ | ----------------- | ------------------ |
+| `add [2×2]`                    | CPU, WASM, WebGPU | `[6, 8, 10, 12]`   |
+| `mul [1×3]`                    | CPU, WASM, WebGPU | `[10, 18, 28]`     |
+| `matmul identity [2×2]`        | CPU, WASM, WebGPU | `[1, 2, 3, 4]`     |
 | `broadcast add [2×2] + scalar` | CPU, WASM, WebGPU | `[11, 12, 13, 14]` |
 
 Tolerance: `1e-5`. Each row shows the actual values on success, or `got [...] · expected [...]` on failure.

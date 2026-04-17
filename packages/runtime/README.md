@@ -23,8 +23,14 @@ import { add, tensor, compileGraph } from '@webtensor/core';
 
 const engine = new Engine(new CPUBackend());
 
-const a = tensor([[1, 2], [3, 4]]);
-const b = tensor([[5, 6], [7, 8]]);
+const a = tensor([
+  [1, 2],
+  [3, 4],
+]);
+const b = tensor([
+  [5, 6],
+  [7, 8],
+]);
 const c = add(a, b);
 
 await engine.evaluate(compileGraph([c]));
@@ -43,6 +49,7 @@ const engine = await Engine.create('webgpu');
 ## API
 
 **Engine**
+
 - `new Engine(backend: Backend)`
 - `static async create(device: string): Promise<Engine>` — uses registry
 - `set(name, data, shape, dtype?)` — bind external input
@@ -51,6 +58,7 @@ const engine = await Engine.create('webgpu');
 - `async evaluate(graph: Graph)` — execute the compiled graph
 
 **Backend interface** (implement this to add a custom backend)
+
 - `allocate(shape, dtype): RuntimeTensor`
 - `read(tensor): Promise<ArrayBufferView>`
 - `write(tensor, data): void`
@@ -58,9 +66,11 @@ const engine = await Engine.create('webgpu');
 - `dispose(tensor): void`
 
 **Backend registry**
+
 - `registerBackend(device: string, factory: () => Promise<Backend>)`
 
 **Other exports**
+
 - `RuntimeTensor`, `RuntimeStorage` — execution-level tensor model (PyTorch Tensor/Storage split)
 - Stride utils: `getShapeSize`, `stridedIdx`, `broadcastStridesOf`, `isContiguous`, `computeContiguousStrides`
 - Dtype utils: `bytesPerElement`, `typedArrayCtor`, `copyBuffer`, `TypedArray`

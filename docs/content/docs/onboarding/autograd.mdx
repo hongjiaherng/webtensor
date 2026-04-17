@@ -58,12 +58,12 @@ All ops live in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webte
 
 ### Binary
 
-| Op  | Backward formula                | Status                                                                                                 |
-| --- | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Op  | Backward formula                | Status                                                                                                      |
+| --- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Add | `(grad, grad)`                  | ⚠️ **Missing unbroadcast** — wrong when shapes differ. See [Bugs and gaps](/docs/onboarding/bugs-and-gaps). |
-| Sub | `(grad, -grad)`                 | ⚠️ **Missing unbroadcast.**                                                                            |
-| Mul | `(grad * b, grad * a)`          | ⚠️ Inherits the same broadcast issue (no explicit NOTE comment yet).                                   |
-| Div | `(grad / b, -grad * a / (b*b))` | ⚠️ **Missing unbroadcast.**                                                                            |
+| Sub | `(grad, -grad)`                 | ⚠️ **Missing unbroadcast.**                                                                                 |
+| Mul | `(grad * b, grad * a)`          | ⚠️ Inherits the same broadcast issue (no explicit NOTE comment yet).                                        |
+| Div | `(grad / b, -grad * a / (b*b))` | ⚠️ **Missing unbroadcast.**                                                                                 |
 
 ### Linalg
 

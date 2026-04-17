@@ -28,24 +28,24 @@ Every backend follows the same shape:
 
 All three backends register exactly the **same 16 kernels**:
 
-| Op           | CPU | WASM | WebGPU | Notes                                                                                                               |
-| ------------ | --- | ---- | ------ | ------------------------------------------------------------------------------------------------------------------- |
-| `Add`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
-| `Sub`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
-| `Mul`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
-| `Div`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
+| Op           | CPU | WASM | WebGPU | Notes                                                                                                                    |
+| ------------ | --- | ---- | ------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `Add`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
+| `Sub`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
+| `Mul`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
+| `Div`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
 | `MatMul`     | ✅  | ✅   | ✅     | **2D only.** Batched (rank ≥ 3) not yet implemented in any backend; see [Bugs and gaps](/docs/onboarding/bugs-and-gaps). |
-| `Relu`       | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `ReluGrad`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.                    |
-| `Neg`        | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `Exp`        | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `Log`        | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `Sqrt`       | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `Abs`        | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                             |
-| `Pow`        | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                            |
-| `Sigmoid`    | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `Tanh`       | ✅  | ✅   | ✅     | Strided.                                                                                                            |
-| `Contiguous` | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                                  |
+| `Relu`       | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `ReluGrad`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.                         |
+| `Neg`        | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `Exp`        | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `Log`        | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `Sqrt`       | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `Abs`        | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                                  |
+| `Pow`        | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                                 |
+| `Sigmoid`    | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `Tanh`       | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
+| `Contiguous` | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                                       |
 
 **View ops** (`Transpose`, `Reshape`, `View`, `Slice`, `Permute`, `Expand`, `Squeeze`, `Unsqueeze`) are handled inside the engine — they never reach a backend kernel. See [System walkthrough](/docs/onboarding/system-walkthrough).
 
@@ -112,13 +112,13 @@ This chains three steps: `wasm-pack build rust --target bundler --out-dir ../pkg
 The published `dist/index.js` contains the `.wasm` binary inline as a base64 string — consumers don't need `vite-plugin-wasm` or any other bundler config. [src/module.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/module.ts) decodes the base64 and instantiates the module manually:
 
 ```ts
-import wasmBase64Raw from '../pkg/webtensor_wasm_bg.wasm';   // bundler → base64 string
+import wasmBase64Raw from '../pkg/webtensor_wasm_bg.wasm'; // bundler → base64 string
 const wasmBase64 = wasmBase64Raw as unknown as string;
 
 const bytes = Uint8Array.from(atob(wasmBase64), (c) => c.charCodeAt(0));
 const { instance } = await WebAssembly.instantiate(bytes, {
   './webtensor_wasm_bg.js': {
-    __wbindgen_init_externref_table: () => {},   // no-op: kernels use only numeric pointers
+    __wbindgen_init_externref_table: () => {}, // no-op: kernels use only numeric pointers
   },
 });
 instance.exports.__wbindgen_start();

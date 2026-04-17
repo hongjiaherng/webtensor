@@ -70,8 +70,12 @@ td.detail {
   font-size: 0.85em;
 }
 
-.pass { color: #4ade80; }
-.fail { color: #f87171; }
+.pass {
+  color: #4ade80;
+}
+.fail {
+  color: #f87171;
+}
 
 .badge {
   font-size: 0.7em;
@@ -79,8 +83,12 @@ td.detail {
   border-radius: 6px;
   padding: 2px 10px;
 }
-.badge.pass { background: #14532d; }
-.badge.fail { background: #7f1d1d; }
+.badge.pass {
+  background: #14532d;
+}
+.badge.fail {
+  background: #7f1d1d;
+}
 
 section {
   margin-top: 32px;

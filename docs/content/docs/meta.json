@@ -1,11 +1,4 @@
 {
   "title": "webtensor",
-  "pages": [
-    "---Getting Started---",
-    "index",
-    "roadmap",
-    "---Guides---",
-    "onboarding",
-    "advanced"
-  ]
+  "pages": ["---Getting Started---", "index", "roadmap", "---Guides---", "onboarding", "advanced"]
 }

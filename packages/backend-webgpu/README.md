@@ -23,11 +23,17 @@ if (!('gpu' in navigator)) {
   throw new Error('WebGPU not supported in this environment');
 }
 
-const backend = await WebGPUBackend.create();   // requests adapter + device
+const backend = await WebGPUBackend.create(); // requests adapter + device
 const engine = new Engine(backend);
 
-const a = tensor([[1, 2], [3, 4]]);
-const b = tensor([[5, 6], [7, 8]]);
+const a = tensor([
+  [1, 2],
+  [3, 4],
+]);
+const b = tensor([
+  [5, 6],
+  [7, 8],
+]);
 const c = add(a, b);
 
 await engine.evaluate(compileGraph([c]));

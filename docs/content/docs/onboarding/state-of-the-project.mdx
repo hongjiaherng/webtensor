@@ -29,7 +29,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Area                       | Works                                                     | Partial                                                                          | Missing                     |
 | -------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------- |
 | Backward closure mechanism | `Tensor.backward()`, topo build, accumulation via `add()` |                                                                                  |                             |
-| Per-op gradients           | All listed ✅ in [Autograd](/docs/onboarding/autograd)         | Add/Sub/Mul/Div backward without unbroadcast (silently wrong when shapes differ) | Abs, Slice, Expand backward |
+| Per-op gradients           | All listed ✅ in [Autograd](/docs/onboarding/autograd)    | Add/Sub/Mul/Div backward without unbroadcast (silently wrong when shapes differ) | Abs, Slice, Expand backward |
 | Higher-order gradients     |                                                           | In principle works through the closure mechanism but no tests                    |                             |
 
 ---
@@ -47,13 +47,13 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 ## Ranks and shapes
 
-| Area                           | Works                                                        | Partial                                                                                   | Missing                                                       |
-| ------------------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Strided model                  | All kernels handle arbitrary strides + offset + broadcasting |                                                                                           |                                                               |
-| Rank ≤ 8 on WebGPU             | All current ops fit                                          | `TensorMeta` uniform packs only 8 shape + 8 stride slots — silent corruption above rank 8 |                                                               |
-| Rank > 8                       |                                                              |                                                                                           | Not supported on WebGPU; CPU/WASM untested above rank 8       |
+| Area                           | Works                                                        | Partial                                                                                   | Missing                                                            |
+| ------------------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Strided model                  | All kernels handle arbitrary strides + offset + broadcasting |                                                                                           |                                                                    |
+| Rank ≤ 8 on WebGPU             | All current ops fit                                          | `TensorMeta` uniform packs only 8 shape + 8 stride slots — silent corruption above rank 8 |                                                                    |
+| Rank > 8                       |                                                              |                                                                                           | Not supported on WebGPU; CPU/WASM untested above rank 8            |
 | Max-rank guard at `allocate()` |                                                              |                                                                                           | Not enforced (see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)) |
-| Dynamic shapes (`null` dim)    | Type system supports it                                      | Engine treats `null` as size-1 in many places; placeholder support stubbed but not wired  | True dynamic shapes for placeholder inputs                    |
+| Dynamic shapes (`null` dim)    | Type system supports it                                      | Engine treats `null` as size-1 in many places; placeholder support stubbed but not wired  | True dynamic shapes for placeholder inputs                         |
 
 ---
 
@@ -97,15 +97,15 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 ## Documentation
 
-| Area                            | Works                                                                                                                     | Partial             | Missing                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------- |
+| Area                            | Works                                                                                                                                 | Partial             | Missing                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------- |
 | Architecture, IR, kernel recipe | [Architecture](/docs/advanced/architecture), [IR reference](/docs/advanced/ir-reference), [Adding an op](/docs/advanced/adding-an-op) |                     |                                          |
-| Onboarding pack                 | This section                                                                                                              |                     |                                          |
-| Roadmap                         | [Roadmap](/docs/roadmap)                                                                                                       |                     |                                          |
-| Diagrams                        | 11 PlantUML-rendered SVGs covering package map, execution flow, backend internals, autograd, gap map, etc.                |                     |                                          |
-| API reference                   |                                                                                                                           |                     | Generated from JSDoc; no `typedoc` setup |
-| Contributor guide               | [Contributor guide](/docs/onboarding/contributor-guide)                                                                        |                     | Top-level `CONTRIBUTING.md`              |
-| Examples / quickstart code      |                                                                                                                           | README has snippets | `examples/` directory with runnable apps |
+| Onboarding pack                 | This section                                                                                                                          |                     |                                          |
+| Roadmap                         | [Roadmap](/docs/roadmap)                                                                                                              |                     |                                          |
+| Diagrams                        | 11 PlantUML-rendered SVGs covering package map, execution flow, backend internals, autograd, gap map, etc.                            |                     |                                          |
+| API reference                   |                                                                                                                                       |                     | Generated from JSDoc; no `typedoc` setup |
+| Contributor guide               | [Contributor guide](/docs/onboarding/contributor-guide)                                                                               |                     | Top-level `CONTRIBUTING.md`              |
+| Examples / quickstart code      |                                                                                                                                       | README has snippets | `examples/` directory with runnable apps |
 
 ---
 

@@ -28,7 +28,9 @@ All published packages share a single coordinated version. Edit each `packages/*
 - `packages/backend-webgpu`
 
 <Callout type="warn">
-**Current version drift:** `@webtensor/backend-wasm` is at `0.2.x` while the other five packages are still at `0.0.0`. Before the next coordinated release, decide a single shared version (e.g., `0.3.0`) and bump everyone to it.
+  **Current version drift:** `@webtensor/backend-wasm` is at `0.2.x` while the other five packages
+  are still at `0.0.0`. Before the next coordinated release, decide a single shared version (e.g.,
+  `0.3.0`) and bump everyone to it.
 </Callout>
 
 If you changed types or APIs in `@webtensor/ir`, `@webtensor/runtime`, or `@webtensor/core`, every dependent package (basically all the backends and core) needs a corresponding bump too — they all peer-depend on these via `workspace:*`, which is replaced with the actual version at publish time.
@@ -58,7 +60,11 @@ bun run publish:all
 ```
 
 <Callout type="warn">
-**Heads-up on the publish script:** the current `publish:all` in the root `package.json` invokes `bun publish --cwd packages/X --access public`. The `--cwd` flag is a **global** Bun flag and must come **before** the subcommand. The correct form is `bun --cwd packages/X publish --access public`. Fix this in the root `package.json` before your first real release if it hasn't been fixed yet.
+  **Heads-up on the publish script:** the current `publish:all` in the root `package.json` invokes
+  `bun publish --cwd packages/X --access public`. The `--cwd` flag is a **global** Bun flag and must
+  come **before** the subcommand. The correct form is `bun --cwd packages/X publish --access
+  public`. Fix this in the root `package.json` before your first real release if it hasn't been
+  fixed yet.
 </Callout>
 
 The packages publish in dependency order so consumers always see a consistent `workspace:*` → version resolution.
@@ -87,9 +93,9 @@ That's it. The release is live on npm and the smoke test confirms it works as a 
 
 ## Recovery
 
-| Situation | Action |
-|---|---|
+| Situation                            | Action                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- |
 | Wrong version published, &lt;72h ago | `npm unpublish @webtensor/<name>@0.3.0` (per package), fix, re-publish same or next version |
-| Wrong version published, &gt;72h ago | Publish a patch (`0.3.1`) — `npm` won't let you unpublish |
-| One package failed mid-publish | Re-run `bun publish --cwd packages/<failed> --access public` for just that package |
-| Smoke test reveals a packaging bug | Publish a patch immediately; document the failure mode in `bugs-and-gaps.mdx` |
+| Wrong version published, &gt;72h ago | Publish a patch (`0.3.1`) — `npm` won't let you unpublish                                   |
+| One package failed mid-publish       | Re-run `bun publish --cwd packages/<failed> --access public` for just that package          |
+| Smoke test reveals a packaging bug   | Publish a patch immediately; document the failure mode in `bugs-and-gaps.mdx`               |

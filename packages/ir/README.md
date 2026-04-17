@@ -23,14 +23,14 @@ const strides = computeContiguousStrides([2, 3, 4]); // [12, 4, 1]
 
 ## API
 
-| Export | Kind | Description |
-|---|---|---|
-| `Node` | type | An op in the graph: `{ id, op, inputs, outputs, attributes?, name? }` |
-| `Value` | type | Tensor metadata: `{ name, shape, dtype, data?, producer?, consumers?, debugName? }` |
-| `Graph` | type | `{ nodes, values, inputs, outputs, initializers, name?, opset? }` |
-| `DType` | type | `'float32' \| 'int32' \| 'bool'` |
-| `AttributeValue` | type | Union of scalar/array/buffer attribute values |
-| `computeContiguousStrides(shape)` | function | C-order (row-major) strides; innermost = 1 |
+| Export                            | Kind     | Description                                                                         |
+| --------------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `Node`                            | type     | An op in the graph: `{ id, op, inputs, outputs, attributes?, name? }`               |
+| `Value`                           | type     | Tensor metadata: `{ name, shape, dtype, data?, producer?, consumers?, debugName? }` |
+| `Graph`                           | type     | `{ nodes, values, inputs, outputs, initializers, name?, opset? }`                   |
+| `DType`                           | type     | `'float32' \| 'int32' \| 'bool'`                                                    |
+| `AttributeValue`                  | type     | Union of scalar/array/buffer attribute values                                       |
+| `computeContiguousStrides(shape)` | function | C-order (row-major) strides; innermost = 1                                          |
 
 ## Docs
 

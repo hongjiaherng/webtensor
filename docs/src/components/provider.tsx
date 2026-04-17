@@ -10,7 +10,12 @@ export function Provider({ children }: { children: ReactNode }) {
     if (!basePath) return;
     const orig = window.fetch.bind(window);
     window.fetch = (input, init) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : (input as Request).url;
       if (url.startsWith('/api/')) return orig(basePath + url, init);
       return orig(input, init);
     };

@@ -13,9 +13,10 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          // Files not covered by any tsconfig (e.g. eslint.config.js, vitest.config.ts)
-          // are parsed with default compiler options instead of erroring out.
-          allowDefaultProject: ['*.js', '*.ts'],
+          // Files not covered by any tsconfig — parsed with default compiler options
+          // instead of erroring out. Includes loose .ts files in scripts/ and per-package
+          // build.ts files (e.g. packages/backend-wasm/build.ts).
+          allowDefaultProject: ['*.js', '*.ts', 'scripts/*.ts', 'packages/*/build.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -49,14 +50,16 @@ export default tseslint.config(
   // Disable formatting rules that conflict with Prettier — must be last
   prettierConfig,
 
-  // Ignore generated, compiled, and third-party files
+  // Ignore generated, compiled, third-party, and self-contained subprojects
+  // (docs/ and smoke-test/ have their own eslint setups and are linted via their own scripts)
   {
     ignores: [
       '**/dist/',
       'node_modules/',
       'packages/backend-wasm/pkg/',
       'packages/backend-wasm/rust/',
-      '_archive/',
+      'docs/',
+      'smoke-test/',
       'bun.lock',
       '**/*.wgsl',
     ],
