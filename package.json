@@ -24,26 +24,27 @@
     "vitest": "^4.1.4"
   },
   "scripts": {
+    "setup": "bun install && cd docs && bun install",
+    "build": "bun run build:ir && bun run build:runtime && bun run build:core && bun run build:backend-cpu && bun run build:backend-webgpu && bun run build:backend-wasm",
     "build:ir": "bun run --cwd packages/ir build",
     "build:runtime": "bun run --cwd packages/runtime build",
     "build:core": "bun run --cwd packages/core build",
     "build:backend-cpu": "bun run --cwd packages/backend-cpu build",
     "build:backend-webgpu": "bun run --cwd packages/backend-webgpu build",
     "build:backend-wasm": "bun run --cwd packages/backend-wasm build",
-    "build": "bun run build:ir && bun run build:runtime && bun run build:core && bun run build:backend-cpu && bun run build:backend-webgpu && bun run build:backend-wasm",
-    "clean": "node scripts/clean.mjs",
-    "clean:all": "node scripts/clean.mjs --all",
+    "clean": "bun scripts/clean.ts",
+    "clean:all": "bun scripts/clean.ts --all",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public",
-    "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../../public/diagrams",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "docs:dev": "cd docs && bun run dev",
     "docs:build": "cd docs && bun run build",
     "docs:start": "cd docs && bun run start",
-    "assets:logo": "cd assets/logo && uv run main.py"
+    "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../../public/diagrams",
+    "docs:logo": "cd assets/logo && uv sync && uv run main.py",
+    "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public"
   }
 }
