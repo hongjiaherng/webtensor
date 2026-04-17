@@ -2,10 +2,15 @@ import { createMDX } from 'fumadocs-mdx/next';
 
 const withMDX = createMDX();
 
+const basePath = process.env.NODE_ENV === 'production' ? '/webtensor' : '';
+
 /** @type {import('next').NextConfig} */
 const config = {
   output: 'export',
-  basePath: process.env.NODE_ENV === 'production' ? '/webtensor' : '',
+  basePath,
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   reactStrictMode: true,
 };
 

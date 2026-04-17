@@ -1,13 +1,10 @@
-'use client';
-
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { appName, gitConfig } from './shared';
+import { gitConfig } from './shared';
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export function baseOptions(): BaseLayoutProps {
-  const pathname = usePathname();
-  const basePath = pathname.startsWith('/webtensor') ? '/webtensor' : '';
 
   return {
     nav: {
