@@ -17,7 +17,7 @@ A tensor library that runs entirely in the browser. Train, visualize, and run in
 
 ## Architecture
 
-![Package map](docs/diagrams/package-map.svg)
+![Package map](https://raw.githubusercontent.com/hongjiaherng/webtensor/main/docs/public/diagrams/package-map.svg)
 
 **Boundary rules:**
 
@@ -70,7 +70,33 @@ All ops run on CPU, WASM (Rust), and WebGPU with cross-backend parity tests.
 
 ## Docs
 
-- [docs/roadmap.mdx](docs/roadmap.mdx) — implementation roadmap and checklist
-- [docs/reference/architecture.mdx](docs/reference/architecture.mdx) — diagrams, design decisions, backend contract
-- [docs/reference/ir-reference.mdx](docs/reference/ir-reference.mdx) — IR schema: Node/Value/Graph types, shape system, dtype reference
-- [docs/reference/adding-an-op.mdx](docs/reference/adding-an-op.mdx) — how to add a kernel across all three backends
+Full documentation is built with [Fumadocs](https://fumadocs.dev/). Start with the [onboarding series](docs/content/docs/onboarding/) for a guided tour, or jump to the [advanced reference](docs/content/docs/advanced/) for architecture and IR specs.
+
+**Key guides:**
+
+- [Roadmap](docs/content/docs/roadmap.mdx) — implementation roadmap and checklist
+- [Architecture](docs/content/docs/advanced/architecture.mdx) — diagrams, design decisions, backend contract
+- [IR Reference](docs/content/docs/advanced/ir-reference.mdx) — IR schema: Node/Value/Graph types, shape system, dtype reference
+- [Adding an Op](docs/content/docs/advanced/adding-an-op.mdx) — how to add a kernel across all three backends
+
+**Local development:**
+
+```sh
+bun run docs:dev          # Start docs site at http://localhost:3000
+bun run docs:build        # Build static docs for GitHub Pages
+bun run docs:plantuml     # Regenerate SVG diagrams from .puml sources
+```
+
+---
+
+## Contributing
+
+See the full [contributor guide](docs/content/docs/onboarding/contributor-guide.mdx) in the docs.
+
+**Quick start for adding a new op:**
+
+1. Define the op in [packages/core/src/ops.ts](packages/core/src/ops.ts) with backward closure.
+2. Implement kernels in CPU, WASM, and WebGPU backends.
+3. Register in each backend's kernel registry.
+4. Add tests to [tests/ops/](tests/ops/).
+5. Follow the step-by-step [adding an op guide](docs/content/docs/advanced/adding-an-op.mdx).

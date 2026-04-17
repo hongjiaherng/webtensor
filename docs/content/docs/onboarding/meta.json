@@ -1,0 +1,14 @@
+{
+  "title": "Onboarding",
+  "pages": [
+    "start-here",
+    "system-walkthrough",
+    "package-deep-dive",
+    "backends-and-kernels",
+    "autograd",
+    "state-of-the-project",
+    "bugs-and-gaps",
+    "contributor-guide",
+    "rearchitect-notes"
+  ]
+}

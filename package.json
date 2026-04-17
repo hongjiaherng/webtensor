@@ -8,7 +8,6 @@
   ],
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "mintlify": "^4",
     "@types/bun": "^1.3.12",
     "@vitest/browser": "^4.1.4",
     "@vitest/browser-playwright": "^4.1.4",
@@ -41,9 +40,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public",
-    "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../",
-    "docs:dev": "cd docs && mintlify dev --port 3001",
-    "docs:check": "cd docs && mintlify broken-links",
+    "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o docs/public/diagrams",
+    "docs:dev": "cd docs && bun run dev",
+    "docs:build": "cd docs && bun run build",
     "assets:logo": "cd assets/logo && uv run main.py"
   }
 }

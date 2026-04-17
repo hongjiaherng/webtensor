@@ -1,0 +1,261 @@
+---
+title: 'Adding a new op'
+description: 'End-to-end checklist for adding a kernel across CPU, WASM, and WebGPU.'
+---
+
+Checklist for adding a kernel across all three backends. Follow in order — CPU establishes the correctness oracle before WASM or WebGPU are added.
+
+---
+
+## Step 1: Mark it in the roadmap
+
+In [`/roadmap`](/docs/roadmap), add a row to the **Ops** table (or relevant section) and update cells as each backend is completed.
+
+---
+
+## Step 2: Core graph-building function
+
+**File:** `packages/core/src/ops.ts`
+
+Add a function that constructs the IR node. Mirror the existing pattern:
+
+```ts
+export function sigmoid(a: Tensor): Tensor {
+  return new Tensor({
+    shape: a.shape,
+    dtype: a.dtype,
+    device: a.device,
+    requiresGrad: a.requiresGrad,
+    ctx: {
+      op: 'Sigmoid',
+      inputs: [a],
+      backward: (grad: Tensor) => {
+        // d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
+        return [
+          /* gradA */
+        ];
+      },
+    },
+  });
+}
+```
+
+The op string (`'Sigmoid'`) is what the kernel registries key on. It is already exported via `export * from './ops'` in `packages/core/src/index.ts`.
+
+---
+
+## Step 3: CPU kernel
+
+**File:** `packages/backend-cpu/src/kernels/<category>/<OpName>.ts`
+
+Categories: `binary/`, `unary/`, `linalg/`, `memory/`.
+
+```ts
+// packages/backend-cpu/src/kernels/unary/sigmoid.ts
+import { CPUKernel, stridedIdx, buf } from '../utils';
+
+export const sigmoidKernel: CPUKernel = (_node, inputs, outputs) => {
+  const shape = inputs[0].shape as number[];
+  const strides = inputs[0].strides;
+  const offset = inputs[0].offset;
+  const inBuf = buf(inputs[0]);
+  const outBuf = buf(outputs[0]);
+  for (let i = 0; i < outBuf.length; i++) {
+    const x = inBuf[stridedIdx(shape, strides, offset, i)];
+    outBuf[i] = 1 / (1 + Math.exp(-x));
+  }
+};
+```
+
+> **Note:** `buf(tensor)` returns the dtype-aware `TypedArray` (from `@webtensor/runtime`). Never cast `storage.buffer as Float32Array` directly — use `buf()` so kernels work with any dtype.
+
+**Register in `packages/backend-cpu/src/kernels/registry.ts`:**
+
+```ts
+import { sigmoidKernel } from './unary/sigmoid';
+// ...
+['Sigmoid', sigmoidKernel],
+```
+
+---
+
+## Step 4: CPU test
+
+Add test cases in `tests/ops/<opname>.test.ts` using the `BACKENDS` array from `tests/helpers.ts`. Run against CPU first. Exclude backends that don't yet have the kernel by filtering:
+
+```ts
+BACKENDS.filter((b) => b.name !== 'WebGPU').forEach(({ name, create }) => { ... });
+```
+
+---
+
+## Step 5: WASM kernel
+
+**Rust function** in `packages/backend-wasm/rust/src/ops/<category>/<opname>.rs`:
+
+Unary ops use a strided meta buffer (19 `u32` values) for arbitrary stride support:
+
+```rust
+use crate::utils::strided_idx;
+use std::slice;
+
+pub unsafe fn sigmoid_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *const u32) {
+    let meta = slice::from_raw_parts(meta_ptr, 19);
+    let total = meta[0] as usize;
+    let a = slice::from_raw_parts(a_ptr, total);
+    let out = slice::from_raw_parts_mut(out_ptr, total);
+    for i in 0..total {
+        let idx = strided_idx(meta, i);
+        out[i] = 1.0 / (1.0 + (-a[idx]).exp());
+    }
+}
+```
+
+Expose it via `wasm_bindgen` in `lib.rs`:
+
+```rust
+#[wasm_bindgen]
+pub unsafe fn sigmoid_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *const u32) {
+    ops::unary::sigmoid::sigmoid_strided(a_ptr, out_ptr, meta_ptr);
+}
+```
+
+**Extend `WebtensorWasmModule`** in `packages/backend-wasm/src/module.ts`:
+
+```ts
+readonly sigmoid_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+```
+
+**TypeScript kernel** in `packages/backend-wasm/src/kernels/unary/sigmoid.ts`:
+
+```ts
+import { WASMKernel, handleOf, buildUnaryMetaData, allocMeta } from '../utils';
+
+export const sigmoidKernel: WASMKernel = (module, _node, inputs, outputs) => {
+  const a = handleOf(inputs[0]);
+  const out = handleOf(outputs[0]);
+  const meta = buildUnaryMetaData(inputs);
+  const metaPtr = allocMeta(module, meta);
+  module.sigmoid_strided(a.ptr, out.ptr, metaPtr);
+  module.free_u32(metaPtr, meta.length);
+};
+```
+
+**Register in `packages/backend-wasm/src/kernels/registry.ts`.**
+
+**Rebuild WASM** after changing Rust:
+
+```sh
+cd packages/backend-wasm && wasm-pack build rust --target bundler --out-dir ../pkg
+```
+
+---
+
+## Step 6: WebGPU kernel
+
+### WGSL shader
+
+**File:** `packages/backend-webgpu/src/kernels/<category>/<OpName>.wgsl`
+
+All kernels use the same `TensorMeta` uniform struct for strided access. Input tensors may have arbitrary strides and offsets (e.g. from a Transpose or Slice view) — the shader handles this transparently.
+
+> **Important:** Do not name the uniform variable `meta` — it is a reserved keyword in WGSL. Use `u_meta` or another name.
+
+**Unary op** (one input, one output):
+
+```wgsl
+struct TensorMeta {
+  rank:    u32,
+  offset:  u32,
+  _p0:     u32,
+  _p1:     u32,
+  shape:   array<vec4<u32>, 2>,   // shape[0..7] packed as 2 × vec4
+  strides: array<vec4<u32>, 2>,   // strides[0..7] packed as 2 × vec4
+};
+
+@group(0) @binding(0) var<storage, read>       a:      array<f32>;
+@group(0) @binding(1) var<storage, read_write> out:    array<f32>;
+@group(0) @binding(2) var<uniform>             u_meta: TensorMeta;
+
+fn strided_idx(flat: u32) -> u32 {
+  let rank = u_meta.rank;
+  var rem = flat;
+  var idx = u_meta.offset;
+  for (var d = rank; d > 0u; d--) {
+    let ax  = d - 1u;
+    let dim = u_meta.shape[ax / 4u][ax % 4u];
+    let s   = u_meta.strides[ax / 4u][ax % 4u];
+    idx += (rem % dim) * s;
+    rem  /= dim;
+  }
+  return idx;
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  if (i >= arrayLength(&out)) { return; }
+  let x = a[strided_idx(i)];
+  out[i] = 1.0 / (1.0 + exp(-x));  // sigmoid
+}
+```
+
+**Binary op** (two inputs, one output): see `kernels/binary/add.wgsl` for the full pattern. Binary ops use two separate `TensorMeta` uniforms (`u_meta_a` at binding 3, `u_meta_b` at binding 4) and pass the broadcast output shape when building meta so that stride-0 broadcast dimensions are set correctly.
+
+### TypeScript kernel
+
+**File:** `packages/backend-webgpu/src/kernels/<category>/<OpName>.ts`
+
+Implements the `WebGPUKernel` interface from `../utils`:
+
+| Method                                                 | Responsibility                                                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createPipeline(device)`                               | Compile the WGSL shader into a `GPUComputePipeline`.                                                                                               |
+| `buildBindGroupEntries(device, node, inputs, outputs)` | Wire GPU buffers and meta uniform buffers to binding slots. Returns `{ entries, tempBuffers }` — `tempBuffers` are destroyed after GPU submission. |
+| `getDispatch(node, inputs, outputs)`                   | Return `[x, y, z]` workgroup counts.                                                                                                               |
+
+**Unary example:**
+
+```ts
+import source from './sigmoid.wgsl?raw';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+
+export const sigmoidKernel: WebGPUKernel = {
+  createPipeline(device) {
+    return device.createComputePipeline({
+      layout: 'auto',
+      compute: {
+        module: device.createShaderModule({ code: source, label: 'SigmoidShader' }),
+        entryPoint: 'main',
+      },
+      label: 'SigmoidPipeline',
+    });
+  },
+
+  buildBindGroupEntries(device, _node, inputs, outputs) {
+    const metaBuf = createMetaBuffer(device, packMeta(inputs[0]));
+    return {
+      entries: [
+        { binding: 0, resource: { buffer: inputs[0].storage.buffer as GPUBuffer } },
+        { binding: 1, resource: { buffer: outputs[0].storage.buffer as GPUBuffer } },
+        { binding: 2, resource: { buffer: metaBuf } },
+      ],
+      tempBuffers: [metaBuf],
+    };
+  },
+
+  getDispatch(_node, _inputs, outputs) {
+    return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+  },
+};
+```
+
+**Register in `packages/backend-webgpu/src/kernels/registry.ts`.**
+
+No changes to `backend.ts` are needed — `execute()` is fully generic.
+
+---
+
+## Step 7: Parity test
+
+Once all target backends support the op, add a `describe` block in `tests/backend/consistency.test.ts` that runs the same graph on each backend and asserts outputs match CPU within `1e-5`.

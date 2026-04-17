@@ -1,0 +1,45 @@
+---
+title: 'webtensor'
+description: 'A tensor library that runs entirely in the browser — WebGPU acceleration, eager autograd, and a torch-like API in TypeScript.'
+---
+
+**webtensor** is a multi-backend tensor library built for the browser. Train, visualize, and run inference with WebGPU acceleration as a TypeScript library. Backends: CPU (TypeScript), WASM (Rust via wasm-pack), and WebGPU (WGSL compute shaders). All three share full kernel parity across 16 ops.
+
+> **Status: active development — building the foundation.**
+
+---
+
+## Where to start
+
+**New to the project?** Work through the onboarding series in order:
+
+- [Start here](/docs/onboarding/start-here) — status snapshot, reading order, what's implemented and what isn't.
+- [System walkthrough](/docs/onboarding/system-walkthrough) — end-to-end traced example: how `add(a, b)` becomes a number.
+- [Package deep-dive](/docs/onboarding/package-deep-dive) — the six packages, their types, and their dependency rules.
+
+**Contributing?**
+
+- [Contributor guide](/docs/onboarding/contributor-guide) — dev loop, test patterns, common pitfalls.
+- [Adding an op](/docs/advanced/adding-an-op) — step-by-step recipe across all three backends.
+- [Bugs and gaps](/docs/onboarding/bugs-and-gaps) — severity-tagged defects ready to be picked up.
+
+**Planning bigger work?**
+
+- [Roadmap](/docs/roadmap) — feature checklist and priority order.
+- [Rearchitect notes](/docs/onboarding/rearchitect-notes) — impact analysis for future changes.
+
+---
+
+## Architecture at a glance
+
+```text
+user code  →  @webtensor/core  (Tensor, ops, autograd, compileGraph)
+                    ↓
+           @webtensor/runtime  (Engine, Backend interface, view ops)
+                    ↓
+   backend-cpu | backend-wasm | backend-webgpu
+```
+
+The same `Graph` IR runs on any backend. Backends register themselves at import time; `Engine.create('cpu' | 'wasm' | 'webgpu')` picks one.
+
+See [Architecture](/docs/advanced/architecture) for the full contract and [IR reference](/docs/advanced/ir-reference) for the graph schema.
