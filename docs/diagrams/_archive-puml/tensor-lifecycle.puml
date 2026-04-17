@@ -1,0 +1,61 @@
+@startuml tensor-lifecycle
+title Tensor Lifecycle — From User Code to Result
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam DefaultFontName "Segoe UI"
+
+actor User
+participant "tensor()" as Init
+participant "Op fn\n(add/mul/...)" as Op
+participant "Tensor\n(core)" as Tensor
+participant "compileGraph()" as Compile
+participant "Engine\n(runtime)" as Engine
+participant "Backend\n(cpu/wasm/webgpu)" as Backend
+
+== Build phase (eager, no compute) ==
+User -> Init : tensor([1,2,3])
+Init -> Tensor : new Tensor({ ctx: { op:'Constant', data } })
+Init --> User : t_0
+
+User -> Op : add(a, b)
+Op -> Tensor : new Tensor({ ctx: { op:'Add', inputs:[a,b], backward } })
+Op --> User : t_2
+
+== Compile phase ==
+User -> Compile : compileGraph([y])
+Compile -> Compile : DFS through _ctx.inputs
+Compile --> User : Graph IR\n(nodes, values, initializers, outputs)
+
+== Execute phase ==
+User -> Engine : Engine.create(device)
+Engine -> Backend : factory()  (async)
+Backend --> Engine : Backend instance
+Engine --> User : engine
+
+User -> Engine : evaluate(graph)
+Engine -> Engine : topologicalSort
+loop for each node in topo order
+  alt Constant
+    Engine -> Backend : allocate + write(initializer data)
+  else View op (Transpose/Slice/Permute/Expand/Squeeze/Unsqueeze)
+    Engine -> Engine : viewRegistry — metadata only
+  else Reshape/View
+    alt contiguous
+      Engine -> Engine : zero-copy view
+    else non-contiguous
+      Engine -> Backend : Contiguous kernel + reshape
+    end
+  else Kernel op
+    Engine -> Backend : allocate(output)
+    Engine -> Backend : execute(node, inputs, outputs)
+    Backend --> Engine : (sync for CPU/WASM, queued for WebGPU)
+  end
+  Engine -> Engine : decrement input refcounts → dispose if 0
+end
+
+User -> Engine : get(y.id)
+Engine -> Backend : read(tensor)
+Backend --> User : ArrayBufferView
+
+@enduml

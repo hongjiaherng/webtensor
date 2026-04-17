@@ -39,6 +39,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public"
+    "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public",
+    "render:diagrams": "plantuml -tsvg -o docs/diagrams docs/diagrams/*.puml"
   }
 }

@@ -1,0 +1,66 @@
+@startuml gap-map
+title Webtensor — What Works vs What's Missing
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam DefaultFontName "Segoe UI"
+skinparam rectangle {
+  BackgroundColor<<done>> #C8E6C9
+  BackgroundColor<<partial>> #FFE0B2
+  BackgroundColor<<missing>> #FFCDD2
+  BackgroundColor<<bug>> #EF9A9A
+  BorderColor #555
+}
+
+package "Ops (forward)" {
+  rectangle "Add Sub Mul Div\n(broadcast OK)" <<done>>
+  rectangle "Unary math\n(neg/exp/log/sqrt\nabs/pow/sigmoid/tanh)" <<done>>
+  rectangle "Relu + ReluGrad" <<done>>
+  rectangle "Views\n(transpose/reshape/slice\npermute/expand/squeeze/unsqueeze)" <<done>>
+  rectangle "MatMul (2D only)" <<done>>
+  rectangle "MatMul (batched ≥3D)" <<missing>>
+  rectangle "Reduce (sum/mean)" <<missing>>
+  rectangle "Softmax" <<missing>>
+  rectangle "Concat" <<missing>>
+}
+
+package "Autograd" {
+  rectangle "Most ops have backward" <<done>>
+  rectangle "Broadcasting unbroadcast\n(needs ReduceSum)" <<bug>>
+  rectangle "Expand backward" <<missing>>
+  rectangle "Abs backward (needs sign)" <<missing>>
+  rectangle "Slice backward (needs Pad/Scatter)" <<missing>>
+}
+
+package "Backends" {
+  rectangle "CPU (TS)" <<done>>
+  rectangle "WASM (Rust)" <<done>>
+  rectangle "WebGPU (WGSL)" <<done>>
+  rectangle "16/16 kernel parity\nacross 3 backends" <<done>>
+  rectangle "WebGPU TensorMeta\nrank ≤ 8 (silent corruption above)" <<bug>>
+  rectangle "Max-rank guard at allocate()" <<missing>>
+}
+
+package "DTypes" {
+  rectangle "float32 kernels" <<done>>
+  rectangle "Type system + alloc/IO\nfor int32 / bool" <<done>>
+  rectangle "int32 / bool op kernels" <<missing>>
+}
+
+package "Training infra" {
+  rectangle "Eager autograd" <<done>>
+  rectangle "Loss functions" <<missing>>
+  rectangle "Optimizers (SGD/Adam)" <<missing>>
+  rectangle "Dataloader / batching" <<missing>>
+}
+
+package "Distribution" {
+  rectangle "dist/ artifacts present" <<done>>
+  rectangle "publish:all script" <<partial>>
+  rectangle "Version drift\n(backend-wasm 0.1.0, others 0.0.0)" <<bug>>
+  rectangle "ESLint error on scripts/clean.mjs" <<bug>>
+  rectangle "ONNX import" <<missing>>
+  rectangle "Devtools / visualization" <<missing>>
+}
+
+@enduml

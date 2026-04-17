@@ -129,3 +129,12 @@ A cell is checked when the dtype is fully supported on that backend: type system
 | --------------------------------------------------- | :--: |
 | `packages/onnx` — protobuf parser, op mapping to IR | [ ]  |
 | `packages/devtools` — graph viz, training dashboard | [ ]  |
+
+## CI/CD
+
+- Setup publishing to npm
+  - As a client-side library
+  - Make sure types are included in the package
+  - Make sure smallest possible bundle is published (e.g. by using `files` field in `package.json` or similar)
+  - Publish @webtensor/core, @webtensor/ir, @webtensor/runtime, @webtensor/backend-cpu, @webtensor/backend-wasm, @webtensor/backend-webgpu separately
+- Setup docs site

@@ -6,15 +6,117 @@
 
 ### Execution Data Flow
 
-![Execution flow](diagrams/execution-flow.svg)
+See [diagrams/execution-flow.md](diagrams/execution-flow.md).
+
+```mermaid
+sequenceDiagram
+    participant User as User (core API)
+    participant Compiler as Compiler (core)
+    participant Engine as Runtime Engine
+    participant Backend as Backend (cpu/wasm/webgpu)
+    participant Registry as Kernel Registry
+
+    User->>Compiler: tensor ops (eager or traced)
+    Compiler->>Engine: Graph (IR nodes + values)
+    Engine->>Engine: topological sort → ExecutionPlan
+
+    loop for each Node in plan
+        alt view op (Transpose / Reshape / Slice)
+            Engine->>Engine: compute new shape/strides/offset (zero-copy)
+        else compute op
+            Engine->>Backend: allocate(output shapes)
+            Engine->>Backend: execute(node, inputs[], outputs[])
+            Backend->>Registry: lookup(node.op)
+            Registry-->>Backend: kernel
+            Backend->>Backend: run kernel — fills output buffers
+            Backend-->>Engine: done
+        end
+    end
+
+    Engine->>Backend: read(output tensor)
+    Backend-->>User: ArrayBufferView (typed by dtype)
+    Engine->>Backend: dispose(intermediate tensors)
+```
 
 ### Backend Internals
 
-![Backend internals](diagrams/backend-internals.svg)
+See [diagrams/backend-internals.md](diagrams/backend-internals.md).
+
+```mermaid
+classDiagram
+    class Backend {
+        <<interface>>
+        +allocate(shape, dtype) RuntimeTensor
+        +read(tensor) ArrayBufferView | Promise
+        +write(tensor, data) void
+        +execute(node, inputs, outputs) void
+        +dispose(tensor) void
+    }
+
+    class CPUBackend {
+        -registry: Map~string, CPUKernel~
+        Synchronous. Float32Array buffers.
+    }
+
+    class WASMBackend {
+        -module: WebtensorWasmModule
+        -registry: Map~string, WASMKernel~
+        WASM heap (pointer handles), Rust kernels.
+    }
+
+    class WebGPUBackend {
+        -device: GPUDevice
+        -registry: Map~string, WebGPUKernel~
+        -pipelineCache: Map~string, GPUComputePipeline~
+        GPUBuffers, WGSL, async read.
+    }
+
+    Backend <|.. CPUBackend
+    Backend <|.. WASMBackend
+    Backend <|.. WebGPUBackend
+```
 
 ### Target End-State
 
-![Target architecture](diagrams/target-architecture.svg)
+See [diagrams/target-architecture.md](diagrams/target-architecture.md).
+
+```mermaid
+flowchart TD
+    subgraph App["React App"]
+        usercode[User code - import tensor, train from webtensor]
+    end
+    subgraph Authoring["Authoring"]
+        core[core - Tensor API, autograd, optimizer loop]
+    end
+    subgraph Import["Import"]
+        onnx[onnx - protobuf parser → IR]
+    end
+    subgraph Graph["Graph"]
+        ir[ir - ONNX-aligned graph schema]
+    end
+    subgraph Execution["Execution"]
+        runtime[runtime - Engine + Backend dispatch]
+    end
+    subgraph Backends["Backends"]
+        cpu[backend-cpu]
+        wasm[backend-wasm]
+        webgpu[backend-webgpu - primary]
+    end
+    subgraph Vis["Visualization"]
+        devtools[devtools - graph view, training viz]
+    end
+
+    usercode --> core
+    usercode -->|training events| devtools
+    core -->|compiles to| ir
+    onnx -->|parses to| ir
+    runtime -->|executes| ir
+    cpu -.-> runtime
+    wasm -.-> runtime
+    webgpu -.-> runtime
+    devtools -->|execution trace| runtime
+    devtools -->|renders graph| ir
+```
 
 ---
 

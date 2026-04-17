@@ -1,0 +1,151 @@
+# 06 — Bugs and Gaps
+
+Concrete, actionable defects with severity, location, observable symptom, and a fix sketch. Not a feature wish-list — see [05-state-of-the-project.md](05-state-of-the-project.md) for the broader matrix.
+
+Severity scale:
+
+- **HIGH** — silent numerical wrongness or silent corruption. Will burn anyone who tries to train a real model.
+- **MEDIUM** — missing functionality with a clear failure mode (throws, returns wrong shape).
+- **LOW** — cosmetic, distribution friction, or one-line fixes.
+
+---
+
+## HIGH — Gradient unbroadcasting missing
+
+**Where:** [packages/core/src/ops.ts:21-25](../../packages/core/src/ops.ts#L21-L25), [ops.ts:44](../../packages/core/src/ops.ts#L44), [ops.ts:67](../../packages/core/src/ops.ts#L67), and implicitly in `mul` ([ops.ts:86-92](../../packages/core/src/ops.ts#L86-L92)).
+
+**Symptom:** When forward broadcasting expands a smaller operand (e.g. `add(a:[3], b:[1]) → out:[3]`), the backward returns gradients matching the **output** shape, not the **input** shape. Whatever consumes `b.grad` will see a shape-`[3]` tensor where it expects `[1]` — either a downstream shape mismatch throws, or worse, a downstream broadcast silently propagates wrong values. Training loops that rely on broadcasted bias / scalar parameters get wildly inflated gradients.
+
+**Fix sketch:** implement `sum(tensor, axes, keepDims)` (Reduce kernel), then in each broadcasting backward call `unbroadcast(grad, originalInputShape)` which sums along axes where the input was size-1 or had lower rank.
+
+The closures already document the gap with `// NOTE: missing unbroadcast — requires ReduceSum op (Phase 11)`.
+
+**Blocked on:** Reductions kernel (sum/mean).
+
+---
+
+## HIGH — WebGPU `TensorMeta` rank-8 ceiling
+
+**Where:** [packages/backend-webgpu/src/kernels/utils.ts:8-29](../../packages/backend-webgpu/src/kernels/utils.ts#L8-L29) and [packMeta()](../../packages/backend-webgpu/src/kernels/utils.ts#L43-L59).
+
+**Symptom:** The TensorMeta uniform packs exactly 8 shape slots and 8 stride slots (`array<vec4<u32>, 2>`). `packMeta()` writes the first `min(rank, 8)` dims; everything beyond is silently dropped. A rank-9 (or higher) tensor will run, produce no error, and write nonsense — whatever happens to be in the unused slots gets used as shape/stride. With current ops capped at 2D this never fires, but **any future op above rank 8 will silently corrupt**.
+
+**Fix sketch:** for rank > 8, switch to a `storage` buffer for shape/strides instead of a uniform (uniform-buffer arrays in WGSL are tightly bound by `@minBindingSize`). Or split into multiple uniform structs. Plan covers this in [08-rearchitect-notes.md](08-rearchitect-notes.md). Also add a guard that throws when `rank > 8` until the redesign lands — turns silent corruption into a clean error.
+
+**Blocked on:** nothing (the guard alone is a one-line fix and worth doing now).
+
+---
+
+## HIGH — `MatMul` is 2D only; no batched matmul
+
+**Where:** [packages/core/src/ops.ts:97-134](../../packages/core/src/ops.ts#L97-L134) (forward shape inference is incomplete — line 110 has the placeholder comment `// NOTE: Proper MatMul broadcasting for batch dimensions goes here`). All three matmul kernels assume 2D layouts:
+
+- CPU: [packages/backend-cpu/src/kernels/linalg/matmul.ts](../../packages/backend-cpu/src/kernels/linalg/matmul.ts)
+- WASM: [packages/backend-wasm/src/kernels/linalg/matmul.ts](../../packages/backend-wasm/src/kernels/linalg/matmul.ts)
+- WebGPU: [packages/backend-webgpu/src/kernels/linalg/matmul.wgsl](../../packages/backend-webgpu/src/kernels/linalg/matmul.wgsl)
+
+**Symptom:** `matmul(a:[B, M, K], b:[B, K, N])` will compute the wrong shape (forward inference passes the batch dim through naively) and call kernels that index as if there's no batch axis — output is garbage.
+
+**Fix sketch:** treat the last two dims as the matrix axes; iterate over leading batch dims with broadcasting rules. The CPU implementation is the easiest place to start (extra outer loops). WebGPU needs a 3D dispatch. **Blocked on the rank > 8 / `TensorMeta` redesign** for any batched op that pushes WebGPU above rank 8.
+
+---
+
+## MEDIUM — `Expand` backward not implemented
+
+**Where:** [packages/core/src/ops.ts:357-369](../../packages/core/src/ops.ts#L357-L369) — closure intentionally omitted with `// NOTE: expand backward requires sum reduction over expanded dims — not yet implemented`.
+
+**Symptom:** Calling `.backward()` through an `expand()` silently drops the gradient (the topo walker skips tensors without `_ctx.backward`). Inputs upstream of `expand` get no gradient.
+
+**Fix sketch:** once `sum` exists, the backward is `sum(grad, axes_that_were_expanded, keepDims=true)`. The expanded axes are dims where `input.shape[i] == 1 && output.shape[i] > 1`.
+
+**Blocked on:** Reductions.
+
+---
+
+## MEDIUM — `Slice` backward not implemented
+
+**Where:** [packages/core/src/ops.ts:188-200](../../packages/core/src/ops.ts#L188-L200) — backward closure omitted with `// NOTE: slice backward requires a Pad/Scatter op to place gradients back — not yet implemented`.
+
+**Symptom:** Same as Expand — gradient flow stops at any `slice()` call.
+
+**Fix sketch:** implement a `pad`/`scatter` op that places `grad` into a zero tensor of the original shape at the slice region. Or implement an in-place `index_put` if dropping the immutable model.
+
+---
+
+## MEDIUM — `Abs` backward not implemented
+
+**Where:** [packages/core/src/ops.ts:465-477](../../packages/core/src/ops.ts#L465-L477) — `// NOTE: abs backward requires sign(a) — not yet implemented`.
+
+**Symptom:** Gradient flow stops at `abs()`.
+
+**Fix sketch:** add a `sign` kernel (cheap unary). Backward is `grad * sign(a)`.
+
+---
+
+## MEDIUM — Max-rank guard not enforced at `allocate()`
+
+**Where:** all three backends. Reference: `.claude/CLAUDE.md` notes the package-wide cap is **64**.
+
+**Symptom:** Today nothing checks rank at allocation. A rank-12 tensor (say a future batched op) silently goes through CPU/WASM (where it might work or might index out of bounds in metadata buffers) and silently corrupts on WebGPU (rank-8 ceiling).
+
+**Fix sketch:** In each backend's `allocate()` (and possibly in `Tensor` constructor), throw if `shape.length > MAX_RANK`. Combine with a tighter WebGPU-specific guard (rank > 8 throws until the `TensorMeta` redesign).
+
+---
+
+## LOW — ESLint error: `scripts/clean.mjs` not in `allowDefaultProject`
+
+**Where:** [eslint.config.js](../../eslint.config.js).
+
+**Symptom:** `bun run lint` fails with a parsing error on `scripts/clean.mjs`.
+
+**Fix sketch:** add `'scripts/**/*.mjs'` to the `allowDefaultProject` array in the eslint config.
+
+---
+
+## LOW — Prettier mismatch on `packages/backend-webgpu/package.json`
+
+**Where:** [packages/backend-webgpu/package.json](../../packages/backend-webgpu/package.json).
+
+**Symptom:** `bun run format:check` reports the file is not formatted (a JSON array is on a single line where prettier expects multi-line).
+
+**Fix sketch:** `bun run format` rewrites it. (This is a one-shot fix.)
+
+---
+
+## LOW — Version drift between packages
+
+**Where:** all six `package.json` files. `packages/backend-wasm/package.json` is `0.1.0`; the other five are `0.0.0`.
+
+**Symptom:** `publish:all` would publish `backend-wasm@0.1.0` against `runtime@0.0.0`. If `backend-wasm` ever pins a `runtime` version, this gets ugly.
+
+**Fix sketch:** pick one — either bump all to a shared version (`0.1.0`) or set up a release tool (`changesets`, `lerna`, or a small bun script) that keeps versions aligned.
+
+---
+
+## LOW — Async-shaped sync code in WASM init
+
+**Where:** [packages/backend-wasm/src/module.ts](../../packages/backend-wasm/src/module.ts).
+
+**Symptom:** `loadWasmModule()` returns `Promise<WebtensorWasmModule>` but does no actual async work — the module is loaded at import time by the bundler. Misleading; future maintainers may add real `await`s expecting the promise to mean something.
+
+**Fix sketch:** keep the async signature for symmetry with WebGPU but add a comment, or remove the wrapper entirely and have the backend factory just return synchronously.
+
+---
+
+## LOW — `null` in `shape` not consistently handled
+
+**Where:** [packages/core/src/tensor.ts:62](../../packages/core/src/tensor.ts#L62), various kernels.
+
+**Symptom:** The type allows `(number | null)[]` (placeholders for dynamic dims), but most code paths cast or coerce via `?? 1`. There's no `Tensor.placeholder()` constructor today, so `null` is unreachable in practice. If/when placeholders are added, every kernel and `packMeta()` (WebGPU) will need re-auditing.
+
+**Fix sketch:** until placeholders are wired, narrow the type to `number[]` in internal APIs and convert at the boundary. Or write the placeholder feature and an exhaustive test.
+
+---
+
+## Process gaps (not bugs, but blockers for serious work)
+
+- **No CI.** The 367-test suite must be run manually before every commit. A GitHub Actions job that runs `bun install`, builds WASM, and runs `bun run test` in headless browser would catch regressions immediately.
+- **No published-package smoke test.** All tests use workspace aliases. Publishing without a test that consumes `@webtensor/core` from a real `node_modules` is a leap of faith.
+- **No example apps.** Hard to validate the user experience without one.
+
+These are organizational, not code defects, but they're the cheapest way to multiply confidence.

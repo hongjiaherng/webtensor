@@ -1,0 +1,41 @@
+@startuml onboarding-flow
+title Webtensor Onboarding — Reading Order
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #555
+skinparam DefaultFontName "Segoe UI"
+
+start
+
+:You arrived at the repo;
+
+if (What do you want to do?) then (Use it / understand it)
+  :README.md;
+  :docs/onboarding/00-start-here.md;
+  :docs/onboarding/01-system-walkthrough.md;
+  if (Need more depth?) then (yes)
+    :docs/onboarding/02-package-deep-dive.md;
+    :docs/architecture.md (canonical);
+    :docs/ir-reference.md (canonical);
+  endif
+elseif (Add an op / kernel) then (contribute)
+  :docs/onboarding/07-contributor-guide.md;
+  :docs/adding-an-op.md (canonical recipe);
+  :docs/onboarding/03-backends-and-kernels.md;
+elseif (Pick something to fix) then (fix bugs)
+  :docs/onboarding/06-bugs-and-gaps.md;
+  :docs/onboarding/05-state-of-the-project.md;
+elseif (Plan bigger work) then (refactor / rearchitect)
+  :docs/onboarding/05-state-of-the-project.md;
+  :docs/onboarding/08-rearchitect-notes.md;
+  :docs/next.md (roadmap);
+else (just curious about autograd)
+  :docs/onboarding/04-autograd.md;
+endif
+
+:Then dive into the code;
+stop
+
+@enduml

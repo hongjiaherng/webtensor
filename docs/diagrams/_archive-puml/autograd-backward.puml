@@ -1,0 +1,51 @@
+@startuml autograd-backward
+title Autograd Backward Pass — Eager Graph Construction
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam DefaultFontName "Segoe UI"
+
+actor User
+participant "loss\n(Tensor)" as Loss
+participant "buildTopo()" as Topo
+participant "_ctx.backward()\n(per node)" as Bwd
+participant "add()\n(accumulator)" as Acc
+
+User -> Loss : loss.backward()
+
+Loss -> Loss : check requiresGrad
+Loss -> Topo : DFS through _ctx.inputs
+Topo --> Loss : topo[] (post-order)
+
+Loss -> Loss : seed grad = ones(loss.shape)\nas Constant tensor
+
+loop reverse topo (i = N-1 .. 0)
+  Loss -> Bwd : t._ctx.backward(t.grad)
+  note right
+    Each backward returns
+    NEW Tensors that themselves
+    are graph nodes (Mul, Add,
+    MatMul, Transpose, ReluGrad).
+    The grad graph is built
+    eagerly — not yet executed.
+  end note
+  Bwd --> Loss : inputGrads[]
+  loop for each input that requiresGrad
+    alt input.grad already set
+      Loss -> Acc : input.grad = add(input.grad, g)
+    else first time
+      Loss -> Loss : input.grad = g
+    end
+  end
+end
+
+note over Loss
+  After backward(), `x.grad` is a Tensor
+  representing an unevaluated gradient
+  graph. To get numbers, the user must:
+    compileGraph([x.grad])
+    engine.evaluate(graph)
+    engine.get(x.grad.id)
+end note
+
+@enduml

@@ -1,0 +1,60 @@
+@startuml backend-dispatch
+title Engine Dispatch — Three Fast Paths Plus Kernel
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam DefaultFontName "Segoe UI"
+
+start
+
+:Engine.evaluate(graph);
+:topologicalSort;
+
+while (more nodes?) is (yes)
+  :pop next node;
+
+  if (node.op == "Constant"?) then (yes)
+    :backend.allocate + write\n(initializer data);
+  elseif (op in viewRegistry?\nTranspose|Slice|Permute|\nExpand|Squeeze|Unsqueeze) then (yes)
+    :viewRegistry[op](node, src);
+    note right
+      Pure metadata —
+      shares storage,
+      isView = true.
+      Track viewParents
+      for cascade GC.
+    end note
+  elseif (op in {Reshape, View}?) then (yes)
+    if (isContiguous(src)?) then (yes)
+      :zero-copy view;
+    else (no)
+      if (op == "View") then (throw)
+        stop
+      else (Reshape)
+        :backend.execute Contiguous\nthen reshape;
+      endif
+    endif
+  else (kernel op)
+    :backend.allocate(outputs);
+    :backend.execute(node, inputs, outputs);
+    note right
+      Kernel registry lookup:
+        CPU  → cpuKernelRegistry
+        WASM → wasmKernelRegistry
+        GPU  → webgpuKernelRegistry
+    end note
+  endif
+
+  :decrement input refcounts;
+  if (refcount == 0 && not retained?) then (yes)
+    :dispose;
+    if (was a view?) then (yes)
+      :cascade decrement parent;
+    endif
+  endif
+
+endwhile (no)
+
+stop
+
+@enduml
