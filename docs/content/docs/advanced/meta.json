@@ -1,4 +1,4 @@
 {
   "title": "Advanced",
-  "pages": ["architecture", "ir-reference", "adding-an-op"]
+  "pages": ["architecture", "ir-reference", "adding-an-op", "releasing"]
 }

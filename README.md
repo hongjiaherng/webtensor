@@ -32,16 +32,20 @@ A tensor library that runs entirely in the browser. Train, visualize, and run in
 
 ## Getting Started
 
-**Prerequisites:** [Bun](https://bun.sh), `wasm-pack` (for WASM backend build)
+**Prerequisites:** [Bun](https://bun.sh), [`wasm-pack`](https://rustwasm.github.io/wasm-pack/) (for WASM backend build)
 
 ```sh
-bun install
+# Install all dependencies (root workspace + docs)
+bun run setup
 
-# Build the WASM backend (required before running tests that use WASMBackend)
-cd packages/backend-wasm && wasm-pack build rust --target bundler --out-dir ../pkg && cd ../..
+# Build all packages (chains wasm-pack → bun build → tsc for backend-wasm)
+bun run build
 
+# Run tests (CPU + WASM + WebGPU parity, 1e-5 tolerance)
 bun run test
 ```
+
+If you're only iterating on the WASM backend, `bun run build:backend-wasm` rebuilds just that package (`wasm-pack` → bundler plugin → type emit).
 
 Tests use [Vitest](https://vitest.dev/). Browser/WebGPU tests run via Playwright (`@vitest/browser`).
 

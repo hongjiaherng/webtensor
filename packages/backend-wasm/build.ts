@@ -1,3 +1,5 @@
+/// <reference types="node" />
+/// <reference types="bun" />
 import { readFileSync } from 'fs';
 
 const result = await Bun.build({

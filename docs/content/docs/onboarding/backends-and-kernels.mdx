@@ -102,21 +102,29 @@ Single-threaded. Slow for large tensors but always works — useful as a fallbac
 ### Build
 
 ```sh
-cd packages/backend-wasm && wasm-pack build rust --target bundler --out-dir ../pkg
+bun run build:backend-wasm
 ```
 
-This must be re-run whenever Rust source changes. The `pkg/` output is included in the package's `files` field.
+This chains three steps: `wasm-pack build rust --target bundler --out-dir ../pkg` (compiles Rust to WASM), then `bun build.ts` (Bun bundler with a custom plugin that inlines the `.wasm` binary as a base64 string), then `tsc --emitDeclarationOnly` (emits `.d.ts` files). Re-run whenever Rust source changes. Only `dist/` is published; `pkg/` is build-time only.
 
-### Module loading (wasm-pack 0.14 quirk)
+### Module loading (base64 inline)
 
-The bundler target does **not** generate a default init export. [src/module.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/module.ts) imports the namespace and the WASM memory directly:
+The published `dist/index.js` contains the `.wasm` binary inline as a base64 string — consumers don't need `vite-plugin-wasm` or any other bundler config. [src/module.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/module.ts) decodes the base64 and instantiates the module manually:
 
 ```ts
-import * as wasmExports from '../pkg/webtensor_wasm';
-import { memory } from '../pkg/webtensor_wasm_bg.wasm';
+import wasmBase64Raw from '../pkg/webtensor_wasm_bg.wasm';   // bundler → base64 string
+const wasmBase64 = wasmBase64Raw as unknown as string;
+
+const bytes = Uint8Array.from(atob(wasmBase64), (c) => c.charCodeAt(0));
+const { instance } = await WebAssembly.instantiate(bytes, {
+  './webtensor_wasm_bg.js': {
+    __wbindgen_init_externref_table: () => {},   // no-op: kernels use only numeric pointers
+  },
+});
+instance.exports.__wbindgen_start();
 ```
 
-`loadWasmModule()` returns immediately — the module is loaded at import time. The `async` signature is preserved for symmetry with the WebGPU backend.
+`loadWasmModule()` is genuinely async and caches the result — the WASM is instantiated lazily on the first `WASMBackend.create()` call, not at import time.
 
 ### Tensor handle
 

@@ -23,5 +23,9 @@
   "dependencies": {
     "@webtensor/ir": "workspace:*",
     "@webtensor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.12",
+    "@types/node": "^25.6.0"
   }
 }

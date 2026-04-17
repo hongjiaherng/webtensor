@@ -1,0 +1,95 @@
+---
+title: Releasing
+description: How to publish the @webtensor/* packages to npm and verify the release with the smoke test.
+---
+
+This guide walks through cutting a coordinated release of all six `@webtensor/*` packages and verifying it against npm with the [smoke test](/docs/onboarding/smoke-test).
+
+## 0. Pre-flight
+
+Make sure the workspace is green before touching versions:
+
+```sh
+bun run lint
+bun run test          # CPU + WASM + WebGPU parity, 1e-5 tolerance
+```
+
+If anything fails, fix it first — releases lock in whatever bugs make it through.
+
+## 1. Bump versions
+
+All published packages share a single coordinated version. Edit each `packages/*/package.json` and bump `version` to the new release (e.g., `0.3.0`):
+
+- `packages/ir`
+- `packages/runtime`
+- `packages/core`
+- `packages/backend-cpu`
+- `packages/backend-wasm`
+- `packages/backend-webgpu`
+
+<Callout type="warn">
+**Current version drift:** `@webtensor/backend-wasm` is at `0.2.x` while the other five packages are still at `0.0.0`. Before the next coordinated release, decide a single shared version (e.g., `0.3.0`) and bump everyone to it.
+</Callout>
+
+If you changed types or APIs in `@webtensor/ir`, `@webtensor/runtime`, or `@webtensor/core`, every dependent package (basically all the backends and core) needs a corresponding bump too — they all peer-depend on these via `workspace:*`, which is replaced with the actual version at publish time.
+
+## 2. Build everything
+
+```sh
+bun run build
+```
+
+This rebuilds all six packages in dependency order (`ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm`). The `backend-wasm` build chains three steps: `wasm-pack build` → `bun build.ts` (which inlines the `.wasm` binary as base64 into `dist/index.js`) → `tsc --emitDeclarationOnly`.
+
+Sanity-check `dist/` for each package — it should contain only `index.js` (or a small bundle) and `.d.ts` files, nothing else.
+
+## 3. Publish
+
+Login if needed:
+
+```sh
+bun login
+```
+
+Then run the publish script:
+
+```sh
+bun run publish:all
+```
+
+<Callout type="warn">
+**Heads-up on the publish script:** the current `publish:all` in the root `package.json` invokes `bun publish --cwd packages/X --access public`. The `--cwd` flag is a **global** Bun flag and must come **before** the subcommand. The correct form is `bun --cwd packages/X publish --access public`. Fix this in the root `package.json` before your first real release if it hasn't been fixed yet.
+</Callout>
+
+The packages publish in dependency order so consumers always see a consistent `workspace:*` → version resolution.
+
+## 4. Verify with the smoke test
+
+The workspace tests pass against the local source — they don't catch packaging or bundler-compat regressions. The [smoke test](/docs/onboarding/smoke-test) does.
+
+```sh
+# In smoke-test/package.json, bump every "@webtensor/*" dep to the new version
+cd smoke-test
+bun install            # pulls fresh from npm
+bun dev                # http://localhost:3000
+```
+
+Click **Run tests** and confirm all three backends are green (12 tests total). If anything fails, the publish has a real-world bug — fix and publish a patch immediately, or `npm unpublish` within the 72-hour window.
+
+## 5. Tag
+
+```sh
+git tag v0.3.0
+git push --tags
+```
+
+That's it. The release is live on npm and the smoke test confirms it works as a real consumer would experience it.
+
+## Recovery
+
+| Situation | Action |
+|---|---|
+| Wrong version published, &lt;72h ago | `npm unpublish @webtensor/<name>@0.3.0` (per package), fix, re-publish same or next version |
+| Wrong version published, &gt;72h ago | Publish a patch (`0.3.1`) — `npm` won't let you unpublish |
+| One package failed mid-publish | Re-run `bun publish --cwd packages/<failed> --access public` for just that package |
+| Smoke test reveals a packaging bug | Publish a patch immediately; document the failure mode in `bugs-and-gaps.mdx` |

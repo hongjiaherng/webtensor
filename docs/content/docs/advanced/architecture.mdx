@@ -117,7 +117,7 @@ dispose()   →  module.free_f32(ptr, elements)  frees the WASM allocation
 
 Tensors do not cross the JS/WASM boundary on every kernel call. The `_raw` suffix on Rust functions (e.g., `add_raw`) marks the pointer-based variants used at runtime.
 
-`packages/backend-wasm/pkg/` is build output from `wasm-pack` and must not be imported directly by kernel code. `packages/backend-wasm/src/module.ts` is the only file that imports from `pkg/` — all kernel code goes through `module.ts`.
+`packages/backend-wasm/pkg/` is build output from `wasm-pack`. `packages/backend-wasm/src/module.ts` is the only file that imports from `pkg/` — all kernel code goes through `module.ts`. At bundle time the `build.ts` plugin rewrites the `*.wasm` import into a base64 string default export, so the published `dist/index.js` contains the WASM binary inline. `pkg/` itself is never published (the package's `files` field is `["dist"]`), and consumers don't need `vite-plugin-wasm` or any other WASM-handling bundler config to use the package.
 
 ---
 
@@ -132,3 +132,15 @@ same graph  →  WebGPU result   (must match CPU within 1e-5)
 ```
 
 Tests run in Vitest browser mode (Playwright, Chromium). Do not use `bun test` directly — use `bun run test`, which invokes Vitest with the correct browser environment configuration.
+
+---
+
+## Kernel implementation style
+
+All three backends ship naive scalar / per-thread implementations that prioritize correctness over raw throughput. This is intentional for early-stage development — kernels are easy to read, easy to verify against the CPU oracle, and easy to swap later when training-loop benchmarks justify optimization.
+
+- **CPU** — Plain TypeScript loops over `TypedArray`s, dispatched via `stridedIdx(flat, rank, shape, strides, offset)`. Synchronous `execute()`.
+- **WASM** — Rust scalar loops compiled with `wasm-bindgen` (no `rayon`, no SIMD intrinsics). Memory uses `Vec` leak/reclaim across the JS/WASM boundary. Matmul is naive O(MNK), 2D-only, no tiling.
+- **WebGPU** — One thread per output element. Workgroup sizes are `@workgroup_size(64)` for elementwise ops and `@workgroup_size(8, 8)` for matmul. No shared-memory tiling — each matmul thread accumulates its M×N output cell via a scalar K-dim loop. Pipeline cache + temp meta buffers GC'd after `device.queue.onSubmittedWorkDone()`.
+
+Optimization (SIMD on WASM, tiled matmul on WebGPU, fused activations) is deferred until the training loop is in place and benchmarks identify hotspots.

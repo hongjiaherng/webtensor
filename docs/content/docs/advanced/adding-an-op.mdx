@@ -146,8 +146,10 @@ export const sigmoidKernel: WASMKernel = (module, _node, inputs, outputs) => {
 **Rebuild WASM** after changing Rust:
 
 ```sh
-cd packages/backend-wasm && wasm-pack build rust --target bundler --out-dir ../pkg
+bun run build:backend-wasm
 ```
+
+This chains `wasm-pack build` → `bun build.ts` (which bundles `src/` and inlines the new `.wasm` binary as base64 into `dist/index.js`) → `tsc --emitDeclarationOnly`.
 
 ---
 

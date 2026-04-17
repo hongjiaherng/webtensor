@@ -18,12 +18,12 @@ Practical how-to for working in the repo. The canonical recipe for adding a new 
 ### First-time setup
 
 ```sh
-bun install
-cd packages/backend-wasm && wasm-pack build rust --target bundler --out-dir ../pkg && cd ../..
-bun run test
+bun run setup            # install workspace + docs deps
+bun run build            # build all 6 packages (chains wasm-pack → bun build → tsc for backend-wasm)
+bun run test             # CPU + WASM + WebGPU parity (1e-5 tolerance)
 ```
 
-The WASM build step is **required** before any test that uses `WASMBackend`. It writes to `packages/backend-wasm/pkg/` which is git-ignored and consumed via the workspace.
+`bun run build` rebuilds every package in dependency order. The `backend-wasm` build chains three steps under the hood: `wasm-pack build` writes `packages/backend-wasm/pkg/` (git-ignored), `bun build.ts` bundles `src/` and inlines the `.wasm` binary as base64 into `dist/index.js`, and `tsc --emitDeclarationOnly` writes the `.d.ts` files. If you're only iterating on the WASM kernels, `bun run build:backend-wasm` rebuilds just that package.
 
 ### Day-to-day commands
 

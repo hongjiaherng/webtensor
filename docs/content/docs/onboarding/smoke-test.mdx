@@ -1,0 +1,66 @@
+---
+title: Smoke test
+description: A standalone Bun + React app that validates the published @webtensor/* packages end-to-end against npm.
+---
+
+`smoke-test/` is a Bun + React app at the repo root. It exists to catch issues that the workspace-internal Vitest suite can't — most importantly, **bundler-compatibility regressions** in the published packages. (One was already caught this way: the `@webtensor/backend-wasm` 0.1.0 → 0.2.0 fix where the wasm-pack bundler-target glue was incompatible with Bun's bundler.)
+
+The smoke test is **not** part of the workspace. It installs from npm like a real consumer would.
+
+## Layout
+
+```
+smoke-test/
+├── package.json         # depends on published @webtensor/* packages, NOT workspace
+├── src/
+│   ├── index.html       # entry — links to frontend.tsx
+│   ├── frontend.tsx     # mounts <App /> with React.StrictMode
+│   ├── App.tsx          # UI — env panel + "Run tests" button + per-backend results
+│   ├── tests.ts         # backend detection + 4 ops × 3 backends
+│   └── index.css
+└── bun.lock
+```
+
+## Run
+
+```sh
+cd smoke-test
+bun install
+bun dev          # serves on http://localhost:3000 with HMR
+```
+
+No Vite, no `vite-plugin-wasm` — pure Bun bundler. This proves the packages work without consumer-side WASM bundler config.
+
+## What it checks
+
+**Environment panel** (runs on mount, before you click anything):
+
+- **CPU** — always available (TypeScript-only).
+- **WASM** — checks `typeof WebAssembly`.
+- **WebGPU** — checks `'gpu' in navigator`, then `requestAdapter()`. On success, shows the adapter's `vendor · architecture · device`.
+
+**Test cases** (one click runs all 12):
+
+| Test | Backends | Expected |
+|---|---|---|
+| `add [2×2]` | CPU, WASM, WebGPU | `[6, 8, 10, 12]` |
+| `mul [1×3]` | CPU, WASM, WebGPU | `[10, 18, 28]` |
+| `matmul identity [2×2]` | CPU, WASM, WebGPU | `[1, 2, 3, 4]` |
+| `broadcast add [2×2] + scalar` | CPU, WASM, WebGPU | `[11, 12, 13, 14]` |
+
+Tolerance: `1e-5`. Each row shows the actual values on success, or `got [...] · expected [...]` on failure.
+
+## When to use it
+
+After every release. The flow:
+
+1. Run the [release flow](/docs/advanced/releasing) — `bun run publish:all`.
+2. Bump `@webtensor/*` versions in `smoke-test/package.json` to the new release.
+3. `cd smoke-test && bun install` (pulls the freshly published versions from npm).
+4. `bun dev`, click **Run tests**, confirm all three backends are green.
+
+If something fails, the published packages have a real-world bug that the workspace tests didn't catch — most likely a packaging or bundler issue. Roll back via `npm unpublish` (within the 72-hour window) or publish a patch immediately.
+
+## Adding more cases
+
+The test cases are defined in [`smoke-test/src/tests.ts`](https://github.com/hongjiaherng/webtensor/blob/main/smoke-test/src/tests.ts) using a small `runCase(name, fn)` helper and a shared `evalAndRead(engine, output)` utility. Keep this app deliberately small — it's a smoke test, not a parity suite. The full op×backend matrix lives in `tests/` inside the workspace.
