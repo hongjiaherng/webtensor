@@ -3,10 +3,10 @@ import { NestedArray } from './types';
 export function inferShape(arr: NestedArray<number>): number[] {
   if (!Array.isArray(arr)) return [];
   const shape: number[] = [];
-  let current: any = arr;
+  let current: NestedArray<number> = arr;
   while (Array.isArray(current)) {
     shape.push(current.length);
-    current = current[0];
+    current = current[0]!;
   }
   return shape;
 }
@@ -14,12 +14,12 @@ export function inferShape(arr: NestedArray<number>): number[] {
 export function flattenArray(arr: NestedArray<number>): number[] {
   if (!Array.isArray(arr)) return [arr];
   const out: number[] = [];
-  function recurse(a: any[]) {
-    for (let i = 0; i < a.length; i++) {
-      if (Array.isArray(a[i])) {
-        recurse(a[i]);
+  function recurse(a: NestedArray<number>[]) {
+    for (const item of a) {
+      if (Array.isArray(item)) {
+        recurse(item);
       } else {
-        out.push(a[i]);
+        out.push(item);
       }
     }
   }

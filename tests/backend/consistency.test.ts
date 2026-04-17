@@ -1,6 +1,6 @@
 import { describe, it, beforeAll } from 'vitest';
 import { tensor, compileGraph, add, sub, mul, div, matmul, relu } from '@webtensor/core';
-import { Engine } from '@webtensor/runtime';
+import { Engine, type Backend } from '@webtensor/runtime';
 import { CPUBackend } from '@webtensor/backend-cpu';
 import { WASMBackend } from '@webtensor/backend-wasm';
 import { WebGPUBackend } from '@webtensor/backend-webgpu';
@@ -21,7 +21,7 @@ async function collectResults(
   graphFn: () => ReturnType<typeof tensor>,
   backendNames: string[],
 ): Promise<Map<string, Float32Array>> {
-  const backends: Record<string, () => Promise<any>> = {
+  const backends: Record<string, () => Promise<Backend>> = {
     CPU: async () => new CPUBackend(),
     WASM: async () => await WASMBackend.create(),
     WebGPU: async () => await WebGPUBackend.create(),

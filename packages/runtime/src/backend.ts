@@ -1,16 +1,19 @@
 import { Node, DType } from '@webtensor/ir';
 
 /**
- * Physical memory backing a tensor. Each backend stores its native handle here:
- *   CPU   — Float32Array
- *   WASM  — { ptr, elements, byteLength } (pointer into WASM linear memory)
- *   WebGPU — GPUBuffer
+ * Physical memory backing a tensor. The runtime treats `buffer` as opaque —
+ * only the backend that allocated it knows the concrete type and reads it.
+ *
+ * Concrete types per backend (each casts internally):
+ *   @webtensor/backend-cpu    → TypedArray (Float32Array, Int32Array, Uint8Array)
+ *   @webtensor/backend-wasm   → WasmTensorHandle ({ ptr, elements, byteLength })
+ *   @webtensor/backend-webgpu → GPUBuffer
  *
  * Storage is separate from RuntimeTensor to mirror the PyTorch Storage/Tensor
  * split — the foundation for zero-copy stride-based views.
  */
 export interface RuntimeStorage {
-  buffer: any; // Float32Array | GPUBuffer | WasmTensorHandle
+  buffer: unknown;
   byteLength: number;
 }
 
