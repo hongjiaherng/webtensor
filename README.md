@@ -70,7 +70,7 @@ All ops run on CPU, WASM (Rust), and WebGPU with cross-backend parity tests.
 
 ## Docs
 
-- [docs/next.md](docs/next.md) — implementation roadmap and checklist
-- [docs/architecture.md](docs/architecture.md) — diagrams, design decisions, backend contract
-- [docs/ir-reference.md](docs/ir-reference.md) — IR schema: Node/Value/Graph types, shape system, dtype reference
-- [docs/adding-an-op.md](docs/adding-an-op.md) — how to add a kernel across all three backends
+- [docs/roadmap.mdx](docs/roadmap.mdx) — implementation roadmap and checklist
+- [docs/reference/architecture.mdx](docs/reference/architecture.mdx) — diagrams, design decisions, backend contract
+- [docs/reference/ir-reference.mdx](docs/reference/ir-reference.mdx) — IR schema: Node/Value/Graph types, shape system, dtype reference
+- [docs/reference/adding-an-op.mdx](docs/reference/adding-an-op.mdx) — how to add a kernel across all three backends
