@@ -1,0 +1,25 @@
+{
+  "name": "bun-react-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.html",
+    "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify",
+    "preview": "bunx serve dist"
+  },
+  "dependencies": {
+    "@webtensor/backend-cpu": "^0.0.0",
+    "@webtensor/backend-wasm": "^0.2.1",
+    "@webtensor/backend-webgpu": "^0.0.0",
+    "@webtensor/core": "^0.0.0",
+    "@webtensor/runtime": "^0.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/bun": "latest"
+  }
+}

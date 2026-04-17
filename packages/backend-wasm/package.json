@@ -1,6 +1,6 @@
 {
   "name": "@webtensor/backend-wasm",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "WASM backend for webtensor using wasm-bindgen",
   "type": "module",
   "main": "dist/index.js",
@@ -12,17 +12,13 @@
     }
   },
   "files": [
-    "dist",
-    "pkg/webtensor_wasm.js",
-    "pkg/webtensor_wasm.d.ts",
-    "pkg/webtensor_wasm_bg.js",
-    "pkg/webtensor_wasm_bg.wasm",
-    "pkg/webtensor_wasm_bg.wasm.d.ts"
+    "dist"
   ],
   "scripts": {
     "build:wasm": "wasm-pack build rust --target bundler --out-dir ../pkg",
-    "build:ts": "tsc",
-    "build": "bun run build:wasm && bun run build:ts"
+    "build:bundle": "bun build.ts",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build": "bun run build:wasm && bun run build:bundle && bun run build:types"
   },
   "dependencies": {
     "@webtensor/ir": "workspace:*",
