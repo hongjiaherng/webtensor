@@ -9,26 +9,22 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: (
-        <div className="flex items-center h-8">
+        <div className="relative h-7 w-[120px] sm:w-[150px]">
           <Image
             src={`${basePath}/logo-light.svg`}
             alt="webtensor"
-            width={150}
-            height={32}
+            fill
             unoptimized
             priority
-            className="dark:hidden h-8 w-auto"
-            style={{ width: 'auto', height: 'auto' }}
+            className="dark:hidden object-contain object-left"
           />
           <Image
             src={`${basePath}/logo-dark.svg`}
             alt="webtensor"
-            width={150}
-            height={32}
+            fill
             unoptimized
             priority
-            className="hidden dark:block h-8 w-auto"
-            style={{ width: 'auto', height: 'auto' }}
+            className="hidden dark:block object-contain object-left"
           />
         </div>
       ),

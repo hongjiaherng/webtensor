@@ -11,6 +11,9 @@ const dirs = [
   'packages/backend-webgpu/dist',
   'packages/backend-wasm/dist',
   'packages/backend-wasm/pkg',
+  'docs/out',
+  'docs/.next',
+  'docs/.source',
 ];
 
 if (all) {
@@ -19,6 +22,7 @@ if (all) {
     'packages/backend-wasm/rust/Cargo.lock',
     'node_modules',
     'bun.lock',
+    'docs/node_modules',
   );
 }
 
