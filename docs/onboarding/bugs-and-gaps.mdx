@@ -1,6 +1,9 @@
-# 06 — Bugs and Gaps
+---
+title: 'Bugs and gaps'
+description: 'Severity-tagged defects with location, observable symptom, and a fix sketch.'
+---
 
-Concrete, actionable defects with severity, location, observable symptom, and a fix sketch. Not a feature wish-list — see [05-state-of-the-project.md](05-state-of-the-project.md) for the broader matrix.
+Concrete, actionable defects with severity, location, observable symptom, and a fix sketch. Not a feature wish-list — see [State of the project](/onboarding/state-of-the-project) for the broader matrix.
 
 Severity scale:
 
@@ -12,13 +15,13 @@ Severity scale:
 
 ## HIGH — Gradient unbroadcasting missing
 
-**Where:** [packages/core/src/ops.ts:21-25](../../packages/core/src/ops.ts#L21-L25), [ops.ts:44](../../packages/core/src/ops.ts#L44), [ops.ts:67](../../packages/core/src/ops.ts#L67), and implicitly in `mul` ([ops.ts:86-92](../../packages/core/src/ops.ts#L86-L92)).
+**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `Add`, `Sub`, `Div`, and `Mul` backward closures (search for `// NOTE: missing unbroadcast`).
 
 **Symptom:** When forward broadcasting expands a smaller operand (e.g. `add(a:[3], b:[1]) → out:[3]`), the backward returns gradients matching the **output** shape, not the **input** shape. Whatever consumes `b.grad` will see a shape-`[3]` tensor where it expects `[1]` — either a downstream shape mismatch throws, or worse, a downstream broadcast silently propagates wrong values. Training loops that rely on broadcasted bias / scalar parameters get wildly inflated gradients.
 
 **Fix sketch:** implement `sum(tensor, axes, keepDims)` (Reduce kernel), then in each broadcasting backward call `unbroadcast(grad, originalInputShape)` which sums along axes where the input was size-1 or had lower rank.
 
-The closures already document the gap with `// NOTE: missing unbroadcast — requires ReduceSum op (Phase 11)`.
+The closures already document the gap with `// NOTE: missing unbroadcast — requires ReduceSum op`.
 
 **Blocked on:** Reductions kernel (sum/mean).
 
@@ -26,11 +29,11 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## HIGH — WebGPU `TensorMeta` rank-8 ceiling
 
-**Where:** [packages/backend-webgpu/src/kernels/utils.ts:8-29](../../packages/backend-webgpu/src/kernels/utils.ts#L8-L29) and [packMeta()](../../packages/backend-webgpu/src/kernels/utils.ts#L43-L59).
+**Where:** [packages/backend-webgpu/src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — see the `TensorMeta` struct and `packMeta()` function.
 
 **Symptom:** The TensorMeta uniform packs exactly 8 shape slots and 8 stride slots (`array<vec4<u32>, 2>`). `packMeta()` writes the first `min(rank, 8)` dims; everything beyond is silently dropped. A rank-9 (or higher) tensor will run, produce no error, and write nonsense — whatever happens to be in the unused slots gets used as shape/stride. With current ops capped at 2D this never fires, but **any future op above rank 8 will silently corrupt**.
 
-**Fix sketch:** for rank > 8, switch to a `storage` buffer for shape/strides instead of a uniform (uniform-buffer arrays in WGSL are tightly bound by `@minBindingSize`). Or split into multiple uniform structs. Plan covers this in [08-rearchitect-notes.md](08-rearchitect-notes.md). Also add a guard that throws when `rank > 8` until the redesign lands — turns silent corruption into a clean error.
+**Fix sketch:** for rank > 8, switch to a `storage` buffer for shape/strides instead of a uniform (uniform-buffer arrays in WGSL are tightly bound by `@minBindingSize`). Or split into multiple uniform structs. Plan covers this in [Rearchitect notes](/onboarding/rearchitect-notes). Also add a guard that throws when `rank > 8` until the redesign lands — turns silent corruption into a clean error.
 
 **Blocked on:** nothing (the guard alone is a one-line fix and worth doing now).
 
@@ -38,11 +41,11 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## HIGH — `MatMul` is 2D only; no batched matmul
 
-**Where:** [packages/core/src/ops.ts:97-134](../../packages/core/src/ops.ts#L97-L134) (forward shape inference is incomplete — line 110 has the placeholder comment `// NOTE: Proper MatMul broadcasting for batch dimensions goes here`). All three matmul kernels assume 2D layouts:
+**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `matmul()` function (search for `// NOTE: Proper MatMul broadcasting for batch dimensions goes here`). All three matmul kernels assume 2D layouts:
 
-- CPU: [packages/backend-cpu/src/kernels/linalg/matmul.ts](../../packages/backend-cpu/src/kernels/linalg/matmul.ts)
-- WASM: [packages/backend-wasm/src/kernels/linalg/matmul.ts](../../packages/backend-wasm/src/kernels/linalg/matmul.ts)
-- WebGPU: [packages/backend-webgpu/src/kernels/linalg/matmul.wgsl](../../packages/backend-webgpu/src/kernels/linalg/matmul.wgsl)
+- CPU: [packages/backend-cpu/src/kernels/linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/linalg/matmul.ts)
+- WASM: [packages/backend-wasm/src/kernels/linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/linalg/matmul.ts)
+- WebGPU: [packages/backend-webgpu/src/kernels/linalg/matmul.wgsl](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/linalg/matmul.wgsl)
 
 **Symptom:** `matmul(a:[B, M, K], b:[B, K, N])` will compute the wrong shape (forward inference passes the batch dim through naively) and call kernels that index as if there's no batch axis — output is garbage.
 
@@ -52,7 +55,7 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## MEDIUM — `Expand` backward not implemented
 
-**Where:** [packages/core/src/ops.ts:357-369](../../packages/core/src/ops.ts#L357-L369) — closure intentionally omitted with `// NOTE: expand backward requires sum reduction over expanded dims — not yet implemented`.
+**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `expand()` op (search for `// NOTE: expand backward requires sum reduction`).
 
 **Symptom:** Calling `.backward()` through an `expand()` silently drops the gradient (the topo walker skips tensors without `_ctx.backward`). Inputs upstream of `expand` get no gradient.
 
@@ -64,7 +67,7 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## MEDIUM — `Slice` backward not implemented
 
-**Where:** [packages/core/src/ops.ts:188-200](../../packages/core/src/ops.ts#L188-L200) — backward closure omitted with `// NOTE: slice backward requires a Pad/Scatter op to place gradients back — not yet implemented`.
+**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `slice()` op (search for `// NOTE: slice backward requires a Pad/Scatter op`).
 
 **Symptom:** Same as Expand — gradient flow stops at any `slice()` call.
 
@@ -74,7 +77,7 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## MEDIUM — `Abs` backward not implemented
 
-**Where:** [packages/core/src/ops.ts:465-477](../../packages/core/src/ops.ts#L465-L477) — `// NOTE: abs backward requires sign(a) — not yet implemented`.
+**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `abs()` op (search for `// NOTE: abs backward requires sign(a)`).
 
 **Symptom:** Gradient flow stops at `abs()`.
 
@@ -94,21 +97,11 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## LOW — ESLint error: `scripts/clean.mjs` not in `allowDefaultProject`
 
-**Where:** [eslint.config.js](../../eslint.config.js).
+**Where:** [eslint.config.js](https://github.com/hongjiaherng/webtensor/blob/main/eslint.config.js).
 
 **Symptom:** `bun run lint` fails with a parsing error on `scripts/clean.mjs`.
 
 **Fix sketch:** add `'scripts/**/*.mjs'` to the `allowDefaultProject` array in the eslint config.
-
----
-
-## LOW — Prettier mismatch on `packages/backend-webgpu/package.json`
-
-**Where:** [packages/backend-webgpu/package.json](../../packages/backend-webgpu/package.json).
-
-**Symptom:** `bun run format:check` reports the file is not formatted (a JSON array is on a single line where prettier expects multi-line).
-
-**Fix sketch:** `bun run format` rewrites it. (This is a one-shot fix.)
 
 ---
 
@@ -124,7 +117,7 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## LOW — Async-shaped sync code in WASM init
 
-**Where:** [packages/backend-wasm/src/module.ts](../../packages/backend-wasm/src/module.ts).
+**Where:** [packages/backend-wasm/src/module.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/module.ts).
 
 **Symptom:** `loadWasmModule()` returns `Promise<WebtensorWasmModule>` but does no actual async work — the module is loaded at import time by the bundler. Misleading; future maintainers may add real `await`s expecting the promise to mean something.
 
@@ -134,7 +127,7 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## LOW — `null` in `shape` not consistently handled
 
-**Where:** [packages/core/src/tensor.ts:62](../../packages/core/src/tensor.ts#L62), various kernels.
+**Where:** [packages/core/src/tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts), various kernels.
 
 **Symptom:** The type allows `(number | null)[]` (placeholders for dynamic dims), but most code paths cast or coerce via `?? 1`. There's no `Tensor.placeholder()` constructor today, so `null` is unreachable in practice. If/when placeholders are added, every kernel and `packMeta()` (WebGPU) will need re-auditing.
 

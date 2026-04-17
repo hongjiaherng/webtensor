@@ -1,4 +1,7 @@
-# IR Reference
+---
+title: 'IR Reference'
+description: 'Schema for Node, Value, and Graph — the device-agnostic data model shared by core and the future ONNX parser.'
+---
 
 The IR describes a computation graph as pure data. It has no device state, no gradient information, and no execution state. The same IR is produced by `core`'s graph compiler and will eventually be produced by the ONNX parser — both must generate graphs that the runtime can execute without modification.
 

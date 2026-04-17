@@ -1,6 +1,9 @@
-# 07 — Contributor Guide
+---
+title: 'Contributor guide'
+description: 'Local dev loop, test patterns, common pitfalls, and how to submit a change.'
+---
 
-Practical how-to for working in the repo. The canonical recipe for adding a new op is [adding-an-op.md](../adding-an-op.md); this file is the surrounding context — dev loop, test patterns, common pitfalls.
+Practical how-to for working in the repo. The canonical recipe for adding a new op is [Adding an op](/reference/adding-an-op); this file is the surrounding context — dev loop, test patterns, common pitfalls.
 
 ---
 
@@ -29,22 +32,23 @@ The WASM build step is **required** before any test that uses `WASMBackend`. It 
 | `bun run test`                       | Run the full Vitest suite in headed Chromium. **Do not use `bun test`** — that bypasses the browser config and WebGPU tests fail. |
 | `bun run test:watch`                 | Vitest in watch mode.                                                                                                             |
 | `bun run test tests/ops/add.test.ts` | Run one test file.                                                                                                                |
-| `bun run lint`                       | ESLint (currently has 1 known error — see [06-bugs-and-gaps.md](06-bugs-and-gaps.md)).                                            |
+| `bun run lint`                       | ESLint (currently has 1 known error — see [Bugs and gaps](/onboarding/bugs-and-gaps)).                                            |
 | `bun run lint:fix`                   | ESLint with auto-fix.                                                                                                             |
 | `bun run format`                     | Prettier write.                                                                                                                   |
 | `bun run format:check`               | Prettier check (CI-style).                                                                                                        |
 | `bun run build`                      | Build all six packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm`.         |
 | `bun run clean`                      | Delete `dist/` outputs.                                                                                                           |
 | `bun run clean:all`                  | Also delete `node_modules` and the `pkg/` WASM bundle.                                                                            |
-| `bun run render:diagrams`            | Render `docs/diagrams/*.puml` to `*.svg` via PlantUML.                                                                            |
+| `bun run render:diagrams`            | Render `docs-md/diagrams/*.puml` to `*.svg` via PlantUML, then copy SVGs into `docs/diagrams/`.                                   |
+| `bun run docs:dev`                   | Start the Mintlify dev server at `http://localhost:3001`.                                                                         |
 
 ---
 
 ## Adding a new op
 
-The canonical procedure lives in [adding-an-op.md](../adding-an-op.md). High-level it's four steps × three backends:
+The canonical procedure lives in [Adding an op](/reference/adding-an-op). High-level it's four steps × three backends:
 
-1. **Core graph function** in [packages/core/src/ops.ts](../../packages/core/src/ops.ts) — declares the op name, output shape, attributes, and backward closure.
+1. **Core graph function** in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — declares the op name, output shape, attributes, and backward closure.
 2. **CPU kernel** in `packages/backend-cpu/src/kernels/<category>/<op>.ts`, registered in `kernels/registry.ts`.
 3. **WASM kernel** — Rust function in `packages/backend-wasm/rust/src/ops/<category>/<op>.rs`, JS wrapper in `packages/backend-wasm/src/kernels/<category>/<op>.ts`, register, **rebuild WASM** with `wasm-pack`.
 4. **WebGPU kernel** — `<op>.wgsl` (uniform must be `u_meta` not `meta`!) plus `<op>.ts` implementing `WebGPUKernel`, register.
@@ -54,7 +58,7 @@ Then:
 5. **Per-op test** in `tests/ops/<op>.test.ts`.
 6. **Cross-backend parity** — make sure `tests/backend/consistency.test.ts` exercises the new op on all three backends.
 
-Add the op to [03-backends-and-kernels.md](03-backends-and-kernels.md) parity table and update [next.md](../next.md) if it was on the roadmap.
+Add the op to [Backends and kernels](/onboarding/backends-and-kernels) parity table and update [Roadmap](/roadmap) if it was on the checklist.
 
 ---
 
@@ -66,7 +70,7 @@ This is the single most common new-contributor trip-up. Vitest browser config is
 
 ### Build graphs in `beforeAll`, not in `describe` body
 
-`Tensor.id` comes from a process-global counter ([tensor.ts:34](../../packages/core/src/tensor.ts#L34)). Vitest can run multiple test files in the same process. If you build graphs at module load (the `describe` body), tensor IDs from earlier files collide with later ones and tests interfere.
+`Tensor.id` comes from a process-global counter ([tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts)). Vitest can run multiple test files in the same process. If you build graphs at module load (the `describe` body), tensor IDs from earlier files collide with later ones and tests interfere.
 
 ```ts
 describe('add', () => {
@@ -82,13 +86,13 @@ describe('add', () => {
 
 ### Use the helpers in `tests/helpers.ts`
 
-[`tests/helpers.ts`](../../tests/helpers.ts) exports:
+[`tests/helpers.ts`](https://github.com/hongjiaherng/webtensor/blob/main/tests/helpers.ts) exports:
 
 - `BACKENDS` — array of `'cpu' | 'wasm' | 'webgpu'` to iterate over for parity tests.
 - `runUnary`, `runBinary` — convenience runners.
 - `expectClose(actual, expected, tol = 1e-5)` — float comparison.
 
-Tolerance is `1e-5` (per [CLAUDE.md](../../.claude/CLAUDE.md)). CPU is the correctness oracle — WASM and WebGPU are compared against CPU output, not against hand-computed expected values.
+Tolerance is `1e-5`. CPU is the correctness oracle — WASM and WebGPU are compared against CPU output, not against hand-computed expected values.
 
 ### Test layout
 
@@ -113,7 +117,7 @@ WebGPU rejects bind groups with gaps. Unary kernels use 0,1,2; binary kernels us
 
 ### WebGPU temp buffers must outlive submission
 
-In [packages/backend-webgpu/src/backend.ts](../../packages/backend-webgpu/src/backend.ts), `tempBuffers` are destroyed only after `device.queue.onSubmittedWorkDone()` resolves. If you destroy earlier the GPU reads garbage.
+In [packages/backend-webgpu/src/backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/backend.ts), `tempBuffers` are destroyed only after `device.queue.onSubmittedWorkDone()` resolves. If you destroy earlier the GPU reads garbage.
 
 ### `Backend.dispose()` is a no-op for views
 
@@ -142,8 +146,8 @@ Tests that share a `describe` block but build their own graphs at top-level will
 There is no formal CONTRIBUTING.md or PR template. The de-facto checklist:
 
 1. `bun run test` — green across all three backends.
-2. `bun run lint` and `bun run format:check` — green (modulo the two known issues from [06-bugs-and-gaps.md](06-bugs-and-gaps.md)).
-3. If you added an op: update the parity table in [03-backends-and-kernels.md](03-backends-and-kernels.md) and the roadmap checklist in [next.md](../next.md).
-4. If you fixed a documented bug: remove it from [06-bugs-and-gaps.md](06-bugs-and-gaps.md).
+2. `bun run lint` and `bun run format:check` — green (modulo the known ESLint error on `scripts/clean.mjs` from [Bugs and gaps](/onboarding/bugs-and-gaps)).
+3. If you added an op: update the parity table in [Backends and kernels](/onboarding/backends-and-kernels) and the roadmap checklist in [Roadmap](/roadmap).
+4. If you fixed a documented bug: remove it from [Bugs and gaps](/onboarding/bugs-and-gaps).
 
-Continue with [08-rearchitect-notes.md](08-rearchitect-notes.md) if you're planning bigger work.
+Continue with [Rearchitect notes](/onboarding/rearchitect-notes) if you're planning bigger work.

@@ -1,8 +1,11 @@
-# 03 — Backends and Kernels
+---
+title: 'Backends and kernels'
+description: 'Three backends, one contract: registry pattern, CPU kernels, WASM (Rust + meta buffers), WebGPU (WGSL + uniforms).'
+---
 
 Three backends, one contract, full parity. This file goes deep on each.
 
-For the canonical recipe to add a new op see [adding-an-op.md](../adding-an-op.md). This file is the **why and how it fits together** — the patterns, the gotchas, the specific layouts.
+For the canonical recipe to add a new op see [Adding an op](/reference/adding-an-op). This file is the **why and how it fits together** — the patterns, the gotchas, the specific layouts.
 
 ---
 
@@ -15,7 +18,7 @@ Every backend follows the same shape:
 3. An **`index.ts`** that calls `registerBackend(device, factory)` at module load.
 4. The factory is `() => Promise<Backend>` — async because WASM and WebGPU need init.
 
-`Engine.create(device)` looks up the factory in `backendRegistry` ([engine.ts:7-11](../../packages/runtime/src/engine.ts#L7-L11)), awaits it, and wraps the resulting `Backend` in an `Engine`.
+`Engine.create(device)` looks up the factory in `backendRegistry` ([engine.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/runtime/src/engine.ts)), awaits it, and wraps the resulting `Backend` in an `Engine`.
 
 `backend.execute(node, inputs, outputs)` is one line: look up `node.op` in the registry, call the kernel. If missing, throw `unsupported op`.
 
@@ -31,7 +34,7 @@ All three backends register exactly the **same 16 kernels**:
 | `Sub`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
 | `Mul`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
 | `Div`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                |
-| `MatMul`     | ✅  | ✅   | ✅     | **2D only.** Batched (rank ≥ 3) not yet implemented in any backend; see [06-bugs-and-gaps.md](06-bugs-and-gaps.md). |
+| `MatMul`     | ✅  | ✅   | ✅     | **2D only.** Batched (rank ≥ 3) not yet implemented in any backend; see [Bugs and gaps](/onboarding/bugs-and-gaps). |
 | `Relu`       | ✅  | ✅   | ✅     | Strided.                                                                                                            |
 | `ReluGrad`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.                    |
 | `Neg`        | ✅  | ✅   | ✅     | Strided.                                                                                                            |
@@ -44,17 +47,17 @@ All three backends register exactly the **same 16 kernels**:
 | `Tanh`       | ✅  | ✅   | ✅     | Strided.                                                                                                            |
 | `Contiguous` | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                                  |
 
-**View ops** (`Transpose`, `Reshape`, `View`, `Slice`, `Permute`, `Expand`, `Squeeze`, `Unsqueeze`) are handled inside the engine — they never reach a backend kernel. See [01-system-walkthrough.md](01-system-walkthrough.md).
+**View ops** (`Transpose`, `Reshape`, `View`, `Slice`, `Permute`, `Expand`, `Squeeze`, `Unsqueeze`) are handled inside the engine — they never reach a backend kernel. See [System walkthrough](/onboarding/system-walkthrough).
 
 ---
 
 ## CPU backend
 
-[packages/backend-cpu](../../packages/backend-cpu/) — the simplest and the correctness oracle.
+[packages/backend-cpu](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/) — the simplest and the correctness oracle.
 
 ### Backend class
 
-[backend.ts](../../packages/backend-cpu/src/backend.ts):
+[backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/backend.ts):
 
 - `allocate()` — `new TypedArray(size)` via `typedArrayCtor(dtype)` from `@webtensor/runtime/dtype`.
 - `read()` — returns the typed array directly.
@@ -66,7 +69,7 @@ All three backends register exactly the **same 16 kernels**:
 
 `CPUKernel = (node, inputs, outputs) => void`. Every kernel handles arbitrary strides via `stridedIdx()`.
 
-Example — [`addKernel`](../../packages/backend-cpu/src/kernels/binary/add.ts):
+Example — [`addKernel`](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/binary/add.ts):
 
 ```ts
 const aBcast = broadcastStridesOf(outShape, aShape, inputs[0].strides);
@@ -82,9 +85,9 @@ The pattern is identical for `sub`, `mul`, `div` — only the operator changes.
 
 Unary kernels (`relu`, `exp`, `tanh`, …) are even simpler: one `stridedIdx` per element.
 
-`MatMul` ([linalg/matmul.ts](../../packages/backend-cpu/src/kernels/linalg/matmul.ts)) is a manual `M × N × K` triple loop using row/col strides directly — it doesn't use the generic `stridedIdx` because it benefits from per-axis stride extraction.
+`MatMul` ([linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/linalg/matmul.ts)) is a manual `M × N × K` triple loop using row/col strides directly — it doesn't use the generic `stridedIdx` because it benefits from per-axis stride extraction.
 
-`Contiguous` ([memory/contiguous.ts](../../packages/backend-cpu/src/kernels/memory/contiguous.ts)) is a pure copy from strided source → contiguous destination via `stridedIdx`.
+`Contiguous` ([memory/contiguous.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/memory/contiguous.ts)) is a pure copy from strided source → contiguous destination via `stridedIdx`.
 
 ### Performance profile
 
@@ -94,7 +97,7 @@ Single-threaded. Slow for large tensors but always works — useful as a fallbac
 
 ## WASM backend
 
-[packages/backend-wasm](../../packages/backend-wasm/) — Rust kernels via `wasm-bindgen`, called from TypeScript with raw pointers.
+[packages/backend-wasm](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/) — Rust kernels via `wasm-bindgen`, called from TypeScript with raw pointers.
 
 ### Build
 
@@ -106,7 +109,7 @@ This must be re-run whenever Rust source changes. The `pkg/` output is included 
 
 ### Module loading (wasm-pack 0.14 quirk)
 
-The bundler target does **not** generate a default init export. [src/module.ts](../../packages/backend-wasm/src/module.ts) imports the namespace and the WASM memory directly:
+The bundler target does **not** generate a default init export. [src/module.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/module.ts) imports the namespace and the WASM memory directly:
 
 ```ts
 import * as wasmExports from '../pkg/webtensor_wasm';
@@ -121,11 +124,11 @@ import { memory } from '../pkg/webtensor_wasm_bg.wasm';
 
 ### Memory management
 
-Rust ([rust/src/memory.rs](../../packages/backend-wasm/rust/src/memory.rs)) exposes `alloc_f32` / `free_f32` (and the `u32` pair) using `Vec::with_capacity` + `mem::forget` for alloc, and `Vec::from_raw_parts` + `drop` for free.
+Rust ([rust/src/memory.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/memory.rs)) exposes `alloc_f32` / `free_f32` (and the `u32` pair) using `Vec::with_capacity` + `mem::forget` for alloc, and `Vec::from_raw_parts` + `drop` for free.
 
 ### Meta buffer layouts
 
-To call a Rust kernel, JS packs metadata into a `Uint32Array`, copies it into WASM memory (`alloc_u32` + write), passes the pointer, and frees afterwards. Layouts (see [src/kernels/utils.ts](../../packages/backend-wasm/src/kernels/utils.ts)):
+To call a Rust kernel, JS packs metadata into a `Uint32Array`, copies it into WASM memory (`alloc_u32` + write), passes the pointer, and frees afterwards. Layouts (see [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/utils.ts)):
 
 | Op family | Words | Layout                                                                                    |
 | --------- | ----- | ----------------------------------------------------------------------------------------- |
@@ -133,15 +136,15 @@ To call a Rust kernel, JS packs metadata into a `Uint32Array`, copies it into WA
 | Unary     | 19    | `[total, rank, shape[8], strides[8], offset]`                                             |
 | MatMul    | 9     | `[M, K, N, a_row_stride, a_col_stride, b_row_stride, b_col_stride, a_offset, b_offset]`   |
 
-The Rust side reads the same layout (e.g. [ops/unary/relu.rs](../../packages/backend-wasm/rust/src/ops/unary/relu.rs)) using `slice::from_raw_parts(meta_ptr, 19)`.
+The Rust side reads the same layout (e.g. [ops/unary/relu.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/ops/unary/relu.rs)) using `slice::from_raw_parts(meta_ptr, 19)`.
 
 ### `_raw` pointer convention
 
-Each Rust kernel exposes `<op>_strided(a_ptr, [b_ptr,] out_ptr, meta_ptr)`. ReluGrad has a special `_raw` form (`relu_grad_raw(grad, a, out, n)`) that skips the meta buffer because autograd always passes contiguous tensors — see [src/kernels/unary/relu.ts](../../packages/backend-wasm/src/kernels/unary/relu.ts).
+Each Rust kernel exposes `<op>_strided(a_ptr, [b_ptr,] out_ptr, meta_ptr)`. ReluGrad has a special `_raw` form (`relu_grad_raw(grad, a, out, n)`) that skips the meta buffer because autograd always passes contiguous tensors — see [src/kernels/unary/relu.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/unary/relu.ts).
 
 ### Stride utility (Rust)
 
-[rust/src/utils.rs](../../packages/backend-wasm/rust/src/utils.rs) has `strided_idx(shape, strides, offset, flat_idx)` — same algorithm as the JS version, in Rust. Used by every kernel that handles arbitrary strides.
+[rust/src/utils.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/utils.rs) has `strided_idx(shape, strides, offset, flat_idx)` — same algorithm as the JS version, in Rust. Used by every kernel that handles arbitrary strides.
 
 ### Performance profile
 
@@ -151,11 +154,11 @@ Faster than CPU on large element-wise ops, but with WASM ↔ JS boundary overhea
 
 ## WebGPU backend
 
-[packages/backend-webgpu](../../packages/backend-webgpu/) — WGSL compute shaders, async device init.
+[packages/backend-webgpu](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/) — WGSL compute shaders, async device init.
 
 ### Backend class
 
-[backend.ts](../../packages/backend-webgpu/src/backend.ts):
+[backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/backend.ts):
 
 - `WebGPUBackend.create()` — `await navigator.gpu.requestAdapter()` then `requestDevice()`.
 - `allocate()` — creates a `GPUBuffer` with `STORAGE | COPY_SRC | COPY_DST`.
@@ -166,7 +169,7 @@ Faster than CPU on large element-wise ops, but with WASM ↔ JS boundary overhea
 
 ### `WebGPUKernel` interface
 
-Each kernel implements three methods ([utils.ts:87-100](../../packages/backend-webgpu/src/kernels/utils.ts#L87-L100)):
+Each kernel implements three methods (see [utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts)):
 
 ```ts
 interface WebGPUKernel {
@@ -185,7 +188,7 @@ interface WebGPUKernel {
 
 ### `TensorMeta` uniform
 
-Defined in [utils.ts:8-29](../../packages/backend-webgpu/src/kernels/utils.ts#L8-L29) — **80 bytes, 20 × u32**:
+Defined in [utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — **80 bytes, 20 × u32**:
 
 ```text
 [0]    rank
@@ -209,13 +212,13 @@ struct TensorMeta {
 
 Access in WGSL: `u_meta.shape[ax / 4u][ax % 4u]`.
 
-`packMeta(tensor, outShape?)` ([utils.ts:43-59](../../packages/backend-webgpu/src/kernels/utils.ts#L43-L59)) builds the array. When `outShape` is provided (binary ops), it computes broadcast strides via `broadcastStridesOf()`.
+`packMeta(tensor, outShape?)` builds the array. When `outShape` is provided (binary ops), it computes broadcast strides via `broadcastStridesOf()`.
 
-`createMetaBuffer(device, data)` ([utils.ts:66-75](../../packages/backend-webgpu/src/kernels/utils.ts#L66-L75)) creates a `UNIFORM | COPY_DST` buffer with `mappedAtCreation: true` — proven reliable in Chromium.
+`createMetaBuffer(device, data)` creates a `UNIFORM | COPY_DST` buffer with `mappedAtCreation: true` — proven reliable in Chromium.
 
 ### The `meta` keyword pitfall
 
-`meta` is a **reserved WGSL keyword**. Always name the uniform `u_meta`, `u_meta_a`, `u_meta_b`. Using bare `meta` causes a silent compile failure: the pipeline builds, but every output is zero. This bit hard once already — see [.claude/CLAUDE.md](../../.claude/CLAUDE.md).
+`meta` is a **reserved WGSL keyword**. Always name the uniform `u_meta`, `u_meta_a`, `u_meta_b`. Using bare `meta` causes a silent compile failure: the pipeline builds, but every output is zero. This bit hard once already — see [.claude/CLAUDE.md](https://github.com/hongjiaherng/webtensor/blob/main/.claude/CLAUDE.md).
 
 ### Bind group convention
 
@@ -233,11 +236,11 @@ Most unary/binary kernels use `@workgroup_size(64)` and dispatch `ceil(N / 64)` 
 
 ### Pipeline cache
 
-[backend.ts](../../packages/backend-webgpu/src/backend.ts) caches compiled pipelines by op name. First call to an op compiles the WGSL; subsequent calls are zero-cost lookup.
+[backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/backend.ts) caches compiled pipelines by op name. First call to an op compiles the WGSL; subsequent calls are zero-cost lookup.
 
 ### Rank-8 ceiling
 
-`TensorMeta` only carries 8 shape and 8 stride slots. Any op invoked with rank > 8 will silently corrupt metadata. See [06-bugs-and-gaps.md](06-bugs-and-gaps.md) — this becomes a real issue when batched matmul lands.
+`TensorMeta` only carries 8 shape and 8 stride slots. Any op invoked with rank > 8 will silently corrupt metadata. See [Bugs and gaps](/onboarding/bugs-and-gaps) — this becomes a real issue when batched matmul lands.
 
 ### Performance profile
 
@@ -253,7 +256,7 @@ Native GPU parallelism — significantly faster on large tensors. Init cost is h
 | WASM    | `WasmTensorHandle = { ptr, elements, byteLength }` |
 | WebGPU  | `GPUBuffer`                                        |
 
-All backends use `bytesPerElement(dtype)` and `typedArrayCtor(dtype)` from [packages/runtime/src/dtype.ts](../../packages/runtime/src/dtype.ts) — never hardcode `* 4` or `Float32Array`.
+All backends use `bytesPerElement(dtype)` and `typedArrayCtor(dtype)` from [packages/runtime/src/dtype.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/runtime/src/dtype.ts) — never hardcode `* 4` or `Float32Array`.
 
 ---
 
@@ -271,11 +274,11 @@ All backends use `bytesPerElement(dtype)` and `typedArrayCtor(dtype)` from [pack
 
 ## Adding a kernel — quick map
 
-The full recipe is in [adding-an-op.md](../adding-an-op.md). This is the cliff notes:
+The full recipe is in [Adding an op](/reference/adding-an-op). This is the cliff notes:
 
 1. **CPU:** new file under `kernels/<category>/`, register in `kernels/registry.ts`.
 2. **WASM:** Rust function with `#[wasm_bindgen]` in `rust/src/ops/<category>/`, JS wrapper in `src/kernels/<category>/`, register, **rebuild WASM**.
 3. **WebGPU:** `<op>.wgsl` (uniform = `u_meta`!) plus `<op>.ts` implementing `WebGPUKernel`, register.
 4. **Tests:** add to `tests/ops/<op>.test.ts` + ensure `tests/backend/consistency.test.ts` covers it.
 
-Continue with [04-autograd.md](04-autograd.md).
+Continue with [Autograd](/onboarding/autograd).

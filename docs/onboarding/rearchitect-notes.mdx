@@ -1,6 +1,9 @@
-# 08 — Rearchitect Notes
+---
+title: 'Rearchitect notes'
+description: 'Impact analysis for future changes: what each touches, what it unblocks, and what to watch out for.'
+---
 
-Forward-looking. For each significant future change, what it touches across the codebase, what it unblocks, and what to be careful about. Not a roadmap — see [next.md](../next.md) for that. This is the **impact analysis**.
+Forward-looking. For each significant future change, what it touches across the codebase, what it unblocks, and what to be careful about. Not a roadmap — see [Roadmap](/roadmap) for that. This is the **impact analysis**.
 
 ---
 
@@ -31,7 +34,7 @@ Forward-looking. For each significant future change, what it touches across the 
 
 **Touches:**
 
-- `packages/core/src/ops.ts:97-134` — fix shape inference (the placeholder comment at line 110 is the entry point). Output shape = `broadcast(a.shape[:-2], b.shape[:-2]) + [a.shape[-2], b.shape[-1]]`.
+- `packages/core/src/ops.ts` — fix shape inference in `matmul()` (search for the placeholder comment). Output shape = `broadcast(a.shape[:-2], b.shape[:-2]) + [a.shape[-2], b.shape[-1]]`.
 - CPU matmul kernel — extra outer loop over batch indices.
 - WASM matmul kernel — same in Rust.
 - WebGPU matmul shader — 3D dispatch; batch index in `gid.z`.
@@ -46,7 +49,7 @@ Forward-looking. For each significant future change, what it touches across the 
 
 **Why:** unblocks rank > 8 ops on WebGPU. Eliminates a class of silent corruption bugs.
 
-**Current:** `TensorMeta` is an 80-byte uniform with `array<vec4<u32>, 2>` for shape and strides — exactly 8 slots each. Defined at [packages/backend-webgpu/src/kernels/utils.ts:8-29](../../packages/backend-webgpu/src/kernels/utils.ts#L8-L29).
+**Current:** `TensorMeta` is an 80-byte uniform with `array<vec4<u32>, 2>` for shape and strides — exactly 8 slots each. See [packages/backend-webgpu/src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts).
 
 **Options:**
 
@@ -170,4 +173,4 @@ WASM with threads (atomics + shared memory) and WebGPU with multiple queue submi
 | 9   | Distribution hardening + CI                      | Confidence in publish                               | 1-2 days              |
 | 10  | ONNX import                                      | Pretrained models                                   | weeks                 |
 
-For overall direction see [next.md](../next.md). For every concrete bug see [06-bugs-and-gaps.md](06-bugs-and-gaps.md).
+For overall direction see [Roadmap](/roadmap). For every concrete bug see [Bugs and gaps](/onboarding/bugs-and-gaps).

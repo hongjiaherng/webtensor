@@ -1,0 +1,71 @@
+---
+title: 'Start here'
+description: 'Onboarding pack overview — status snapshot, reading order, and links into the rest of the docs.'
+---
+
+This folder is an **onboarding pack** for webtensor: a multi-backend (CPU / WASM / WebGPU) tensor library with eager autograd, written in TypeScript with Rust kernels for WASM.
+
+The Reference docs ([architecture](/reference/architecture), [IR reference](/reference/ir-reference), [adding an op](/reference/adding-an-op)) and the [roadmap](/roadmap) are the canonical specs. The files in this Onboarding section are a **layered breakdown**: a system tour, an honest audit, and contributor/refactor guidance.
+
+---
+
+## Status snapshot
+
+- **Backends:** CPU, WASM, WebGPU — all three at full kernel parity (16/16 ops).
+- **Tests:** ~367 cross-backend tests, browser mode via Playwright/Chromium.
+- **What works today:** eager API, graph compile, evaluate, view ops, autograd for most ops, broadcasting in forward.
+- **What blocks production:** reductions (sum/mean) missing → broadcast unbroadcast in autograd is silently wrong; batched matmul not implemented; WebGPU `TensorMeta` capped at rank 8; only `float32` has kernels; no loss/optimizer; publish path untested.
+- **Distribution:** `dist/` exists, `publish:all` script exists, but versions are drifted (`backend-wasm` 0.1.0, others 0.0.0) and not validated outside the workspace.
+
+See [State of the project](/onboarding/state-of-the-project) for the full matrix and [Bugs and gaps](/onboarding/bugs-and-gaps) for severity-tagged defects.
+
+---
+
+## Reading order
+
+![Onboarding flow](/diagrams/onboarding-flow.svg)
+
+Pick the path that matches your goal:
+
+| If you want to…                             | Read in this order                                                                                                                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Use the library / understand it broadly** | [README](https://github.com/hongjiaherng/webtensor/blob/main/README.md) → [System walkthrough](/onboarding/system-walkthrough) → [Package deep-dive](/onboarding/package-deep-dive) |
+| **Add an op or kernel**                     | [Contributor guide](/onboarding/contributor-guide) → [Adding an op](/reference/adding-an-op) (canonical recipe) → [Backends and kernels](/onboarding/backends-and-kernels)          |
+| **Fix a bug / pick something to work on**   | [Bugs and gaps](/onboarding/bugs-and-gaps) → [State of the project](/onboarding/state-of-the-project)                                                                               |
+| **Plan a refactor or rearchitect**          | [State of the project](/onboarding/state-of-the-project) → [Rearchitect notes](/onboarding/rearchitect-notes) → [Roadmap](/roadmap) (canonical)                                     |
+| **Understand autograd**                     | [Autograd](/onboarding/autograd)                                                                                                                                                    |
+| **Understand the IR**                       | [IR reference](/reference/ir-reference) (canonical) → [System walkthrough](/onboarding/system-walkthrough)                                                                          |
+
+---
+
+## Onboarding file index
+
+| File                                                     | Purpose                                                                                                        |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [Start here](/onboarding/start-here)                     | This file. Status, reading order, file index.                                                                  |
+| [System walkthrough](/onboarding/system-walkthrough)     | End-to-end execution: tensor → graph → engine → backend → result. With a worked example.                       |
+| [Package deep-dive](/onboarding/package-deep-dive)       | Per-package responsibilities, key types, public surface, dependency rules.                                     |
+| [Backends and kernels](/onboarding/backends-and-kernels) | Three backends in detail: registry pattern, CPU kernels, WASM (Rust + meta buffers), WebGPU (WGSL + uniforms). |
+| [Autograd](/onboarding/autograd)                         | Eager backward pass, per-op gradient catalog, what's still missing.                                            |
+| [State of the project](/onboarding/state-of-the-project) | Works / Partial / Missing matrix across ops, autograd, dtypes, training, distribution.                         |
+| [Bugs and gaps](/onboarding/bugs-and-gaps)               | Severity-tagged defects with file:line, symptoms, fix sketches.                                                |
+| [Contributor guide](/onboarding/contributor-guide)       | Local dev loop, test patterns, common pitfalls.                                                                |
+| [Rearchitect notes](/onboarding/rearchitect-notes)       | Forward-looking — what each future change touches.                                                             |
+
+---
+
+## Canonical references
+
+- [Architecture](/reference/architecture) — package boundaries, strided model basics, contract between layers.
+- [IR reference](/reference/ir-reference) — `Node` / `Value` / `Graph` schema, dtype rules, ONNX alignment.
+- [Adding an op](/reference/adding-an-op) — step-by-step recipe for adding a new op across all three backends.
+- [Roadmap](/roadmap) — feature checklist and priority order.
+- [.claude/CLAUDE.md](https://github.com/hongjiaherng/webtensor/blob/main/.claude/CLAUDE.md) — project guidance for AI assistants; also a great quick reference for the WGSL `meta` keyword pitfall and other gotchas.
+
+---
+
+## One-screen mental model
+
+![Mental model](/diagrams/mental-model.svg)
+
+Continue with [System walkthrough](/onboarding/system-walkthrough) for the worked example.

@@ -1,8 +1,11 @@
-# 05 — State of the Project
+---
+title: 'State of the project'
+description: 'Honest Works / Partial / Missing matrix across ops, autograd, dtypes, training, and distribution.'
+---
 
-Honest audit. Three columns: **Works** (production-quality), **Partial** (usable but with caveats), **Missing** (not implemented). For concrete bugs and severities see [06-bugs-and-gaps.md](06-bugs-and-gaps.md). For roadmap priorities see [next.md](../next.md).
+Honest audit. Three columns: **Works** (production-quality), **Partial** (usable but with caveats), **Missing** (not implemented). For concrete bugs and severities see [Bugs and gaps](/onboarding/bugs-and-gaps). For roadmap priorities see [Roadmap](/roadmap).
 
-![Gap map](../diagrams/gap-map.svg)
+![Gap map](/diagrams/gap-map.svg)
 
 ---
 
@@ -26,7 +29,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Area                       | Works                                                     | Partial                                                                          | Missing                     |
 | -------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------- |
 | Backward closure mechanism | `Tensor.backward()`, topo build, accumulation via `add()` |                                                                                  |                             |
-| Per-op gradients           | All listed ✅ in [04-autograd.md](04-autograd.md)         | Add/Sub/Mul/Div backward without unbroadcast (silently wrong when shapes differ) | Abs, Slice, Expand backward |
+| Per-op gradients           | All listed ✅ in [Autograd](/onboarding/autograd)         | Add/Sub/Mul/Div backward without unbroadcast (silently wrong when shapes differ) | Abs, Slice, Expand backward |
 | Higher-order gradients     |                                                           | In principle works through the closure mechanism but no tests                    |                             |
 
 ---
@@ -49,7 +52,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Strided model                  | All kernels handle arbitrary strides + offset + broadcasting |                                                                                           |                                                               |
 | Rank ≤ 8 on WebGPU             | All current ops fit                                          | `TensorMeta` uniform packs only 8 shape + 8 stride slots — silent corruption above rank 8 |                                                               |
 | Rank > 8                       |                                                              |                                                                                           | Not supported on WebGPU; CPU/WASM untested above rank 8       |
-| Max-rank guard at `allocate()` |                                                              |                                                                                           | Not enforced (see [06-bugs-and-gaps.md](06-bugs-and-gaps.md)) |
+| Max-rank guard at `allocate()` |                                                              |                                                                                           | Not enforced (see [Bugs and gaps](/onboarding/bugs-and-gaps)) |
 | Dynamic shapes (`null` dim)    | Type system supports it                                      | Engine treats `null` as size-1 in many places; placeholder support stubbed but not wired  | True dynamic shapes for placeholder inputs                    |
 
 ---
@@ -79,36 +82,36 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 ## Distribution
 
-| Area              | Works                                   | Partial                                                                                                | Missing                                      |
-| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| Build artifacts   | `dist/` exists for all six packages     | Only validated via workspace aliases — never tested in real `node_modules`                             |                                              |
-| Versioning        |                                         | Version drift: `backend-wasm` is `0.1.0`, others are `0.0.0`                                           | Lockstep version-bump tooling                |
-| Publish script    | `publish:all` exists                    | Untested; assumes Bun ≥ 1.2.0 with built-in publish                                                    | Per-package publish, dry-run, npm provenance |
-| Lint / format     | `prettier --write`, `eslint --fix` work | One ESLint error (`scripts/clean.mjs`), one Prettier mismatch (`packages/backend-webgpu/package.json`) |                                              |
-| CI                |                                         |                                                                                                        | No GitHub Actions, no automated test runs    |
-| Changelog         |                                         |                                                                                                        | None                                         |
-| License field     | (root has none in `package.json`)       |                                                                                                        | Add `license` to each package                |
-| Peer dependencies |                                         |                                                                                                        | Should `@webgpu/types` be a peer/optional?   |
+| Area              | Works                                   | Partial                                                                    | Missing                                      |
+| ----------------- | --------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| Build artifacts   | `dist/` exists for all six packages     | Only validated via workspace aliases — never tested in real `node_modules` |                                              |
+| Versioning        |                                         | Version drift: `backend-wasm` is `0.1.0`, others are `0.0.0`               | Lockstep version-bump tooling                |
+| Publish script    | `publish:all` exists                    | Untested; assumes Bun ≥ 1.2.0 with built-in publish                        | Per-package publish, dry-run, npm provenance |
+| Lint / format     | `prettier --write`, `eslint --fix` work | One ESLint error (`scripts/clean.mjs`)                                     |                                              |
+| CI                |                                         |                                                                            | No GitHub Actions, no automated test runs    |
+| Changelog         |                                         |                                                                            | None                                         |
+| License field     | (root has none in `package.json`)       |                                                                            | Add `license` to each package                |
+| Peer dependencies |                                         |                                                                            | Should `@webgpu/types` be a peer/optional?   |
 
 ---
 
 ## Documentation
 
-| Area                            | Works                                                                                                               | Partial             | Missing                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------- |
-| Architecture, IR, kernel recipe | [architecture.md](../architecture.md), [ir-reference.md](../ir-reference.md), [adding-an-op.md](../adding-an-op.md) |                     |                                          |
-| Onboarding pack                 | This folder                                                                                                         |                     |                                          |
-| Roadmap                         | [next.md](../next.md)                                                                                               |                     |                                          |
-| Diagrams                        | `package-map`, `execution-flow`, `backend-internals`, `target-architecture` + 5 onboarding diagrams                 |                     |                                          |
-| API reference                   |                                                                                                                     |                     | Generated from JSDoc; no `typedoc` setup |
-| Contributor guide               | [07-contributor-guide.md](07-contributor-guide.md)                                                                  |                     | Top-level `CONTRIBUTING.md`              |
-| Examples / quickstart code      |                                                                                                                     | README has snippets | `examples/` directory with runnable apps |
+| Area                            | Works                                                                                                                     | Partial             | Missing                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------- |
+| Architecture, IR, kernel recipe | [Architecture](/reference/architecture), [IR reference](/reference/ir-reference), [Adding an op](/reference/adding-an-op) |                     |                                          |
+| Onboarding pack                 | This section                                                                                                              |                     |                                          |
+| Roadmap                         | [Roadmap](/roadmap)                                                                                                       |                     |                                          |
+| Diagrams                        | 11 PlantUML-rendered SVGs covering package map, execution flow, backend internals, autograd, gap map, etc.                |                     |                                          |
+| API reference                   |                                                                                                                           |                     | Generated from JSDoc; no `typedoc` setup |
+| Contributor guide               | [Contributor guide](/onboarding/contributor-guide)                                                                        |                     | Top-level `CONTRIBUTING.md`              |
+| Examples / quickstart code      |                                                                                                                           | README has snippets | `examples/` directory with runnable apps |
 
 ---
 
 ## Future packages (not yet in tree)
 
-From [next.md](../next.md):
+From [Roadmap](/roadmap):
 
 - `@webtensor/onnx` — `.onnx` parser → `Graph`. Slot-fits the existing `compileGraph` shape.
 - `@webtensor/devtools` — graph viewer, training dashboard, tensor visualizations.
@@ -128,8 +131,8 @@ If you want to **unblock real model training**, the critical path is roughly:
 If you want to **harden distribution**:
 
 1. Align package versions (lockstep at `0.1.0` or set up a release tool).
-2. Fix lint and format.
+2. Fix the remaining ESLint error.
 3. Add CI that runs `bun run test` in browser mode.
 4. Add an `examples/` quickstart that uses the published packages (not workspace aliases) — that's the only way to validate the published artifacts.
 
-See [08-rearchitect-notes.md](08-rearchitect-notes.md) for what each of those touches across the codebase.
+See [Rearchitect notes](/onboarding/rearchitect-notes) for what each of those touches across the codebase.
