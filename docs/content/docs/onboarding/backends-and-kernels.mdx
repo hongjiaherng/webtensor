@@ -305,6 +305,6 @@ The full recipe is in [Adding an op](/docs/advanced/adding-an-op). This is the c
 1. **CPU:** new file under `kernels/<category>/`, register in `kernels/registry.ts`.
 2. **WASM:** Rust function with `#[wasm_bindgen]` in `rust/src/ops/<category>/`, JS wrapper in `src/kernels/<category>/`, register, **rebuild WASM**.
 3. **WebGPU:** `<op>.wgsl` (uniform = `u_meta`!) plus `<op>.ts` implementing `WebGPUKernel`, register.
-4. **Tests:** add to `tests/ops/<op>.test.ts` + ensure `tests/backend/consistency.test.ts` covers it.
+4. **Tests:** add to `tests/ops/<category>/<op>.test.ts` + ensure `tests/backend/consistency.test.ts` covers it.
 
 Continue with [Autograd](/docs/onboarding/autograd).

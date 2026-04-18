@@ -87,7 +87,7 @@ import { sigmoidKernel } from './unary/sigmoid';
 
 ## Step 4: CPU test
 
-Add test cases in `tests/ops/<opname>.test.ts` using the `BACKENDS` array from `tests/helpers.ts`. Run against CPU first. Exclude backends that don't yet have the kernel by filtering:
+Add test cases in `tests/ops/<category>/<opname>.test.ts` (categories: `binary/`, `unary/`, `activation/`, `reduce/`, `compare/`, `linalg/`, `view/`, `shape/`, `cast/`, `init/`). Use the `BACKENDS` array from `tests/helpers.ts`. Run against CPU first. Exclude backends that don't yet have the kernel by filtering:
 
 ```ts
 BACKENDS.filter((b) => b.name !== 'WebGPU').forEach(({ name, create }) => { ... });

@@ -10,7 +10,6 @@
     "state-of-the-project",
     "bugs-and-gaps",
     "contributor-guide",
-    "smoke-test",
-    "rearchitect-notes"
+    "smoke-test"
   ]
 }

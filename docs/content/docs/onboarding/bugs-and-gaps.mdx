@@ -13,30 +13,6 @@ Severity scale:
 
 ---
 
-## HIGH — WebGPU `TensorMeta` rank-8 ceiling
-
-**Where:** [packages/backend-webgpu/src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — see the `TensorMeta` struct and `packMeta()` function.
-
-**Symptom:** The TensorMeta uniform packs exactly 8 shape slots and 8 stride slots (`array<vec4<u32>, 2>`). `packMeta()` writes the first `min(rank, 8)` dims; everything beyond is silently dropped. A rank-9 (or higher) tensor will run, produce no error, and write nonsense — whatever happens to be in the unused slots gets used as shape/stride.
-
-**Current mitigation:** batched matmul caps `batch_rank` at 6 (total rank ≤ 8) in `packMetaMatMulInput()`. All current ops stay within 8.
-
-**Fix sketch:** for rank > 8, switch to a `storage` buffer for shape/strides instead of a uniform (uniform-buffer arrays in WGSL are tightly bound by `@minBindingSize`). Or split into multiple uniform structs. Plan covers this in [Rearchitect notes](/docs/onboarding/rearchitect-notes). Also add a guard that throws when `rank > 8` until the redesign lands — turns silent corruption into a clean error.
-
-**Blocked on:** nothing (the guard alone is a one-line fix and worth doing now).
-
----
-
-## MEDIUM — `Slice` backward not implemented
-
-**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `slice()` op (search for `// NOTE: slice backward requires a Pad/Scatter op`).
-
-**Symptom:** Same as Expand — gradient flow stops at any `slice()` call.
-
-**Fix sketch:** implement a `pad`/`scatter` op that places `grad` into a zero tensor of the original shape at the slice region. Or implement an in-place `index_put` if dropping the immutable model.
-
----
-
 ## MEDIUM — `Abs` backward not implemented
 
 **Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `abs()` op (search for `// NOTE: abs backward requires sign(a)`).
@@ -44,16 +20,6 @@ Severity scale:
 **Symptom:** Gradient flow stops at `abs()`.
 
 **Fix sketch:** add a `sign` kernel (cheap unary). Backward is `grad * sign(a)`.
-
----
-
-## MEDIUM — Max-rank guard not enforced at `allocate()`
-
-**Where:** all three backends. Reference: `.claude/CLAUDE.md` notes the package-wide cap is **64**.
-
-**Symptom:** Today nothing checks rank at allocation. A rank-12 tensor (say a future batched op) silently goes through CPU/WASM (where it might work or might index out of bounds in metadata buffers) and silently corrupts on WebGPU (rank-8 ceiling).
-
-**Fix sketch:** In each backend's `allocate()` (and possibly in `Tensor` constructor), throw if `shape.length > MAX_RANK`. Combine with a tighter WebGPU-specific guard (rank > 8 throws until the `TensorMeta` redesign).
 
 ---
 
@@ -99,7 +65,7 @@ Severity scale:
 
 ## Process gaps (not bugs, but blockers for serious work)
 
-- **No CI.** The ~517-test suite must be run manually before every commit. A GitHub Actions job that runs `bun install`, builds WASM, and runs `bun run test` in headless browser would catch regressions immediately.
+- **No CI.** The ~765-test suite must be run manually before every commit. A GitHub Actions job that runs `bun install`, builds WASM, and runs `bun run test` in headless browser would catch regressions immediately.
 - **No published-package smoke test.** All tests use workspace aliases. Publishing without a test that consumes `@webtensor/core` from a real `node_modules` is a leap of faith.
 - **No example apps.** Hard to validate the user experience without one.
 

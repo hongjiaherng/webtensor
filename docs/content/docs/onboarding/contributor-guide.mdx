@@ -19,7 +19,7 @@ Practical how-to for working in the repo. The canonical recipe for adding a new 
 
 ```sh
 bun run setup            # install workspace + docs deps
-bun run build            # build all 6 packages (chains wasm-pack → bun build → tsc for backend-wasm)
+bun run build            # build all 8 packages (chains wasm-pack → bun build → tsc for backend-wasm)
 bun run test             # CPU + WASM + WebGPU parity (1e-5 tolerance)
 ```
 
@@ -31,12 +31,12 @@ bun run test             # CPU + WASM + WebGPU parity (1e-5 tolerance)
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
 | `bun run test`                       | Run the full Vitest suite in headed Chromium. **Do not use `bun test`** — that bypasses the browser config and WebGPU tests fail. |
 | `bun run test:watch`                 | Vitest in watch mode.                                                                                                             |
-| `bun run test tests/ops/add.test.ts` | Run one test file.                                                                                                                |
+| `bun run test tests/ops/binary/add.test.ts` | Run one test file.                                                                                                         |
 | `bun run lint`                       | ESLint (currently has 1 known error — see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)).                                       |
 | `bun run lint:fix`                   | ESLint with auto-fix.                                                                                                             |
 | `bun run format`                     | Prettier write.                                                                                                                   |
 | `bun run format:check`               | Prettier check (CI-style).                                                                                                        |
-| `bun run build`                      | Build all six packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm`.         |
+| `bun run build`                      | Build all eight packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm → nn → optim`. |
 | `bun run clean`                      | Delete `dist/` outputs.                                                                                                           |
 | `bun run clean:all`                  | Also delete `node_modules` and the `pkg/` WASM bundle.                                                                            |
 | `bun run docs:plantuml`              | Render `docs/diagrams/puml/*.puml` to `*.svg` into `docs/public/diagrams/` via PlantUML.                                          |
@@ -49,14 +49,14 @@ bun run test             # CPU + WASM + WebGPU parity (1e-5 tolerance)
 
 The canonical procedure lives in [Adding an op](/docs/advanced/adding-an-op). High-level it's four steps × three backends:
 
-1. **Core graph function** in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — declares the op name, output shape, attributes, and backward closure.
+1. **Core graph function** in [packages/core/src/ops/&lt;category&gt;/&lt;op&gt;.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops) — declares the op name, output shape, attributes, and backward closure.
 2. **CPU kernel** in `packages/backend-cpu/src/kernels/<category>/<op>.ts`, registered in `kernels/registry.ts`.
 3. **WASM kernel** — Rust function in `packages/backend-wasm/rust/src/ops/<category>/<op>.rs`, JS wrapper in `packages/backend-wasm/src/kernels/<category>/<op>.ts`, register, **rebuild WASM** with `wasm-pack`.
 4. **WebGPU kernel** — `<op>.wgsl` (uniform must be `u_meta` not `meta`!) plus `<op>.ts` implementing `WebGPUKernel`, register.
 
 Then:
 
-5. **Per-op test** in `tests/ops/<op>.test.ts`.
+5. **Per-op test** in `tests/ops/<category>/<op>.test.ts`.
 6. **Cross-backend parity** — make sure `tests/backend/consistency.test.ts` exercises the new op on all three backends.
 
 Add the op to [Backends and kernels](/docs/onboarding/backends-and-kernels) parity table and update [Roadmap](/docs/roadmap) if it was on the checklist.
@@ -89,8 +89,8 @@ describe('add', () => {
 
 [`tests/helpers.ts`](https://github.com/hongjiaherng/webtensor/blob/main/tests/helpers.ts) exports:
 
-- `BACKENDS` — array of `'cpu' | 'wasm' | 'webgpu'` to iterate over for parity tests.
-- `runUnary`, `runBinary` — convenience runners.
+- `BACKENDS` — array of `{ name, create }` entries to iterate over for parity tests. Each `create()` returns a fresh `Backend` instance.
+- `DTYPES` — dtype axis (`['float32', 'int32']`) for tests that need dtype × backend coverage.
 - `expectClose(actual, expected, tol = 1e-5)` — float comparison.
 
 Tolerance is `1e-5`. CPU is the correctness oracle — WASM and WebGPU are compared against CPU output, not against hand-computed expected values.
@@ -99,10 +99,10 @@ Tolerance is `1e-5`. CPU is the correctness oracle — WASM and WebGPU are compa
 
 | Folder              | What lives there                                      |
 | ------------------- | ----------------------------------------------------- |
-| `tests/ops/`        | One file per op (`add.test.ts`, `relu.test.ts`, ...). |
+| `tests/ops/<category>/` | One file per op, grouped by category (`binary/`, `unary/`, `activation/`, `reduce/`, `compare/`, `linalg/`, `view/`, `shape/`, `cast/`, `init/`). |
 | `tests/backend/`    | Cross-backend `consistency.test.ts`, GC/memory tests. |
 | `tests/foundation/` | Dtype round-trip, view ops, engine internals.         |
-| `tests/graph/`      | Autograd, `simple_graph.test.ts` integration.         |
+| `tests/graph/`      | Autograd, `compile()`, placeholder, training loop.    |
 
 ---
 
@@ -151,4 +151,4 @@ There is no formal CONTRIBUTING.md or PR template. The de-facto checklist:
 3. If you added an op: update the parity table in [Backends and kernels](/docs/onboarding/backends-and-kernels) and the roadmap checklist in [Roadmap](/docs/roadmap).
 4. If you fixed a documented bug: remove it from [Bugs and gaps](/docs/onboarding/bugs-and-gaps).
 
-Continue with [Rearchitect notes](/docs/onboarding/rearchitect-notes) if you're planning bigger work.
+Continue with [Rearchitect notes](/docs/history/rearchitect-notes) if you're planning bigger work.

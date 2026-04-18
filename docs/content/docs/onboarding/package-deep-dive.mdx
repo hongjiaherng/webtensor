@@ -205,7 +205,7 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 
 ## What lives in `tests/`
 
-- [tests/ops/](https://github.com/hongjiaherng/webtensor/blob/main/tests/ops/) — per-op tests (one file per op).
+- [tests/ops/](https://github.com/hongjiaherng/webtensor/blob/main/tests/ops/) — per-op tests, grouped by category (`binary/`, `unary/`, `activation/`, `reduce/`, `compare/`, `linalg/`, `view/`, `shape/`, `cast/`, `init/`).
 - [tests/backend/](https://github.com/hongjiaherng/webtensor/blob/main/tests/backend/) — cross-backend parity (`consistency.test.ts`) and memory/GC tests.
 - [tests/foundation/](https://github.com/hongjiaherng/webtensor/blob/main/tests/foundation/) — dtype round-trip, view ops, engine core.
 - [tests/graph/](https://github.com/hongjiaherng/webtensor/blob/main/tests/graph/) — autograd, simple graph execution.

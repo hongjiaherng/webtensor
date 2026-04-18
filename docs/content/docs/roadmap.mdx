@@ -39,17 +39,16 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 
 ---
 
-### 3. Concat / Gather / Slice backward
+### 3. Gather + advanced indexing
 
-**What it is:** Fill the remaining gaps in the op set that unblock real models: `concat(tensors, axis)`, `gather(data, indices, axis)`, and a backward for `slice` (requires `Pad` or `Scatter`).
+**What it is:** Fill the remaining gaps in the op set that unblock real models. `concat`, `pad`, and `slice` backward already shipped in Phase 5. Remaining: `gather(data, indices, axis)` and scatter-style advanced indexing.
 
-**Why it matters:** `concat` is everywhere (skip connections, attention). `gather` with int32 indices enables embedding lookups. `slice` backward is needed for any training code that slices into tensors.
+**Why it matters:** `gather` with int32 indices enables embedding lookups (blocked on int32 kernels). Scatter is needed for advanced indexing and some backwards.
 
 **What needs to change:**
 
-- **`concat`** — kernel copies N input tensors into one output along the concat axis. Backward: slice the gradient back into N pieces.
 - **`gather`** — blocked on int32 kernels (indices must be int32). Kernel reads `data[indices[i]]` per output element. Backward: `scatter_add`.
-- **`slice` backward** — implement `pad` / `scatter` to write the gradient into a zero tensor at the slice region.
+- **`scatter` / `scatter_add`** — write values into an output tensor at indexed positions.
 
 ---
 
@@ -77,7 +76,10 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 | ReduceMean               | [x] | [x]  |  [x]   |
 | Reshape                  | [x] | [x]  |  [x]   |
 | Slice                    | [x] | [x]  |  [x]   |
-| Concat                   | [ ] | [ ]  |  [ ]   |
+| Concat                   | [x] | [x]  |  [x]   |
+| Pad                      | [x] | [x]  |  [x]   |
+| Cast                     | [x] | [x]  |  [x]   |
+| Compare (eq/ne/lt/le/gt/ge) | [x] | [x] | [x]   |
 | Gather                   | [ ] | [ ]  |  [ ]   |
 | LogSoftmax               | [ ] | [ ]  |  [ ]   |
 
@@ -96,7 +98,9 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 | Expand backward                    | [x]  |
 | Sigmoid / Tanh backward            | [x]  |
 | Exp / Log / Sqrt / Pow backward    | [x]  |
-| Slice backward (needs pad/scatter) | [ ]  |
+| Slice backward (via pad)           | [x]  |
+| Concat backward (via slice)        | [x]  |
+| Pad backward (via slice)           | [x]  |
 | Abs backward (needs sign)          | [ ]  |
 
 ## Training
@@ -131,7 +135,7 @@ A cell is checked when the dtype is fully supported on that backend: type system
 | Strided tensor model (strides, offset, views)   | [x]  |
 | Broadcasting via stride-0                       | [x]  |
 | Cross-backend parity tests                      | [x]  |
-| Max rank = 64 (package-wide constraint)         | [ ]  |
+| Max rank = 64 (package-wide constraint)         | [x]  |
 | Single async `evaluate()` (awaits all backends) | [x]  |
 | Device dispatch via `Engine.create(device)`     | [x]  |
 | DType infrastructure (TypedArray, utilities)    | [x]  |

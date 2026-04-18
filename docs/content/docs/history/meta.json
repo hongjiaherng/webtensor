@@ -1,0 +1,5 @@
+{
+  "title": "Dev History",
+  "description": "Design logs and rearchitecture notes preserved for reference. These are historical — not instructions for the current system.",
+  "pages": ["rearchitect-notes"]
+}

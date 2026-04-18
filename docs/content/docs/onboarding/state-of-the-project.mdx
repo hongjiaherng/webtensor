@@ -19,7 +19,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Views (zero-copy)   | `transpose`, `reshape`, `view`, `slice`, `unsqueeze`, `squeeze`, `permute`, `expand`, `flatten`            |         |                                                   |
 | Memory              | `contiguous`, `clone`, `detach`                                                                            |         |                                                   |
 | Reductions          | `sum`, `mean` (arbitrary `axis`, `keepdim`)                                                                |         | `max`, `min`, `argmax`, `argmin`                  |
-| Composite           | `softmax` (numerically stable)                                                                             |         | `log_softmax`, `concat`, `split`, `where`         |
+| Composite           | `softmax` (numerically stable), `concat`, `pad`, `cast`, element-wise compare (`eq`, `ne`, `lt`, `le`, `gt`, `ge`) |         | `log_softmax`, `split`, `where`                    |
 | Indexing            |                                                                                                            |         | `gather`, `scatter`, advanced indexing            |
 | Graph inputs        | `placeholder(shape, dtype, device)` + `evaluate(graph, feeds)` + high-level `compile()`/`grad()` helpers   |         | Dynamic shape specialization (shape polymorphism) |
 
@@ -31,7 +31,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------- |
 | Backward closure mechanism | `Tensor.backward()`, topo build, accumulation via `add()`                                                                                                    |                                                                    |         |
 | Broadcast-aware gradients  | `unbroadcastGrad()` inside Add/Sub/Mul/Div/Expand backward correctly sums grads back to each input's shape                                                   |                                                                    |         |
-| Per-op gradients           | Binary ops (broadcast-correct), MatMul (batched), Reductions (sum/mean), Softmax, Expand, all unary math (exp/log/sqrt/sigmoid/tanh/relu/neg/pow), all views | Abs backward (needs `sign` op), Slice backward (needs pad/scatter) |         |
+| Per-op gradients           | Binary ops (broadcast-correct), MatMul (batched), Reductions (sum/mean), Softmax, Expand, Concat, Pad, Slice (via pad), all unary math (exp/log/sqrt/sigmoid/tanh/relu/neg/pow), all views | Abs backward (needs `sign` op) |         |
 | Training loop              | `compile(fn, spec)` + `grad(loss, param)` primitives; `SGD` optimizer; user writes the loop explicitly                                                       |                                                                    |         |
 | Higher-order gradients     |                                                                                                                                                              | In principle works through the closure mechanism but no tests      |         |
 
@@ -53,9 +53,8 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Area                           | Works                                                              | Partial                                                                                   | Missing                                                            |
 | ------------------------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Strided model                  | All kernels handle arbitrary strides + offset + broadcasting       |                                                                                           |                                                                    |
-| Rank ≤ 8 on WebGPU             | All current ops fit (matmul caps batch rank at 6 to stay within)   | `TensorMeta` uniform packs only 8 shape + 8 stride slots — silent corruption above rank 8 |                                                                    |
-| Rank > 8                       |                                                                    |                                                                                           | Not supported on WebGPU; CPU/WASM untested above rank 8            |
-| Max-rank guard at `allocate()` |                                                                    |                                                                                           | Not enforced (see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)) |
+| Rank ≤ 64 on all backends      | `MAX_RANK = 64` shared via `@webtensor/ir`; WebGPU `TensorMeta` packs 64 shape + 64 stride slots (520-byte uniform); matmul caps batch rank at 62 to stay within |         |                                                                    |
+| Max-rank guard at `allocate()` | Enforced — all backends throw when allocating a tensor with rank > `MAX_RANK` |                                                                                           |                                                                    |
 | Dynamic shapes (`null` dim)    | Type system supports it; placeholder accepts concrete shapes today |                                                                                           | Shape polymorphism on `compile()` (re-specialize on first call)    |
 
 ---
@@ -83,9 +82,9 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 | Backend | Works                                                                                                                           | Partial                        | Missing                                                     |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------- |
-| CPU     | All 19 kernels (incl. `ReduceSum`, `ReduceMean`, `Softmax`, batched `MatMul`)                                                   |                                |                                                             |
-| WASM    | All 19 kernels; build via `wasm-pack`; function naming scaffolded for future dtype variants (`_f32_` suffix)                    |                                | Multi-threading, SIMD intrinsics                            |
-| WebGPU  | All 19 kernels; pipeline cache; temp buffer cleanup via `onSubmittedWorkDone`; extra uniforms for reduce/softmax/batched-matmul | Rank-8 ceiling on `TensorMeta` | Compute shader fusion, tiled matmul, hierarchical reduction |
+| CPU     | All kernels at parity (binary/unary/activation/reduce/softmax/matmul/concat/pad/cast/compare)                                   |                                |                                                             |
+| WASM    | All kernels at parity; build via `wasm-pack`; base64-inlined binary; function naming scaffolded for future dtype variants       |                                | Multi-threading, SIMD intrinsics                            |
+| WebGPU  | All kernels at parity; pipeline cache; temp-buffer cleanup via `onSubmittedWorkDone`; rank-64 `TensorMeta` uniform              |                                | Compute shader fusion, tiled matmul, hierarchical reduction |
 
 ---
 
@@ -133,9 +132,8 @@ If you want to **unblock real model training** (items 1–5 from the original cr
 
 1. **Int32 / bool kernels** — unblocks embedding lookups (`gather` with int32 indices), masking, boolean ops. Biggest remaining op-coverage gap.
 2. **Loss modules + Adam** — add `crossEntropy` (needs `logSoftmax`), `bceLoss`, and an `Adam` optimizer next to `SGD`. All host-side work.
-3. **`concat`, `gather`, slice-backward** — the last few ops needed before ONNX import becomes feasible.
-4. **WebGPU `TensorMeta` redesign (rank > 8)** — storage-buffer instead of uniform; removes the rank-8 ceiling.
-5. **Dropout + train/eval mode** — tiny addition; unblocks deeper models.
+3. **`gather`, advanced indexing** — remaining ops needed before ONNX import becomes feasible (concat, pad, slice-backward already shipped in Phase 5).
+4. **Dropout + train/eval mode** — tiny addition; unblocks deeper models.
 
 If you want to **harden distribution**:
 
@@ -144,4 +142,4 @@ If you want to **harden distribution**:
 3. Add CI that runs `bun run test` in browser mode.
 4. Add an `examples/` quickstart that uses the published packages (not workspace aliases) — that's the only way to validate the published artifacts.
 
-See [Rearchitect notes](/docs/onboarding/rearchitect-notes) for what each of those touches across the codebase.
+See [Rearchitect notes](/docs/history/rearchitect-notes) for what each of those touches across the codebase.

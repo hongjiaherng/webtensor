@@ -3,7 +3,7 @@ title: 'webtensor'
 description: 'A browser-first tensor library with WebGPU acceleration, eager autograd, and a PyTorch/JAX-inspired API in TypeScript.'
 ---
 
-**webtensor** is a multi-backend tensor library built for the browser. Write, train, and visualize models in TypeScript with three backends at full parity: **CPU** (TypeScript), **WASM** (Rust via wasm-pack), and **WebGPU** (WGSL compute shaders). ~580 cross-backend tests.
+**webtensor** is a multi-backend tensor library built for the browser. Write, train, and visualize models in TypeScript with three backends at full parity: **CPU** (TypeScript), **WASM** (Rust via wasm-pack), and **WebGPU** (WGSL compute shaders). 765 cross-backend tests.
 
 > **Status: foundation done.** Broadcast-aware autograd, PyTorch-style `matmul` (incl. N-D batched), reductions, softmax, JAX-style `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
 
@@ -110,6 +110,6 @@ Packages split like **JAX + optax + flax** and **tfjs-core + tfjs-layers** — M
 **Planning bigger work?**
 
 - [Roadmap](/docs/roadmap) — feature checklist and priority order.
-- [Rearchitect notes](/docs/onboarding/rearchitect-notes) — impact analysis for future changes.
+- [Rearchitect notes](/docs/history/rearchitect-notes) — impact analysis for future changes.
 
 See [Architecture](/docs/advanced/architecture) for the full contract and [IR reference](/docs/advanced/ir-reference) for the graph schema.

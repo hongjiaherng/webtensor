@@ -10,6 +10,8 @@ const dirs: string[] = [
   'packages/backend-webgpu/dist',
   'packages/backend-wasm/dist',
   'packages/backend-wasm/pkg',
+  'packages/nn/dist',
+  'packages/optim/dist',
   'docs/out',
   'docs/.next',
   'docs/.source',
