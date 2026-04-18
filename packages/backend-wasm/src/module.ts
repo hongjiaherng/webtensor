@@ -141,6 +141,9 @@ type WasmExports = WebAssembly.Exports & {
     atol: number,
     eqnan: number,
   ) => void;
+  concat_f32_strided: (a: number, b: number, c: number) => void;
+  concat_i32_strided: (a: number, b: number, c: number) => void;
+  concat_u8_strided: (a: number, b: number, c: number) => void;
 };
 
 let cachedModule: WebtensorWasmModule | null = null;
@@ -215,6 +218,9 @@ export async function loadWasmModule(): Promise<WebtensorWasmModule> {
     ge_f32_strided: (a, b, c, d) => x.ge_f32_strided(a, b, c, d),
     ge_i32_strided: (a, b, c, d) => x.ge_i32_strided(a, b, c, d),
     isclose_f32_strided: (a, b, c, d, rt, at, en) => x.isclose_f32_strided(a, b, c, d, rt, at, en),
+    concat_f32_strided: (a, b, c) => x.concat_f32_strided(a, b, c),
+    concat_i32_strided: (a, b, c) => x.concat_i32_strided(a, b, c),
+    concat_u8_strided: (a, b, c) => x.concat_u8_strided(a, b, c),
   };
 
   return cachedModule;

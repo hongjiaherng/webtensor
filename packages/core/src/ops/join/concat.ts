@@ -1,5 +1,6 @@
 import { Tensor } from '../../tensor';
 import { slice } from '../view/slice';
+import { contiguous } from '../memory/contiguous';
 
 /**
  * Concatenate tensors along an existing axis. ONNX: `Concat`. Matches
@@ -67,7 +68,10 @@ export function concat(tensors: Tensor[], axis: number = 0): Tensor {
           const ends = outShape.map((d) => d as number);
           starts[ax] = start;
           ends[ax] = start + size;
-          grads.push(slice(grad, starts, ends));
+          // Materialize the slice view so downstream consumers (and read-back
+          // via `backend.read()`) get a dense buffer rather than a strided view
+          // over the parent grad's storage.
+          grads.push(contiguous(slice(grad, starts, ends)));
           start += size;
         }
         return grads;
