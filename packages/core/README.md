@@ -17,8 +17,14 @@ import { add, matmul, tensor, compileGraph } from '@webtensor/core';
 import { Engine } from '@webtensor/runtime';
 import { CPUBackend } from '@webtensor/backend-cpu';
 
-const a = tensor([[1, 2], [3, 4]]);
-const b = tensor([[5, 6], [7, 8]]);
+const a = tensor([
+  [1, 2],
+  [3, 4],
+]);
+const b = tensor([
+  [5, 6],
+  [7, 8],
+]);
 const c = matmul(add(a, b), a);
 
 const engine = new Engine(await CPUBackend.create());

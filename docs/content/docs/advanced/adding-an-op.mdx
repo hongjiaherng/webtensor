@@ -15,7 +15,7 @@ In [`/roadmap`](/docs/roadmap), add a row to the **Ops** table (or relevant sect
 
 ## Step 2: Core graph-building function
 
-**File:** `packages/core/src/ops.ts`
+**File:** `packages/core/src/ops/<category>/<opName>.ts` (choose the right category: `elementwise`, `reduction`, `linalg`, `activation`, `movement`, `memory`).
 
 Naming conventions to follow:
 
@@ -54,10 +54,10 @@ The op string (`'Sigmoid'`) is what the kernel registries key on. It is already 
 
 **File:** `packages/backend-cpu/src/kernels/<category>/<OpName>.ts`
 
-Categories: `binary/`, `unary/`, `linalg/`, `memory/`.
+Categories: `elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`.
 
 ```ts
-// packages/backend-cpu/src/kernels/unary/sigmoid.ts
+// packages/backend-cpu/src/kernels/elementwise/sigmoid.ts
 import { CPUKernel, stridedIdx, buf } from '../utils';
 
 export const sigmoidKernel: CPUKernel = (_node, inputs, outputs) => {
@@ -78,7 +78,7 @@ export const sigmoidKernel: CPUKernel = (_node, inputs, outputs) => {
 **Register in `packages/backend-cpu/src/kernels/registry.ts`:**
 
 ```ts
-import { sigmoidKernel } from './unary/sigmoid';
+import { sigmoidKernel } from './elementwise/sigmoid';
 // ...
 ['Sigmoid', sigmoidKernel],
 ```
@@ -87,7 +87,7 @@ import { sigmoidKernel } from './unary/sigmoid';
 
 ## Step 4: CPU test
 
-Add test cases in `tests/ops/<category>/<opname>.test.ts` (categories: `binary/`, `unary/`, `activation/`, `reduce/`, `compare/`, `linalg/`, `view/`, `shape/`, `cast/`, `init/`). Use the `BACKENDS` array from `tests/helpers.ts`. Run against CPU first. Exclude backends that don't yet have the kernel by filtering:
+Add test cases in `tests/ops/<category>/<opname>.test.ts` (categories: `elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`, `init/`). Use the `BACKENDS` array from `tests/helpers.ts`. Run against CPU first. Exclude backends that don't yet have the kernel by filtering:
 
 ```ts
 BACKENDS.filter((b) => b.name !== 'WebGPU').forEach(({ name, create }) => { ... });
@@ -132,7 +132,7 @@ pub unsafe fn sigmoid_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *c
 readonly sigmoid_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
 ```
 
-**TypeScript kernel** in `packages/backend-wasm/src/kernels/unary/sigmoid.ts`:
+**TypeScript kernel** in `packages/backend-wasm/src/kernels/elementwise/sigmoid.ts`:
 
 ```ts
 import { WASMKernel, handleOf, buildUnaryMetaData, allocMeta } from '../utils';
@@ -216,7 +216,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ```
 
-**Binary op** (two inputs, one output): see `kernels/binary/add.wgsl` for the full pattern. Binary ops use two separate `TensorMeta` uniforms (`u_meta_a` at binding 3, `u_meta_b` at binding 4) and pass the broadcast output shape when building meta so that stride-0 broadcast dimensions are set correctly.
+**Binary op** (two inputs, one output): see `kernels/elementwise/add.wgsl` for the full pattern. Binary ops use two separate `TensorMeta` uniforms (`u_meta_a` at binding 3, `u_meta_b` at binding 4) and pass the broadcast output shape when building meta so that stride-0 broadcast dimensions are set correctly.
 
 ### TypeScript kernel
 
@@ -274,4 +274,4 @@ No changes to `backend.ts` are needed — `execute()` is fully generic.
 
 ## Step 7: Parity test
 
-Once all target backends support the op, add a `describe` block in `tests/backend/consistency.test.ts` that runs the same graph on each backend and asserts outputs match CPU within `1e-5`.
+Once all target backends support the op, add a `describe` block in `tests/backends/consistency.test.ts` that runs the same graph on each backend and asserts outputs match CPU within `1e-5`.

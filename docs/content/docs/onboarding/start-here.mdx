@@ -11,13 +11,13 @@ The Reference docs ([architecture](/docs/advanced/architecture), [IR reference](
 
 ## Status snapshot
 
-- **Packages:** `@webtensor/ir`, `@webtensor/runtime`, `@webtensor/core`, `@webtensor/nn`, `@webtensor/optim`, plus three backend packages (CPU / WASM / WebGPU).
+- **Packages:** `@webtensor/ir`, `@webtensor/runtime`, `@webtensor/core`, `@webtensor/nn` (activations, losses, optimizers), plus three backend packages (CPU / WASM / WebGPU).
 - **Backends:** full kernel parity across all three (19 / 19 ops).
 - **Tests:** ~580 cross-backend tests, browser mode via Playwright / Chromium.
 - **What works today:**
   - **High-level API**: `tensor`, `zeros/ones/rand/randn` (all accept `{ requiresGrad: true }` for trainable tensors), `run()` + `.run()` method, `compile(fn, spec)` + `grad(loss, param)` (JAX-style `@jit`), `.equals()` / `.allclose()` for shape-aware tensor comparison.
   - **Ops**: broadcast-aware binary ops with correct backward, PyTorch-style `matmul` (1D·1D / 1D·2D / 2D·1D / N-D batched with broadcast), reductions (`sum` / `mean`), `softmax`, full view/memory/unary-math set.
-  - **Training**: `SGD` (momentum optional) in `@webtensor/optim`; `mseLoss` + activations (`relu`, `sigmoid`, `tanh`, `softmax`) in `@webtensor/nn`. End-to-end XOR MLP trains on all three backends.
+  - **Training**: `SGD` (momentum optional), `mseLoss`, and activations (`relu`, `sigmoid`, `tanh`, `softmax`) all live in `@webtensor/nn`. End-to-end XOR MLP trains on all three backends.
 - **What still blocks production:** only `float32` has kernels (`int32` / `bool` allocate but have no kernels); no `cross_entropy` / `bceLoss`, no `Adam`; no `concat` / `gather` / conv ops yet; WebGPU `TensorMeta` capped at rank 8 (matmul caps batch rank at 6); publish path untested.
 - **Distribution:** `dist/` exists; publish script exists but versions drift across packages and haven't been validated outside the workspace.
 
@@ -50,7 +50,7 @@ Pick the path that matches your goal:
 | **Use the library / understand it broadly** | [README](https://github.com/hongjiaherng/webtensor/blob/main/README.md) → [System walkthrough](/docs/onboarding/system-walkthrough) → [Package deep-dive](/docs/onboarding/package-deep-dive) |
 | **Add an op or kernel**                     | [Contributor guide](/docs/onboarding/contributor-guide) → [Adding an op](/docs/advanced/adding-an-op) (canonical recipe) → [Backends and kernels](/docs/onboarding/backends-and-kernels)      |
 | **Fix a bug / pick something to work on**   | [Bugs and gaps](/docs/onboarding/bugs-and-gaps) → [State of the project](/docs/onboarding/state-of-the-project)                                                                               |
-| **Plan a refactor or rearchitect**          | [State of the project](/docs/onboarding/state-of-the-project) → [Rearchitect notes](/docs/history/rearchitect-notes) → [Roadmap](/docs/roadmap) (canonical)                                |
+| **Plan a refactor or rearchitect**          | [State of the project](/docs/onboarding/state-of-the-project) → [Rearchitect notes](/docs/history/rearchitect-notes) → [Roadmap](/docs/roadmap) (canonical)                                   |
 | **Understand autograd**                     | [Key concepts § Autograd](/docs/onboarding/concepts#5-autograd-backward-builds-more-graph) → [Autograd](/docs/onboarding/autograd)                                                            |
 | **Understand the IR**                       | [IR reference](/docs/advanced/ir-reference) (canonical) → [System walkthrough](/docs/onboarding/system-walkthrough)                                                                           |
 | **Answer a specific question**              | [FAQ](/docs/faq)                                                                                                                                                                              |
@@ -70,7 +70,7 @@ Pick the path that matches your goal:
 | [State of the project](/docs/onboarding/state-of-the-project) | Works / Partial / Missing matrix across ops, autograd, dtypes, training, distribution.                                                                   |
 | [Bugs and gaps](/docs/onboarding/bugs-and-gaps)               | Severity-tagged defects with file:line, symptoms, fix sketches.                                                                                          |
 | [Contributor guide](/docs/onboarding/contributor-guide)       | Local dev loop, test patterns, common pitfalls.                                                                                                          |
-| [Rearchitect notes](/docs/history/rearchitect-notes)       | Forward-looking — what each future change touches.                                                                                                       |
+| [Rearchitect notes](/docs/history/rearchitect-notes)          | Forward-looking — what each future change touches.                                                                                                       |
 
 ---
 

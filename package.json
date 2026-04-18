@@ -25,7 +25,7 @@
   },
   "scripts": {
     "setup": "bun install && cd docs && bun install",
-    "build": "bun run build:ir && bun run build:runtime && bun run build:core && bun run build:backend-cpu && bun run build:backend-webgpu && bun run build:backend-wasm && bun run build:nn && bun run build:optim",
+    "build": "bun run build:ir && bun run build:runtime && bun run build:core && bun run build:backend-cpu && bun run build:backend-webgpu && bun run build:backend-wasm && bun run build:nn",
     "build:ir": "bun run --cwd packages/ir build",
     "build:runtime": "bun run --cwd packages/runtime build",
     "build:core": "bun run --cwd packages/core build",
@@ -33,7 +33,6 @@
     "build:backend-webgpu": "bun run --cwd packages/backend-webgpu build",
     "build:backend-wasm": "bun run --cwd packages/backend-wasm build",
     "build:nn": "bun run --cwd packages/nn build",
-    "build:optim": "bun run --cwd packages/optim build",
     "clean": "bun scripts/clean.ts",
     "clean:all": "bun scripts/clean.ts --all",
     "test": "vitest run",
@@ -48,6 +47,6 @@
     "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../../public/diagrams",
     "docs:logo": "cd assets/logo && uv sync && uv run main.py",
     "smoke-test": "cd smoke-test && bun run dev",
-    "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public && bun publish --cwd packages/nn --access public && bun publish --cwd packages/optim --access public"
+    "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public && bun publish --cwd packages/nn --access public"
   }
 }

@@ -72,7 +72,7 @@ When `add(a, b)` is called with `a.shape = [3, 1]` and `b.shape = [1, 4]`, the o
 
 The same mechanism drives `expand()`: it sets stride to `0` on the expanded dimension and increases `shape`. No allocation.
 
-On the backward pass, the gradient for a broadcast dimension must be summed back to the original shape ("unbroadcast"). The helper `unbroadcastGrad(grad, inputShape)` in `ops.ts` handles this using the `sum` kernel; every binary op and `Expand` route their gradients through it.
+On the backward pass, the gradient for a broadcast dimension must be summed back to the original shape ("unbroadcast"). The helper `sumToShape(grad, inputShape)` in `ops.ts` handles this using the `sum` kernel; every binary op and `Expand` route their gradients through it.
 
 ---
 
@@ -117,7 +117,7 @@ Declare trainable weights with `{ requiresGrad: true }` on any factory. `compile
 ```ts
 import { compile, grad, matmul, add, randn, zeros } from '@webtensor/core';
 import { relu, mseLoss } from '@webtensor/nn';
-import { SGD } from '@webtensor/optim';
+import { SGD } from '@webtensor/nn';
 import '@webtensor/backend-webgpu';
 
 // Params — plain Tensors with requiresGrad. compile() auto-feeds them.

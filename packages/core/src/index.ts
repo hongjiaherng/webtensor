@@ -21,15 +21,18 @@ export { rand } from './init/rand';
 export { randn } from './init/randn';
 export { zerosLike, onesLike, randnLike } from './init/like';
 
-// Ops — math primitives and views. (Activations live in @webtensor/nn.)
+// Ops — math primitives, activations, movement, memory.
 export * from './ops';
 
-// Compile / grad / run — the high-level training API
-export { compile, grad } from './compile';
+// Autograd — grad() and internal helpers.
+export { grad } from './autograd';
+
+// Compile / run — the high-level training API
+export { compile } from './compile';
 export { run } from './run';
 
 // Scalar equality helpers (PyTorch / JAX parity: torch.equal, torch.allclose).
-// For element-wise comparison returning a bool tensor, see ops/compare (eq, lt, gt, ...).
+// For element-wise comparison returning a bool tensor, see ops/elementwise (eq, lt, gt, ...).
 export { equal, allclose } from './equality';
 export type { AllcloseOptions } from './equality';
 

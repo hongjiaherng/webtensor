@@ -32,10 +32,10 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 
 **What needs to change:**
 
-- **`log_softmax`** in `ops.ts` — numerically stable: `x - logsumexp(x, axis)`. Backward: `grad - softmax(x) * sum(grad, axis, keepdim=true)`.
+- **`log_softmax`** under `packages/core/src/ops/activation/` — numerically stable: `x - logsumexp(x, axis)`. Backward: `grad - softmax(x) * sum(grad, axis, keepdim=true)`.
 - **`mse_loss(pred, target)` = `reduceMean(pow(sub(pred, target), 2))`** — one-liner alias.
 - **`cross_entropy(logits, target)`** — combined `log_softmax` + negative-log-likelihood.
-- **`optim.Adam`** — another host-side optimizer next to `SGD` in `packages/core/src/optim.ts`. Keeps the existing placeholder-fed pattern (weights live as `Float32Array`s, not inside the graph).
+- **`Adam`** — another host-side optimizer next to `SGD` in `packages/nn/src/optim/`. Keeps the existing placeholder-fed pattern (weights live as `Float32Array`s, not inside the graph).
 
 ---
 
@@ -54,54 +54,54 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 
 ## Ops
 
-| Op                       | CPU | WASM | WebGPU |
-| ------------------------ | :-: | :--: | :----: |
-| Add                      | [x] | [x]  |  [x]   |
-| Sub                      | [x] | [x]  |  [x]   |
-| Mul                      | [x] | [x]  |  [x]   |
-| Div                      | [x] | [x]  |  [x]   |
-| MatMul (1D/2D + batched) | [x] | [x]  |  [x]   |
-| Transpose                | [x] | [x]  |  [x]   |
-| Relu                     | [x] | [x]  |  [x]   |
-| Neg                      | [x] | [x]  |  [x]   |
-| Exp                      | [x] | [x]  |  [x]   |
-| Log                      | [x] | [x]  |  [x]   |
-| Sqrt                     | [x] | [x]  |  [x]   |
-| Abs                      | [x] | [x]  |  [x]   |
-| Pow                      | [x] | [x]  |  [x]   |
-| Sigmoid                  | [x] | [x]  |  [x]   |
-| Tanh                     | [x] | [x]  |  [x]   |
-| Softmax                  | [x] | [x]  |  [x]   |
-| ReduceSum                | [x] | [x]  |  [x]   |
-| ReduceMean               | [x] | [x]  |  [x]   |
-| Reshape                  | [x] | [x]  |  [x]   |
-| Slice                    | [x] | [x]  |  [x]   |
-| Concat                   | [x] | [x]  |  [x]   |
-| Pad                      | [x] | [x]  |  [x]   |
-| Cast                     | [x] | [x]  |  [x]   |
-| Compare (eq/ne/lt/le/gt/ge) | [x] | [x] | [x]   |
-| Gather                   | [ ] | [ ]  |  [ ]   |
-| LogSoftmax               | [ ] | [ ]  |  [ ]   |
+| Op                          | CPU | WASM | WebGPU |
+| --------------------------- | :-: | :--: | :----: |
+| Add                         | [x] | [x]  |  [x]   |
+| Sub                         | [x] | [x]  |  [x]   |
+| Mul                         | [x] | [x]  |  [x]   |
+| Div                         | [x] | [x]  |  [x]   |
+| MatMul (1D/2D + batched)    | [x] | [x]  |  [x]   |
+| Transpose                   | [x] | [x]  |  [x]   |
+| Relu                        | [x] | [x]  |  [x]   |
+| Neg                         | [x] | [x]  |  [x]   |
+| Exp                         | [x] | [x]  |  [x]   |
+| Log                         | [x] | [x]  |  [x]   |
+| Sqrt                        | [x] | [x]  |  [x]   |
+| Abs                         | [x] | [x]  |  [x]   |
+| Pow                         | [x] | [x]  |  [x]   |
+| Sigmoid                     | [x] | [x]  |  [x]   |
+| Tanh                        | [x] | [x]  |  [x]   |
+| Softmax                     | [x] | [x]  |  [x]   |
+| ReduceSum                   | [x] | [x]  |  [x]   |
+| ReduceMean                  | [x] | [x]  |  [x]   |
+| Reshape                     | [x] | [x]  |  [x]   |
+| Slice                       | [x] | [x]  |  [x]   |
+| Concat                      | [x] | [x]  |  [x]   |
+| Pad                         | [x] | [x]  |  [x]   |
+| Cast                        | [x] | [x]  |  [x]   |
+| Compare (eq/ne/lt/le/gt/ge) | [x] | [x]  |  [x]   |
+| Gather                      | [ ] | [ ]  |  [ ]   |
+| LogSoftmax                  | [ ] | [ ]  |  [ ]   |
 
 ## Autograd
 
-| Feature                            | Done |
-| ---------------------------------- | :--: |
-| Add / Sub / Mul / Div backward     | [x]  |
-| Broadcast-aware unbroadcast        | [x]  |
-| MatMul backward (incl. batched)    | [x]  |
-| Transpose / Permute backward       | [x]  |
-| Relu backward (all 3 backends)     | [x]  |
-| Reshape / Squeeze / Unsqueeze      | [x]  |
-| ReduceSum / ReduceMean backward    | [x]  |
-| Softmax backward                   | [x]  |
-| Expand backward                    | [x]  |
-| Sigmoid / Tanh backward            | [x]  |
-| Exp / Log / Sqrt / Pow backward    | [x]  |
-| Slice backward (via pad)           | [x]  |
-| Concat backward (via slice)        | [x]  |
-| Pad backward (via slice)           | [x]  |
-| Abs backward (needs sign)          | [ ]  |
+| Feature                         | Done |
+| ------------------------------- | :--: |
+| Add / Sub / Mul / Div backward  | [x]  |
+| Broadcast-aware unbroadcast     | [x]  |
+| MatMul backward (incl. batched) | [x]  |
+| Transpose / Permute backward    | [x]  |
+| Relu backward (all 3 backends)  | [x]  |
+| Reshape / Squeeze / Unsqueeze   | [x]  |
+| ReduceSum / ReduceMean backward | [x]  |
+| Softmax backward                | [x]  |
+| Expand backward                 | [x]  |
+| Sigmoid / Tanh backward         | [x]  |
+| Exp / Log / Sqrt / Pow backward | [x]  |
+| Slice backward (via pad)        | [x]  |
+| Concat backward (via slice)     | [x]  |
+| Pad backward (via slice)        | [x]  |
+| Abs backward (needs sign)       | [ ]  |
 
 ## Training
 

@@ -19,8 +19,14 @@ import { add, tensor, compileGraph } from '@webtensor/core';
 
 const engine = new Engine(await WASMBackend.create());
 
-const a = tensor([[1, 2], [3, 4]]);
-const b = tensor([[5, 6], [7, 8]]);
+const a = tensor([
+  [1, 2],
+  [3, 4],
+]);
+const b = tensor([
+  [5, 6],
+  [7, 8],
+]);
 const c = add(a, b);
 
 await engine.evaluate(compileGraph([c]));

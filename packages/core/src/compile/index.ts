@@ -2,6 +2,6 @@
 // and `run()` internally; also exported for advanced users (ONNX export, etc.).
 export { compileGraph } from './trace';
 
-// High-level: JAX-style `@jit` compile + differentiate.
-export { compile, grad } from './jit';
+// High-level: JAX-style `@jit` compile.
+export { compile } from './jit';
 export type { CompileOptions, ShapeLike, FeedValue } from './jit';

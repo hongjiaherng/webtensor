@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { tensor, sum, run } from '@webtensor/core';
-import { softmax } from '@webtensor/nn';
+import { softmax } from '@webtensor/core';
 import { Engine } from '@webtensor/runtime';
 import { BACKENDS } from '../../helpers';
 
@@ -51,7 +51,7 @@ BACKENDS.forEach(({ name, create }) => {
     it('rank 1 (default axis = -1)', async () => {
       const input = [1, 2, 3];
       const y = await run(softmax(tensor(input)), { engine });
-      expect(y.allclose(tensor(jsRefSoftmax(input, [3], -1)))).toBe(true);
+      expect(await y.allclose(tensor(jsRefSoftmax(input, [3], -1)))).toBe(true);
     });
 
     it('rank 2 axis = -1', async () => {
@@ -66,7 +66,9 @@ BACKENDS.forEach(({ name, create }) => {
         ),
         { engine },
       );
-      expect(y.allclose(tensor(jsRefSoftmax(input, [2, 3], -1), { shape: [2, 3] }))).toBe(true);
+      expect(await y.allclose(tensor(jsRefSoftmax(input, [2, 3], -1), { shape: [2, 3] }))).toBe(
+        true,
+      );
     });
 
     it('rank 2 axis = 0', async () => {
@@ -81,7 +83,9 @@ BACKENDS.forEach(({ name, create }) => {
         ),
         { engine },
       );
-      expect(y.allclose(tensor(jsRefSoftmax(input, [2, 3], 0), { shape: [2, 3] }))).toBe(true);
+      expect(await y.allclose(tensor(jsRefSoftmax(input, [2, 3], 0), { shape: [2, 3] }))).toBe(
+        true,
+      );
     });
 
     it('rank 3 middle axis', async () => {
@@ -95,12 +99,14 @@ BACKENDS.forEach(({ name, create }) => {
         }
       }
       const y = await run(softmax(tensor(nested), 1), { engine });
-      expect(y.allclose(tensor(jsRefSoftmax(flat, [2, 3, 4], 1), { shape: [2, 3, 4] }))).toBe(true);
+      expect(await y.allclose(tensor(jsRefSoftmax(flat, [2, 3, 4], 1), { shape: [2, 3, 4] }))).toBe(
+        true,
+      );
     });
 
     it('length-1 axis yields 1.0', async () => {
       const y = await run(softmax(tensor([[[5], [6]]]), -1), { engine });
-      expect(y.allclose(tensor([[[1], [1]]]))).toBe(true);
+      expect(await y.allclose(tensor([[[1], [1]]]))).toBe(true);
     });
 
     it('large inputs are numerically stable', async () => {
@@ -112,7 +118,7 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('all equal values → uniform', async () => {
       const y = await run(softmax(tensor([[3, 3, 3, 3]])), { engine });
-      expect(y.allclose(tensor([[0.25, 0.25, 0.25, 0.25]]))).toBe(true);
+      expect(await y.allclose(tensor([[0.25, 0.25, 0.25, 0.25]]))).toBe(true);
     });
   });
 });
@@ -136,7 +142,7 @@ BACKENDS.forEach(({ name, create }) => {
       loss.backward();
       const g = await run(a.grad!, { engine });
       expect(
-        g.allclose(
+        await g.allclose(
           tensor([
             [0, 0, 0],
             [0, 0, 0],

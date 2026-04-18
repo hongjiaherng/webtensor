@@ -27,21 +27,21 @@ bun run test             # CPU + WASM + WebGPU parity (1e-5 tolerance)
 
 ### Day-to-day commands
 
-| Command                              | What it does                                                                                                                      |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `bun run test`                       | Run the full Vitest suite in headed Chromium. **Do not use `bun test`** — that bypasses the browser config and WebGPU tests fail. |
-| `bun run test:watch`                 | Vitest in watch mode.                                                                                                             |
-| `bun run test tests/ops/binary/add.test.ts` | Run one test file.                                                                                                         |
-| `bun run lint`                       | ESLint (currently has 1 known error — see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)).                                       |
-| `bun run lint:fix`                   | ESLint with auto-fix.                                                                                                             |
-| `bun run format`                     | Prettier write.                                                                                                                   |
-| `bun run format:check`               | Prettier check (CI-style).                                                                                                        |
-| `bun run build`                      | Build all eight packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm → nn → optim`. |
-| `bun run clean`                      | Delete `dist/` outputs.                                                                                                           |
-| `bun run clean:all`                  | Also delete `node_modules` and the `pkg/` WASM bundle.                                                                            |
-| `bun run docs:plantuml`              | Render `docs/diagrams/puml/*.puml` to `*.svg` into `docs/public/diagrams/` via PlantUML.                                          |
-| `bun run docs:dev`                   | Start the fumadocs (Next.js) dev server for the docs site.                                                                        |
-| `bun run docs:build`                 | Build the docs site as a static export (for GitHub Pages).                                                                        |
+| Command                                          | What it does                                                                                                                             |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run test`                                   | Run the full Vitest suite in headed Chromium. **Do not use `bun test`** — that bypasses the browser config and WebGPU tests fail.        |
+| `bun run test:watch`                             | Vitest in watch mode.                                                                                                                    |
+| `bun run test tests/ops/elementwise/add.test.ts` | Run one test file.                                                                                                                       |
+| `bun run lint`                                   | ESLint (currently has 1 known error — see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)).                                              |
+| `bun run lint:fix`                               | ESLint with auto-fix.                                                                                                                    |
+| `bun run format`                                 | Prettier write.                                                                                                                          |
+| `bun run format:check`                           | Prettier check (CI-style).                                                                                                               |
+| `bun run build`                                  | Build all eight packages to `dist/`. Sequential — runs `ir → runtime → core → backend-cpu → backend-webgpu → backend-wasm → nn → optim`. |
+| `bun run clean`                                  | Delete `dist/` outputs.                                                                                                                  |
+| `bun run clean:all`                              | Also delete `node_modules` and the `pkg/` WASM bundle.                                                                                   |
+| `bun run docs:plantuml`                          | Render `docs/diagrams/puml/*.puml` to `*.svg` into `docs/public/diagrams/` via PlantUML.                                                 |
+| `bun run docs:dev`                               | Start the fumadocs (Next.js) dev server for the docs site.                                                                               |
+| `bun run docs:build`                             | Build the docs site as a static export (for GitHub Pages).                                                                               |
 
 ---
 
@@ -57,7 +57,7 @@ The canonical procedure lives in [Adding an op](/docs/advanced/adding-an-op). Hi
 Then:
 
 5. **Per-op test** in `tests/ops/<category>/<op>.test.ts`.
-6. **Cross-backend parity** — make sure `tests/backend/consistency.test.ts` exercises the new op on all three backends.
+6. **Cross-backend parity** — make sure `tests/backends/consistency.test.ts` exercises the new op on all three backends.
 
 Add the op to [Backends and kernels](/docs/onboarding/backends-and-kernels) parity table and update [Roadmap](/docs/roadmap) if it was on the checklist.
 
@@ -97,12 +97,13 @@ Tolerance is `1e-5`. CPU is the correctness oracle — WASM and WebGPU are compa
 
 ### Test layout
 
-| Folder              | What lives there                                      |
-| ------------------- | ----------------------------------------------------- |
-| `tests/ops/<category>/` | One file per op, grouped by category (`binary/`, `unary/`, `activation/`, `reduce/`, `compare/`, `linalg/`, `view/`, `shape/`, `cast/`, `init/`). |
-| `tests/backend/`    | Cross-backend `consistency.test.ts`, GC/memory tests. |
-| `tests/foundation/` | Dtype round-trip, view ops, engine internals.         |
-| `tests/graph/`      | Autograd, `compile()`, placeholder, training loop.    |
+| Folder                  | What lives there                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/ops/<category>/` | One file per op, grouped by category (`elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`).          |
+| `tests/core/`           | `@webtensor/core` cross-cutting: `autograd`, `compile`, `placeholder`, `equality`, `init`, `broadcast_grad`, `dtype_promotion`. |
+| `tests/runtime/`        | `@webtensor/runtime`: dtype round-trip, engine internals.                                                                       |
+| `tests/integration/`    | Multi-package end-to-end: `simple_graph`, `train_loop`.                                                                         |
+| `tests/backends/`       | Cross-backend parity (`consistency.test.ts`) and backend GC/memory tests.                                                       |
 
 ---
 

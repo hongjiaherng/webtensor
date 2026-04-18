@@ -127,10 +127,7 @@ export function createUniformBuffer(device: GPUDevice, data: Uint32Array): GPUBu
  * Produces a TensorMeta describing shape = [...batchOut, *matrixDims],
  * with strides broadcast-aligned on batch dims and preserving matrix strides.
  */
-export function packMetaMatMulInput(
-  tensor: RuntimeTensor,
-  batchOutShape: number[],
-): Uint32Array {
+export function packMetaMatMulInput(tensor: RuntimeTensor, batchOutShape: number[]): Uint32Array {
   const shape = tensor.shape as number[];
   const rank = shape.length;
   const matrixRank = 2;

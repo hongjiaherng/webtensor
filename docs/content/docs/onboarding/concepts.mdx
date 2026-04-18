@@ -226,7 +226,7 @@ You can combine forward and backward into one `compileGraph` call, which gives t
 
 ### Unbroadcasting: making gradients match input shapes
 
-When `add(a, b)` broadcasts — say `a:[3,1] + b:[1,4] → [3,4]` — the raw gradient at the output has shape `[3,4]`. But `a.grad` must be `[3,1]` and `b.grad` must be `[1,4]`. The helper `unbroadcastGrad(grad, targetShape)` in [ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) sums over axes where the target is size-1 (or missing, from leading broadcast dims), then reshapes back. Every binary op and `Expand` route their gradients through this helper.
+When `add(a, b)` broadcasts — say `a:[3,1] + b:[1,4] → [3,4]` — the raw gradient at the output has shape `[3,4]`. But `a.grad` must be `[3,1]` and `b.grad` must be `[1,4]`. The helper `sumToShape(grad, targetShape)` in [autograd/sumToShape.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/autograd/sumToShape.ts) sums over axes where the target is size-1 (or missing, from leading broadcast dims), then reshapes back. Every binary op and `Expand` route their gradients through this helper.
 
 ### Gradient accumulation
 
@@ -256,7 +256,7 @@ This mirrors ONNX exactly: initializers vs. graph inputs.
 ```ts
 import { compile, grad, add, matmul, randn, zeros, run } from '@webtensor/core';
 import { relu, mseLoss } from '@webtensor/nn';
-import { SGD } from '@webtensor/optim';
+import { SGD } from '@webtensor/nn';
 
 const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
 const b = zeros([8], { requiresGrad: true });

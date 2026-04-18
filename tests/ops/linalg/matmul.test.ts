@@ -26,7 +26,7 @@ BACKENDS.forEach(({ name, create }) => {
         { engine },
       );
       expect(
-        y.equals(
+        await y.equals(
           tensor([
             [58, 64],
             [139, 154],
@@ -50,7 +50,7 @@ BACKENDS.forEach(({ name, create }) => {
         { engine },
       );
       expect(
-        y.equals(
+        await y.equals(
           tensor([
             [19, 22],
             [43, 50],
@@ -61,19 +61,19 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('[1,1] × [1,1] scalar case', async () => {
       const y = await run(matmul(tensor([[3]]), tensor([[7]])), { engine });
-      expect(y.allclose(tensor([[21]]))).toBe(true);
+      expect(await y.allclose(tensor([[21]]))).toBe(true);
     });
 
     it('[1,4] × [4,1] dot product', async () => {
       const y = await run(matmul(tensor([[1, 2, 3, 4]]), tensor([[1], [2], [3], [4]])), { engine });
-      expect(y.allclose(tensor([[30]]))).toBe(true);
+      expect(await y.allclose(tensor([[30]]))).toBe(true);
     });
 
     it('1D × 1D → scalar (dot product)', async () => {
       const t = matmul(tensor([1, 2, 3]), tensor([4, 5, 6]));
       expect(t.shape).toEqual([]);
       const y = await run(t, { engine });
-      expect(y.allclose(tensor([32], { shape: [] }))).toBe(true);
+      expect(await y.allclose(tensor([32], { shape: [] }))).toBe(true);
     });
 
     it('1D × 2D → shape [N]', async () => {
@@ -87,7 +87,7 @@ BACKENDS.forEach(({ name, create }) => {
       );
       expect(t.shape).toEqual([2]);
       const y = await run(t, { engine });
-      expect(y.allclose(tensor([4, 5]))).toBe(true);
+      expect(await y.allclose(tensor([4, 5]))).toBe(true);
     });
 
     it('2D × 1D → shape [M]', async () => {
@@ -100,7 +100,7 @@ BACKENDS.forEach(({ name, create }) => {
       );
       expect(t.shape).toEqual([2]);
       const y = await run(t, { engine });
-      expect(y.allclose(tensor([4, 10]))).toBe(true);
+      expect(await y.allclose(tensor([4, 10]))).toBe(true);
     });
 
     it('3D × 1D → shape [batch, M]', async () => {
@@ -121,7 +121,7 @@ BACKENDS.forEach(({ name, create }) => {
         { engine },
       );
       expect(
-        y.allclose(
+        await y.allclose(
           tensor([
             [3, 7],
             [11, 15],
@@ -148,7 +148,7 @@ BACKENDS.forEach(({ name, create }) => {
         { engine },
       );
       expect(
-        y.allclose(
+        await y.allclose(
           tensor([
             [4, 6],
             [12, 14],
@@ -186,7 +186,7 @@ BACKENDS.forEach(({ name, create }) => {
         { engine },
       );
       expect(
-        y.allclose(
+        await y.allclose(
           tensor([
             [
               [4, 5],
@@ -216,7 +216,7 @@ BACKENDS.forEach(({ name, create }) => {
       ]); // [4,3,1]
       const y = await run(matmul(a, b), { engine });
       expect(
-        y.allclose(
+        await y.allclose(
           tensor([
             [[6], [15]],
             [[12], [30]],
@@ -276,7 +276,7 @@ BACKENDS.forEach(({ name, create }) => {
         Array.from({ length: 1024 }, () => 32.0),
         { shape: [32, 32] },
       );
-      expect(y.allclose(expected, { atol: 1e-3 })).toBe(true);
+      expect(await y.allclose(expected, { atol: 1e-3 })).toBe(true);
     });
   });
 });

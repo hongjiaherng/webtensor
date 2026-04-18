@@ -70,13 +70,6 @@
       "version": "0.3.2",
       "dependencies": {
         "@webtensor/core": "workspace:^",
-      },
-    },
-    "packages/optim": {
-      "name": "@webtensor/optim",
-      "version": "0.3.2",
-      "dependencies": {
-        "@webtensor/core": "workspace:^",
         "@webtensor/runtime": "workspace:^",
       },
     },
@@ -230,8 +223,6 @@
     "@webtensor/ir": ["@webtensor/ir@workspace:packages/ir"],
 
     "@webtensor/nn": ["@webtensor/nn@workspace:packages/nn"],
-
-    "@webtensor/optim": ["@webtensor/optim@workspace:packages/optim"],
 
     "@webtensor/runtime": ["@webtensor/runtime@workspace:packages/runtime"],
 

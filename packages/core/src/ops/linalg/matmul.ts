@@ -1,9 +1,9 @@
 import { Tensor } from '../../tensor';
 import { broadcastShapes } from '../../shape';
-import { unbroadcastGrad } from '../_unbroadcast';
-import { transpose } from '../view/transpose';
-import { unsqueeze } from '../view/unsqueeze';
-import { squeeze } from '../view/squeeze';
+import { sumToShape } from '../../autograd/sumToShape';
+import { transpose } from '../movement/transpose';
+import { unsqueeze } from '../movement/unsqueeze';
+import { squeeze } from '../movement/squeeze';
 
 /**
  * PyTorch-style `matmul`:
@@ -49,7 +49,7 @@ export function matmul(a: Tensor, b: Tensor): Tensor {
       backward: (grad) => {
         const gradA = matmul(grad, transpose(bP));
         const gradB = matmul(transpose(aP), grad);
-        return [unbroadcastGrad(gradA, aP.shape), unbroadcastGrad(gradB, bP.shape)];
+        return [sumToShape(gradA, aP.shape), sumToShape(gradB, bP.shape)];
       },
     },
   });

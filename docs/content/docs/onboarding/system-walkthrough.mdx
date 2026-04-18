@@ -44,9 +44,9 @@ What happens at each phase:
 
 ### Phase 1 — Build (eager)
 
-`tensor(...)` is in [packages/core/src/tensor_init.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor_init.ts). It allocates a fresh `Tensor` whose `_ctx` is `{ op: 'Constant', inputs: [], attributes: { data } }`. The `id` comes from a module-level counter ([`tensorIdCounter` in tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts)).
+`tensor(...)` is in [packages/core/src/init/tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/init/tensor.ts). It allocates a fresh `Tensor` whose `_ctx` is `{ op: 'Constant', inputs: [], attributes: { data } }`. The `id` comes from a module-level counter ([`tensorIdCounter` in tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts)).
 
-`add(a, b)` is in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts). It computes the broadcast output shape and returns a new `Tensor` whose `_ctx` is:
+`add(a, b)` is in [packages/core/src/ops/elementwise/add.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops/elementwise/add.ts). It computes the broadcast output shape and returns a new `Tensor` whose `_ctx` is:
 
 ```ts
 {
@@ -60,7 +60,7 @@ No memory is allocated, no kernel runs. The whole graph lives as cross-reference
 
 ### Phase 2 — Compile
 
-[`compileGraph(outputs)`](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compiler.ts) walks the graph by DFS from each output, recursing into `t._ctx.inputs`:
+[`compileGraph(outputs)`](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compile/trace.ts) walks the graph by DFS from each output, recursing into `t._ctx.inputs`:
 
 - Each visited `Tensor` becomes a `Value` (`{ name, shape, dtype }`).
 - Each `_ctx` becomes a `Node` (`{ id, op, inputs[], outputs[], attributes? }`).

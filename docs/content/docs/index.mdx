@@ -18,7 +18,7 @@ Every user action can be done at two levels. The **high-level** API is what 99% 
 ```ts
 import { tensor, randn, add, matmul, compile, grad, run } from '@webtensor/core';
 import { relu, mseLoss } from '@webtensor/nn';
-import { SGD } from '@webtensor/optim';
+import { SGD } from '@webtensor/nn';
 import '@webtensor/backend-webgpu'; // pick one (or several)
 
 // Eager one-shot — `run()` evaluates the tensor graph:
@@ -86,7 +86,7 @@ The low-level API is stable and documented. It's what an ONNX importer or a cust
 - `@webtensor/runtime` — `Engine`, `Backend` interface, view ops, dtype utilities.
 - `@webtensor/core` — user-facing tensor library: `Tensor`, ops, autograd, `compile` / `grad` / `run`.
 - **`@webtensor/nn`** — activations (`relu`, `sigmoid`, `tanh`, `softmax`) and losses (`mseLoss`, ...).
-- **`@webtensor/optim`** — host-side optimizers (`SGD`; Adam coming soon).
+- **`@webtensor/nn`** — host-side optimizers (`SGD`; Adam coming soon).
 - `@webtensor/backend-cpu` / `-wasm` / `-webgpu` — kernel implementations.
 
 Packages split like **JAX + optax + flax** and **tfjs-core + tfjs-layers** — ML-specific building blocks (`nn`, `optim`) sit on top of the tensor core, not inside it. Inference-only users don't pay the training-code bundle cost.

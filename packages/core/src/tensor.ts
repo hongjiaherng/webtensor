@@ -36,7 +36,7 @@ import {
   ge,
   isclose,
 } from './ops';
-import type { IsCloseOptions } from './ops/compare/isclose';
+import type { IsCloseOptions } from './ops/elementwise/isclose';
 import { computeContiguousStrides } from '@webtensor/ir';
 import { shapeSize } from './shape';
 import { equal, allclose, AllcloseOptions } from './equality';
@@ -294,13 +294,13 @@ export class Tensor {
     return run(this, options);
   }
 
-  /** Strict equality (same shape + exact values). See `compare.equal`. */
-  equals(other: Tensor): boolean {
-    return equal(this, other);
+  /** Strict equality (same shape + exact values). See `equality.equal`. */
+  equals(other: Tensor, opts?: RunOptions): Promise<boolean> {
+    return equal(this, other, opts);
   }
 
-  /** Numeric closeness (same shape + values within tolerances). See `compare.allclose`. */
-  allclose(other: Tensor, opts?: AllcloseOptions): boolean {
+  /** Numeric closeness (same shape + values within tolerances). See `equality.allclose`. */
+  allclose(other: Tensor, opts?: AllcloseOptions & RunOptions): Promise<boolean> {
     return allclose(this, other, opts);
   }
 }

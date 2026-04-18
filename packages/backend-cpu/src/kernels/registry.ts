@@ -1,33 +1,35 @@
 import { CPUKernel } from './utils';
-import { addKernel } from './binary/add';
-import { subKernel } from './binary/sub';
-import { mulKernel } from './binary/mul';
-import { divKernel } from './binary/div';
-import { reluKernel } from './activation/relu';
-import { reluGradKernel } from './activation/reluGrad';
-import { negKernel } from './unary/neg';
-import { expKernel } from './unary/exp';
-import { logKernel } from './unary/log';
-import { sqrtKernel } from './unary/sqrt';
-import { absKernel } from './unary/abs';
-import { powKernel } from './unary/pow';
+import { addKernel } from './elementwise/add';
+import { subKernel } from './elementwise/sub';
+import { mulKernel } from './elementwise/mul';
+import { divKernel } from './elementwise/div';
+import { negKernel } from './elementwise/neg';
+import { expKernel } from './elementwise/exp';
+import { logKernel } from './elementwise/log';
+import { sqrtKernel } from './elementwise/sqrt';
+import { absKernel } from './elementwise/abs';
+import { powKernel } from './elementwise/pow';
+import { eqKernel } from './elementwise/eq';
+import { neKernel } from './elementwise/ne';
+import { ltKernel } from './elementwise/lt';
+import { leKernel } from './elementwise/le';
+import { gtKernel } from './elementwise/gt';
+import { geKernel } from './elementwise/ge';
+import { iscloseKernel } from './elementwise/isclose';
+import { castKernel } from './elementwise/cast';
+import { reduceSumKernel } from './reduction/sum';
+import { reduceMeanKernel } from './reduction/mean';
+import { allKernel } from './reduction/all';
+import { anyKernel } from './reduction/any';
+import { matmulKernel } from './linalg/matmul';
+import { reluKernel } from './activation/relu/forward';
+import { reluBackwardKernel } from './activation/relu/backward';
 import { sigmoidKernel } from './activation/sigmoid';
 import { tanhKernel } from './activation/tanh';
-import { matmulKernel } from './linalg/matmul';
-import { reduceSumKernel } from './reduce/reduceSum';
-import { reduceMeanKernel } from './reduce/reduceMean';
 import { softmaxKernel } from './activation/softmax';
 import { contiguousKernel } from './memory/contiguous';
-import { castKernel } from './cast/cast';
-import { eqKernel } from './compare/eq';
-import { neKernel } from './compare/ne';
-import { ltKernel } from './compare/lt';
-import { leKernel } from './compare/le';
-import { gtKernel } from './compare/gt';
-import { geKernel } from './compare/ge';
-import { iscloseKernel } from './compare/isclose';
-import { concatKernel } from './join/concat';
-import { padKernel } from './padding/pad';
+import { concatKernel } from './movement/concat';
+import { padKernel } from './movement/pad';
 
 export type { CPUKernel };
 
@@ -36,22 +38,12 @@ export const cpuKernelRegistry = new Map<string, CPUKernel>([
   ['Sub', subKernel],
   ['Mul', mulKernel],
   ['Div', divKernel],
-  ['Relu', reluKernel],
-  ['ReluGrad', reluGradKernel],
   ['Neg', negKernel],
   ['Exp', expKernel],
   ['Log', logKernel],
   ['Sqrt', sqrtKernel],
   ['Abs', absKernel],
   ['Pow', powKernel],
-  ['Sigmoid', sigmoidKernel],
-  ['Tanh', tanhKernel],
-  ['MatMul', matmulKernel],
-  ['ReduceSum', reduceSumKernel],
-  ['ReduceMean', reduceMeanKernel],
-  ['Softmax', softmaxKernel],
-  ['Contiguous', contiguousKernel],
-  ['Cast', castKernel],
   ['Equal', eqKernel],
   ['NotEqual', neKernel],
   ['Less', ltKernel],
@@ -59,6 +51,18 @@ export const cpuKernelRegistry = new Map<string, CPUKernel>([
   ['Greater', gtKernel],
   ['GreaterOrEqual', geKernel],
   ['IsClose', iscloseKernel],
+  ['Cast', castKernel],
+  ['ReduceSum', reduceSumKernel],
+  ['ReduceMean', reduceMeanKernel],
+  ['ReduceAll', allKernel],
+  ['ReduceAny', anyKernel],
+  ['MatMul', matmulKernel],
+  ['Relu', reluKernel],
+  ['ReluBackward', reluBackwardKernel],
+  ['Sigmoid', sigmoidKernel],
+  ['Tanh', tanhKernel],
+  ['Softmax', softmaxKernel],
+  ['Contiguous', contiguousKernel],
   ['Concat', concatKernel],
   ['Pad', padKernel],
 ]);

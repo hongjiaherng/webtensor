@@ -28,27 +28,27 @@ Every backend follows the same shape:
 
 All three backends register exactly the **same 19 kernels**:
 
-| Op           | CPU | WASM | WebGPU | Notes                                                                                                         |
-| ------------ | --- | ---- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| `Add`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `Sub`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `Mul`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `Div`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `MatMul`     | ✅  | ✅   | ✅     | PyTorch semantics: 1D·1D dot, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast (batch rank ≤ 6 on WebGPU). |
-| `ReduceSum`  | ✅  | ✅   | ✅     | Strided. Attrs: `axes: number[]`, `keepdim: 0\|1`. One thread / workgroup invocation per output element.      |
-| `ReduceMean` | ✅  | ✅   | ✅     | Same layout as ReduceSum, divides by reduce-axis product.                                                     |
-| `Softmax`    | ✅  | ✅   | ✅     | Numerically stable (max-subtract); one thread per slice. Attr: `axis: number`.                                |
-| `Relu`       | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `ReluGrad`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.              |
-| `Neg`        | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Exp`        | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Log`        | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Sqrt`       | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Abs`        | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                       |
-| `Pow`        | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                      |
-| `Sigmoid`    | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Tanh`       | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Contiguous` | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                            |
+| Op             | CPU | WASM | WebGPU | Notes                                                                                                         |
+| -------------- | --- | ---- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| `Add`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
+| `Sub`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
+| `Mul`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
+| `Div`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
+| `MatMul`       | ✅  | ✅   | ✅     | PyTorch semantics: 1D·1D dot, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast (batch rank ≤ 6 on WebGPU). |
+| `ReduceSum`    | ✅  | ✅   | ✅     | Strided. Attrs: `axes: number[]`, `keepdim: 0\|1`. One thread / workgroup invocation per output element.      |
+| `ReduceMean`   | ✅  | ✅   | ✅     | Same layout as ReduceSum, divides by reduce-axis product.                                                     |
+| `Softmax`      | ✅  | ✅   | ✅     | Numerically stable (max-subtract); one thread per slice. Attr: `axis: number`.                                |
+| `Relu`         | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `ReluBackward` | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.              |
+| `Neg`          | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `Exp`          | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `Log`          | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `Sqrt`         | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `Abs`          | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                       |
+| `Pow`          | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                      |
+| `Sigmoid`      | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `Tanh`         | ✅  | ✅   | ✅     | Strided.                                                                                                      |
+| `Contiguous`   | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                            |
 
 Additionally, the engine handles two ops entirely in-process (no backend kernel):
 
@@ -79,7 +79,7 @@ Additionally, the engine handles two ops entirely in-process (no backend kernel)
 
 `CPUKernel = (node, inputs, outputs) => void`. Every kernel handles arbitrary strides via `stridedIdx()`.
 
-Example — [`addKernel`](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/binary/add.ts):
+Example — [`addKernel`](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/elementwise/add.ts):
 
 ```ts
 const aBcast = broadcastStridesOf(outShape, aShape, inputs[0].strides);
@@ -158,11 +158,11 @@ To call a Rust kernel, JS packs metadata into a `Uint32Array`, copies it into WA
 
 Dtype scaffolding: reduction and softmax Rust kernels are named with an `_f32_` suffix (`reduce_sum_f32_strided`, etc.); the TS wrapper looks the function up via `dtypeSuffix(dtype)` so adding `int32` / `bool` variants later is additive, not a rewrite.
 
-The Rust side reads the same layout (e.g. [ops/unary/relu.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/ops/unary/relu.rs)) using `slice::from_raw_parts(meta_ptr, 19)`.
+The Rust side reads the same layout (e.g. [kernels/activation/relu/forward.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/kernels/activation/relu/forward.rs)) using `slice::from_raw_parts(meta_ptr, 19)`.
 
 ### `_raw` pointer convention
 
-Each Rust kernel exposes `<op>_strided(a_ptr, [b_ptr,] out_ptr, meta_ptr)`. ReluGrad has a special `_raw` form (`relu_grad_raw(grad, a, out, n)`) that skips the meta buffer because autograd always passes contiguous tensors — see [src/kernels/unary/relu.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/unary/relu.ts).
+Each Rust kernel exposes `<op>_strided(a_ptr, [b_ptr,] out_ptr, meta_ptr)`. ReluBackward has a special `_raw` form (`relu_backward_raw(grad, a, out, n)`) that skips the meta buffer because autograd always passes contiguous tensors — see [src/kernels/activation/relu/backward.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/activation/relu/backward.ts).
 
 ### Stride utility (Rust)
 
@@ -258,7 +258,7 @@ No gaps allowed — WebGPU rejects bind groups with sparse indices.
 
 ### Dispatch sizing
 
-Most unary/binary kernels use `@workgroup_size(64)` and dispatch `ceil(N / 64)` workgroups. Reductions and Softmax use `@workgroup_size(64)` with one invocation per output element (reductions) or per slice (softmax). Batched MatMul uses `@workgroup_size(8, 8, 1)` and dispatches `[ceil(M/8), ceil(N/8), batchTotal]` so `gid.z` is the flat batch index.
+Most elementwise/binary kernels use `@workgroup_size(64)` and dispatch `ceil(N / 64)` workgroups. Reductions and Softmax use `@workgroup_size(64)` with one invocation per output element (reductions) or per slice (softmax). Batched MatMul uses `@workgroup_size(8, 8, 1)` and dispatches `[ceil(M/8), ceil(N/8), batchTotal]` so `gid.z` is the flat batch index.
 
 ### Pipeline cache
 
@@ -305,6 +305,6 @@ The full recipe is in [Adding an op](/docs/advanced/adding-an-op). This is the c
 1. **CPU:** new file under `kernels/<category>/`, register in `kernels/registry.ts`.
 2. **WASM:** Rust function with `#[wasm_bindgen]` in `rust/src/ops/<category>/`, JS wrapper in `src/kernels/<category>/`, register, **rebuild WASM**.
 3. **WebGPU:** `<op>.wgsl` (uniform = `u_meta`!) plus `<op>.ts` implementing `WebGPUKernel`, register.
-4. **Tests:** add to `tests/ops/<category>/<op>.test.ts` + ensure `tests/backend/consistency.test.ts` covers it.
+4. **Tests:** add to `tests/ops/<category>/<op>.test.ts` + ensure `tests/backends/consistency.test.ts` covers it.
 
 Continue with [Autograd](/docs/onboarding/autograd).

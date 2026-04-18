@@ -1,9 +1,13 @@
 import { Tensor } from './tensor';
+import { eq } from './ops/elementwise/eq';
+import { isclose } from './ops/elementwise/isclose';
+import { cast } from './ops/elementwise/cast';
+import { all } from './ops/reduction/all';
+import { run, RunOptions } from './run';
 
 /**
  * Shape comparison helper — two tensors have equal shape iff they have the
- * same rank and each dimension matches exactly. `null` dims compare as
- * themselves.
+ * same rank and each dimension matches exactly.
  */
 function shapesEqual(a: Tensor, b: Tensor): boolean {
   if (a.shape.length !== b.shape.length) return false;
@@ -11,16 +15,6 @@ function shapesEqual(a: Tensor, b: Tensor): boolean {
     if (a.shape[i] !== b.shape[i]) return false;
   }
   return true;
-}
-
-function materialized(t: Tensor, label: string): ArrayLike<number> {
-  if (!t.data) {
-    throw new Error(
-      `${label}: tensor has no .data — only evaluated tensors can be compared. ` +
-        'Call `await run(t)` or `compile(...)` first, or build the tensor with a factory like `tensor()`.',
-    );
-  }
-  return t.data as ArrayLike<number>;
 }
 
 export interface AllcloseOptions {
@@ -33,64 +27,40 @@ export interface AllcloseOptions {
 }
 
 /**
- * Strict element-wise equality. Returns `true` iff the two tensors have the
- * same shape AND every element is exactly equal. Mirrors `torch.equal(a, b)`
- * and `jnp.array_equal(a, b)`.
+ * Strict element-wise equality. Resolves to `true` iff the two tensors have
+ * the same shape AND every element is exactly equal. Mirrors `torch.equal`
+ * and `jnp.array_equal`.
  *
- * NaN values never compare equal (even to themselves) — matching IEEE 754
- * and the PyTorch/JAX convention.
+ * Implemented as `all(eq(a, b))` — comparison runs on the active backend and
+ * only the final scalar bool is pulled back to JS.
+ *
+ * NaN values never compare equal (even to themselves) — matching IEEE 754.
  */
-export function equal(a: Tensor, b: Tensor): boolean {
+export async function equal(a: Tensor, b: Tensor, opts: RunOptions = {}): Promise<boolean> {
   if (!shapesEqual(a, b)) return false;
-  const da = materialized(a, 'equal');
-  const db = materialized(b, 'equal');
-  if (da.length !== db.length) return false;
-  for (let i = 0; i < da.length; i++) {
-    if (da[i] !== db[i]) return false;
-  }
-  return true;
+  // `eq` requires float32 / int32 inputs; bool is 0/1 so casting to int32
+  // preserves semantics without adding bool kernels across three backends.
+  const ac = a.dtype === 'bool' ? cast(a, 'int32') : a;
+  const bc = b.dtype === 'bool' ? cast(b, 'int32') : b;
+  const r = await run(all(eq(ac, bc)), opts);
+  return (r.data as Uint8Array)[0] === 1;
 }
 
 /**
- * Numeric closeness check. Returns `true` iff the two tensors have the same
- * shape AND every pair of elements satisfies
+ * Numeric closeness check. Resolves to `true` iff the two tensors have the
+ * same shape AND every pair of elements satisfies
  *   `|a - b| <= atol + rtol * |b|`
  * (matching the NumPy / PyTorch / JAX formula).
  *
  * Defaults: `rtol = 1e-5`, `atol = 1e-8`, `equalNan = false`.
- *
- * Infinity handling: `+∞ ≈ +∞` and `-∞ ≈ -∞`, but `+∞ ≉ -∞` and `±∞ ≉ finite`.
  */
-export function allclose(a: Tensor, b: Tensor, opts: AllcloseOptions = {}): boolean {
+export async function allclose(
+  a: Tensor,
+  b: Tensor,
+  opts: AllcloseOptions & RunOptions = {},
+): Promise<boolean> {
   if (!shapesEqual(a, b)) return false;
-  const rtol = opts.rtol ?? 1e-5;
-  const atol = opts.atol ?? 1e-8;
-  const equalNan = opts.equalNan ?? false;
-  const da = materialized(a, 'allclose');
-  const db = materialized(b, 'allclose');
-  if (da.length !== db.length) return false;
-
-  for (let i = 0; i < da.length; i++) {
-    const x = da[i];
-    const y = db[i];
-
-    // NaN handling
-    const xNan = Number.isNaN(x);
-    const yNan = Number.isNaN(y);
-    if (xNan || yNan) {
-      if (xNan && yNan && equalNan) continue;
-      return false;
-    }
-
-    // Infinity: only close if identical (sign matters)
-    const xInf = !Number.isFinite(x);
-    const yInf = !Number.isFinite(y);
-    if (xInf || yInf) {
-      if (x !== y) return false;
-      continue;
-    }
-
-    if (Math.abs(x - y) > atol + rtol * Math.abs(y)) return false;
-  }
-  return true;
+  const { rtol, atol, equalNan, ...runOpts } = opts;
+  const r = await run(all(isclose(a, b, { rtol, atol, equalNan })), runOpts);
+  return (r.data as Uint8Array)[0] === 1;
 }

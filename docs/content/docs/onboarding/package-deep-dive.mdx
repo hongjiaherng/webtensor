@@ -46,12 +46,12 @@ For the boundary contract see [Architecture](/docs/advanced/architecture). This 
 **Key files:**
 
 - [src/tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts) — `Tensor` class and `backward()`.
-- [src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — every op function (incl. `sum`, `mean`, `softmax`, `matmul`, `placeholder`) and its backward closure. `unbroadcastGrad` helper for broadcast-aware binary backward.
-- [src/tensor_init.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor_init.ts) — `tensor()`, `zeros()`, `ones()`, `rand()`, `randn()`, `zerosLike()`, `onesLike()`, `randnLike()`.
-- [src/compiler.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compiler.ts) — `compileGraph(outputs)`. Classifies Constants as `initializers` and Placeholders as `inputs`.
-- [src/compile.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compile.ts) — high-level user API: `compile(fn, spec)` (JAX `@jit`-style) and `grad(loss, param)`.
-- [src/nn.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/nn.ts) — `mseLoss`, `makeParam`, `Parameter` interface.
-- [src/optim.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/optim.ts) — `Optimizer` interface, `SGD` (host-side, optional momentum).
+- [src/ops/](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops) — op functions grouped by ontology: `elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`, plus `placeholder.ts`. Each op file declares the forward + backward closure.
+- [src/autograd/](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/autograd) — `grad.ts` (top-level `backward()` driver) and `sumToShape.ts` (broadcast-aware gradient unreducer used by binary + Expand backward).
+- [src/init/](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/init) — `tensor()`, `zeros()`, `ones()`, `rand()`, `randn()`, `zerosLike()`, `onesLike()`, `randnLike()`.
+- [src/compile/](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compile) — `trace.ts` (`compileGraph(outputs)`, classifies Constants as `initializers` and Placeholders as `inputs`) and `jit.ts` (high-level `compile(fn, spec)` + `grad(loss, param)`).
+- [src/run.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/run.ts) — eager `run(t, opts?)` helper that compiles, evaluates, and returns the concrete tensor.
+- [src/equality.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/equality.ts) — host-side `equal(a, b)` / `allclose(a, b)` that dispatch through the backend and return `Promise<boolean>`.
 - [src/shape.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/shape.ts) — `broadcastShapes`, `shapeSize`, `reduceOutputShape`, `normalizeAxes`.
 - [src/types.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/types.ts) — `OpContext<T>`, `Device`.
 
@@ -154,7 +154,7 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 - [src/backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/backend.ts) — `CPUBackend` class (~30 lines).
 - [src/kernels/registry.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/registry.ts) — kernel map.
 - [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/utils.ts) — `CPUKernel` type, helpers like `buf()`.
-- [src/kernels/binary/](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/binary/), `unary/`, `linalg/`, `memory/` — one file per op.
+- [src/kernels/elementwise/](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/elementwise/), `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/` — one file per op, mirrors `packages/core/src/ops/`.
 - [src/index.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/index.ts) — `registerBackend('cpu', () => CPUBackend.create())`.
 
 `CPUKernel` is `(node, inputs, outputs) => void`. Each kernel pulls the typed array via `buf()`, computes broadcast strides if needed, and iterates with `stridedIdx()`. See [Backends and kernels](/docs/onboarding/backends-and-kernels) for kernel anatomy.
@@ -205,9 +205,9 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 
 ## What lives in `tests/`
 
-- [tests/ops/](https://github.com/hongjiaherng/webtensor/blob/main/tests/ops/) — per-op tests, grouped by category (`binary/`, `unary/`, `activation/`, `reduce/`, `compare/`, `linalg/`, `view/`, `shape/`, `cast/`, `init/`).
-- [tests/backend/](https://github.com/hongjiaherng/webtensor/blob/main/tests/backend/) — cross-backend parity (`consistency.test.ts`) and memory/GC tests.
-- [tests/foundation/](https://github.com/hongjiaherng/webtensor/blob/main/tests/foundation/) — dtype round-trip, view ops, engine core.
+- [tests/ops/](https://github.com/hongjiaherng/webtensor/blob/main/tests/ops/) — per-op tests, grouped by category (`elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`, `init/`).
+- [tests/backends/](https://github.com/hongjiaherng/webtensor/blob/main/tests/backends/) — cross-backend parity (`consistency.test.ts`) and memory/GC tests.
+- [tests/runtime/](https://github.com/hongjiaherng/webtensor/blob/main/tests/runtime/) — dtype round-trip, view ops, engine core.
 - [tests/graph/](https://github.com/hongjiaherng/webtensor/blob/main/tests/graph/) — autograd, simple graph execution.
 - [tests/helpers.ts](https://github.com/hongjiaherng/webtensor/blob/main/tests/helpers.ts) — shared helpers (`BACKENDS`, `runUnary`, `runBinary`, `expectClose`, etc.).
 

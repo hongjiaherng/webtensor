@@ -71,9 +71,63 @@ export function compileGraph(outputs: Tensor[]): Graph {
         inputs.push(t.id);
       }
     } else {
-      // Leaf tensor with no producer op.  In normal usage this shouldn't happen
-      // (tensor() always produces a Constant node), but treat it as an initializer
-      // so it is retained during evaluation.
+      // Leaf tensor with NO producer op (`t._ctx` is undefined).
+      //
+      // The only path that produces such a tensor in normal use is `run()` —
+      // see `packages/core/src/run.ts`, which builds a bare `new Tensor({...})`
+      // and assigns `.data` from `engine.get(id)` so callers can inspect the
+      // evaluated values. That result tensor carries a shape, dtype, and a
+      // typed-array buffer, but nothing describing how it was produced.
+      //
+      // Why this branch matters: if the user feeds such a tensor back into a
+      // fresh graph op (e.g. `equal(await run(x), ref)` or any follow-up op),
+      // trace walks into it looking for its producer so the engine has
+      // something to execute. Without a synthetic Constant, the engine would
+      // later try to read `registry.get(t.id)`, miss, and throw
+      // "Missing expected tensor input" — the user would see a cryptic
+      // backend-layer error for what is really just a graph-layer omission.
+      //
+      // Fix: materialize the `.data` buffer as a synthetic Constant node.
+      // This turns the run()-result into a first-class graph input, identical
+      // in behavior to `tensor([...])`. The engine's Constant handler
+      // (`engine.ts::evaluate`) copies `rawData` into a fresh backend-side
+      // storage — no aliasing with the user-visible `.data` buffer, so later
+      // mutations on either side don't cross-contaminate.
+      //
+      // Invariants preserved:
+      //   - Tensors with a ctx (`tensor()`, ops, placeholders, parameters)
+      //     take the `if (t._ctx)` branch above — never reach here. No
+      //     double-materialization.
+      //   - `values[t.id]` was populated a few lines up with the tensor's
+      //     shape and dtype, so the Constant's output Value is consistent
+      //     with what the engine will allocate.
+      //   - `visitedOps.has(nodeId)` guards against pushing the same
+      //     synthetic node twice when the same leaf is referenced multiple
+      //     times in the graph.
+      //
+      // Error path: if the tensor has neither a producer op NOR `.data`,
+      // there is literally nothing to evaluate. Throw at compile time with a
+      // pointer to the two ways to fix it, rather than deferring to the
+      // engine's generic "missing input" error later.
+      if (!t.data) {
+        throw new Error(
+          `compileGraph: leaf tensor '${t.id}' has no producer op and no .data — ` +
+            'nothing to evaluate. Build it with a factory (e.g. `tensor([...])`) ' +
+            'or call `await run(t)` first.',
+        );
+      }
+      const nodeId = `node_${t.id}`;
+      if (!visitedOps.has(nodeId)) {
+        visitedOps.add(nodeId);
+        nodes.push({
+          id: nodeId,
+          op: 'Constant',
+          inputs: [],
+          outputs: [t.id],
+          attributes: { data: t.data as ArrayBufferView },
+        });
+        values[t.id].producer = nodeId;
+      }
       initializers.push(t.id);
     }
   };

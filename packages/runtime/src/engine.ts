@@ -1,6 +1,6 @@
 import { Graph, Node, DType, computeContiguousStrides } from '@webtensor/ir';
 import { Backend, RuntimeTensor, isContiguous } from './backend';
-import { viewRegistry } from './views/registry';
+import { runtimeKernelRegistry } from './kernels/registry';
 
 export type BackendFactory = () => Promise<Backend>;
 
@@ -119,7 +119,7 @@ export class Engine {
       });
 
       // View registry dispatch (zero-copy metadata ops)
-      const viewFn = viewRegistry.get(node.op);
+      const viewFn = runtimeKernelRegistry.get(node.op);
       if (viewFn) {
         const srcId = node.inputs[0];
         const viewId = node.outputs[0];

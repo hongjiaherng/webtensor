@@ -15,7 +15,7 @@ Severity scale:
 
 ## MEDIUM — `Abs` backward not implemented
 
-**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `abs()` op (search for `// NOTE: abs backward requires sign(a)`).
+**Where:** [packages/core/src/ops/elementwise/abs.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops/elementwise/abs.ts) — search for `// NOTE: abs backward requires sign(a)`.
 
 **Symptom:** Gradient flow stops at `abs()`.
 

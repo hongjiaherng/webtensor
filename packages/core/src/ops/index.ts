@@ -1,58 +1,56 @@
-// Binary
-export { add } from './binary/add';
-export { sub } from './binary/sub';
-export { mul } from './binary/mul';
-export { div } from './binary/div';
+// Elementwise — arithmetic, unary math, comparisons, dtype cast
+export { add } from './elementwise/add';
+export { sub } from './elementwise/sub';
+export { mul } from './elementwise/mul';
+export { div } from './elementwise/div';
+export { neg } from './elementwise/neg';
+export { exp } from './elementwise/exp';
+export { log } from './elementwise/log';
+export { sqrt } from './elementwise/sqrt';
+export { abs } from './elementwise/abs';
+export { pow } from './elementwise/pow';
+export { eq } from './elementwise/eq';
+export { ne } from './elementwise/ne';
+export { lt } from './elementwise/lt';
+export { le } from './elementwise/le';
+export { gt } from './elementwise/gt';
+export { ge } from './elementwise/ge';
+export { isclose } from './elementwise/isclose';
+export type { IsCloseOptions } from './elementwise/isclose';
+export { cast } from './elementwise/cast';
 
-// Unary math primitives (NumPy parity — ML-flavored activations live in @webtensor/nn)
-export { neg } from './unary/neg';
-export { exp } from './unary/exp';
-export { log } from './unary/log';
-export { sqrt } from './unary/sqrt';
-export { abs } from './unary/abs';
-export { pow } from './unary/pow';
+// Reduction
+export { sum, reduceSum } from './reduction/sum';
+export { mean, reduceMean } from './reduction/mean';
+export { all } from './reduction/all';
+export { any } from './reduction/any';
 
 // Linalg
 export { matmul } from './linalg/matmul';
 
-// Reductions
-export { sum, reduceSum } from './reduce/sum';
-export { mean, reduceMean } from './reduce/mean';
+// Activation
+export { relu } from './activation/relu';
+export { sigmoid } from './activation/sigmoid';
+export { tanh } from './activation/tanh';
+export { softmax } from './activation/softmax';
 
-// Views (zero-copy)
-export { transpose } from './view/transpose';
-export { reshape } from './view/reshape';
-export { view } from './view/view';
-export { slice } from './view/slice';
-export { unsqueeze } from './view/unsqueeze';
-export { squeeze } from './view/squeeze';
-export { permute } from './view/permute';
-export { flatten } from './view/flatten';
-export { expand } from './view/expand';
+// Movement — zero-copy views + data-moving reshape ops
+export { transpose } from './movement/transpose';
+export { reshape } from './movement/reshape';
+export { view } from './movement/view';
+export { slice } from './movement/slice';
+export { unsqueeze } from './movement/unsqueeze';
+export { squeeze } from './movement/squeeze';
+export { permute } from './movement/permute';
+export { flatten } from './movement/flatten';
+export { expand } from './movement/expand';
+export { concat } from './movement/concat';
+export { pad } from './movement/pad';
 
 // Memory
 export { contiguous } from './memory/contiguous';
 export { clone } from './memory/clone';
 export { detach } from './memory/detach';
-
-// Cast (dtype conversion)
-export { cast } from './cast/cast';
-
-// Join
-export { concat } from './join/concat';
-
-// Padding
-export { pad } from './padding/pad';
-
-// Element-wise comparison (returns bool tensors)
-export { eq } from './compare/eq';
-export { ne } from './compare/ne';
-export { lt } from './compare/lt';
-export { le } from './compare/le';
-export { gt } from './compare/gt';
-export { ge } from './compare/ge';
-export { isclose } from './compare/isclose';
-export type { IsCloseOptions } from './compare/isclose';
 
 // Graph inputs
 export { placeholder } from './placeholder';

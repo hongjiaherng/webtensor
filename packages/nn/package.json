@@ -17,6 +17,7 @@
     "build": "bun build src/index.ts --outdir dist --target browser --external @webtensor/core --external @webtensor/ir --external @webtensor/runtime && tsc --emitDeclarationOnly"
   },
   "dependencies": {
-    "@webtensor/core": "workspace:^"
+    "@webtensor/core": "workspace:^",
+    "@webtensor/runtime": "workspace:^"
   }
 }

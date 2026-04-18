@@ -1,36 +1,40 @@
 mod memory;
-mod ops;
+mod kernels;
 mod utils;
 
 pub use memory::*;
 
-pub use ops::activation::relu::*;
-pub use ops::activation::relu_grad::*;
-pub use ops::activation::sigmoid::*;
-pub use ops::activation::softmax::*;
-pub use ops::activation::tanh::*;
+pub use kernels::activation::relu::backward::*;
+pub use kernels::activation::relu::forward::*;
+pub use kernels::activation::sigmoid::*;
+pub use kernels::activation::softmax::*;
+pub use kernels::activation::tanh::*;
 
-pub use ops::binary::add::*;
-pub use ops::binary::div::*;
-pub use ops::binary::mul::*;
-pub use ops::binary::sub::*;
+pub use kernels::elementwise::abs::*;
+pub use kernels::elementwise::add::*;
+pub use kernels::elementwise::cast::*;
+pub use kernels::elementwise::div::*;
+pub use kernels::elementwise::eq::*;
+pub use kernels::elementwise::exp::*;
+pub use kernels::elementwise::ge::*;
+pub use kernels::elementwise::gt::*;
+pub use kernels::elementwise::isclose::*;
+pub use kernels::elementwise::le::*;
+pub use kernels::elementwise::log::*;
+pub use kernels::elementwise::lt::*;
+pub use kernels::elementwise::mul::*;
+pub use kernels::elementwise::ne::*;
+pub use kernels::elementwise::neg::*;
+pub use kernels::elementwise::pow::*;
+pub use kernels::elementwise::sqrt::*;
+pub use kernels::elementwise::sub::*;
 
-pub use ops::cast::cast::*;
+pub use kernels::linalg::matmul::*;
 
-pub use ops::compare::compare::*;
+pub use kernels::movement::concat::*;
+pub use kernels::movement::pad::*;
 
-pub use ops::join::concat::*;
-
-pub use ops::padding::pad::*;
-
-pub use ops::linalg::matmul::*;
-
-pub use ops::reduce::reduce_mean::*;
-pub use ops::reduce::reduce_sum::*;
-
-pub use ops::unary::abs::*;
-pub use ops::unary::exp::*;
-pub use ops::unary::log::*;
-pub use ops::unary::neg::*;
-pub use ops::unary::pow::*;
-pub use ops::unary::sqrt::*;
+pub use kernels::reduction::all::*;
+pub use kernels::reduction::any::*;
+pub use kernels::reduction::mean::*;
+pub use kernels::reduction::sum::*;

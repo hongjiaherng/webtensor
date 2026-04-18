@@ -79,7 +79,7 @@ interface Graph {
 
 `initializers` are `Constant` nodes — their data is embedded in the graph and retained for the full evaluation lifetime.
 
-`inputs` are `Placeholder` nodes — they have no data in the graph. Callers supply data at runtime via `engine.evaluate(graph, feeds)` where `feeds: Record<valueName, ArrayBufferView>`. This is the ONNX graph-input model, and it is what powers compile-once training loops (the high-level `compile()` / `grad()` helpers in `packages/core/src/compile.ts` build on top).
+`inputs` are `Placeholder` nodes — they have no data in the graph. Callers supply data at runtime via `engine.evaluate(graph, feeds)` where `feeds: Record<valueName, ArrayBufferView>`. This is the ONNX graph-input model, and it is what powers compile-once training loops (the high-level `compile()` / `grad()` helpers in `packages/core/src/compile/jit.ts` build on top).
 
 ---
 
