@@ -4,6 +4,14 @@ A tensor library that runs entirely in the browser. Train, visualize, and run in
 
 > **Status: active development — building the foundation.**
 
+## Next time when i revisit this project
+
+- [ ] differentiate onnx ops vs our own ops (mostly grad of ops) in registry.ts for onnx interopt
+- [ ] benchmark against pytorch
+- [ ] update docs to reflect current state of implementation and roadmap
+
+Taking off from the project...
+
 ---
 
 ## Vision
