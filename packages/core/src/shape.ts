@@ -106,12 +106,12 @@ export function reduceOutputShape(
  * Normalise an axes argument (number | number[] | undefined) to a sorted
  * non-negative array of axis indices against a tensor of the given rank.
  */
-export function normalizeAxes(
-  axes: number | number[] | undefined,
-  rank: number,
-): number[] {
-  const raw = axes === undefined
-    ? Array.from({ length: rank }, (_, i) => i)
-    : Array.isArray(axes) ? axes : [axes];
+export function normalizeAxes(axes: number | number[] | undefined, rank: number): number[] {
+  const raw =
+    axes === undefined
+      ? Array.from({ length: rank }, (_, i) => i)
+      : Array.isArray(axes)
+        ? axes
+        : [axes];
   return raw.map((ax) => (ax < 0 ? rank + ax : ax)).sort((a, b) => a - b);
 }

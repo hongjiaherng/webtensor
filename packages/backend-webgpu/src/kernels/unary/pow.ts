@@ -1,12 +1,12 @@
 import source from './pow.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const powKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'PowShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'PowShader' }),
         entryPoint: 'main',
       },
       label: 'PowPipeline',

@@ -1,10 +1,4 @@
-import {
-  WASMKernel,
-  handleOf,
-  allocMeta,
-  buildReduceMetaData,
-  dtypeSuffix,
-} from '../utils';
+import { WASMKernel, handleOf, allocMeta, buildReduceMetaData, dtypeSuffix } from '../utils';
 import type { WebtensorWasmModule } from '../../module';
 
 export const reduceSumKernel: WASMKernel = (module, node, inputs, outputs) => {

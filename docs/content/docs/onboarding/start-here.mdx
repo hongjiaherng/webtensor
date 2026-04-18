@@ -29,12 +29,12 @@ See [State of the project](/docs/onboarding/state-of-the-project) for the full m
 
 Every user action can be done at two levels. **High-level is the default**; low-level is for custom compilers / ONNX integration / library internals.
 
-| Task                     | High-level (idiomatic)                                                                | Low-level (escape hatch)                                                                                   |
-| ------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Evaluate a tensor        | `await run(t)` / `await t.run()`                                                      | `compileGraph([t])` → `new Engine(backend)` → `engine.evaluate(graph)` → `engine.get(t.id)`                 |
-| Declare a trainable weight | `randn([2, 8], { requiresGrad: true })`                                             | `placeholder([2, 8])` + `t.requiresGrad = true` + wire feeds by hand                                        |
-| Train                    | `compile(fn, spec)` + `grad(loss, param)` + `SGD.step([W, b], [dW, db])`              | Build graph with `placeholder()`, call `loss.backward()`, read grad IDs, `engine.evaluate(graph, feeds)`    |
-| Compare tensors          | `y.equals(tensor([...]))` / `y.allclose(tensor([...]))`                               | Read `y.data`, compare manually                                                                             |
+| Task                       | High-level (idiomatic)                                                   | Low-level (escape hatch)                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Evaluate a tensor          | `await run(t)` / `await t.run()`                                         | `compileGraph([t])` → `new Engine(backend)` → `engine.evaluate(graph)` → `engine.get(t.id)`              |
+| Declare a trainable weight | `randn([2, 8], { requiresGrad: true })`                                  | `placeholder([2, 8])` + `t.requiresGrad = true` + wire feeds by hand                                     |
+| Train                      | `compile(fn, spec)` + `grad(loss, param)` + `SGD.step([W, b], [dW, db])` | Build graph with `placeholder()`, call `loss.backward()`, read grad IDs, `engine.evaluate(graph, feeds)` |
+| Compare tensors            | `y.equals(tensor([...]))` / `y.allclose(tensor([...]))`                  | Read `y.data`, compare manually                                                                          |
 
 ---
 
@@ -46,7 +46,7 @@ Pick the path that matches your goal:
 
 | If you want to…                             | Read in this order                                                                                                                                                                            |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Internalize the codebase deeply**         | [Key concepts](/docs/onboarding/concepts) → [System walkthrough](/docs/onboarding/system-walkthrough) → [Package deep-dive](/docs/onboarding/package-deep-dive) |
+| **Internalize the codebase deeply**         | [Key concepts](/docs/onboarding/concepts) → [System walkthrough](/docs/onboarding/system-walkthrough) → [Package deep-dive](/docs/onboarding/package-deep-dive)                               |
 | **Use the library / understand it broadly** | [README](https://github.com/hongjiaherng/webtensor/blob/main/README.md) → [System walkthrough](/docs/onboarding/system-walkthrough) → [Package deep-dive](/docs/onboarding/package-deep-dive) |
 | **Add an op or kernel**                     | [Contributor guide](/docs/onboarding/contributor-guide) → [Adding an op](/docs/advanced/adding-an-op) (canonical recipe) → [Backends and kernels](/docs/onboarding/backends-and-kernels)      |
 | **Fix a bug / pick something to work on**   | [Bugs and gaps](/docs/onboarding/bugs-and-gaps) → [State of the project](/docs/onboarding/state-of-the-project)                                                                               |
@@ -59,18 +59,18 @@ Pick the path that matches your goal:
 
 ## Onboarding file index
 
-| File                                                          | Purpose                                                                                                        |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [Start here](/docs/onboarding/start-here)                     | This file. Status, reading order, file index.                                                                  |
+| File                                                          | Purpose                                                                                                                                                  |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Start here](/docs/onboarding/start-here)                     | This file. Status, reading order, file index.                                                                                                            |
 | [Key concepts](/docs/onboarding/concepts)                     | Progressive deep-dive into the five core ideas: strided tensors, views, broadcasting, compile/execute, autograd. Start here to internalize the codebase. |
-| [System walkthrough](/docs/onboarding/system-walkthrough)     | End-to-end execution: tensor → graph → engine → backend → result. With a worked example.                       |
-| [Package deep-dive](/docs/onboarding/package-deep-dive)       | Per-package responsibilities, key types, public surface, dependency rules.                                     |
-| [Backends and kernels](/docs/onboarding/backends-and-kernels) | Three backends in detail: registry pattern, CPU kernels, WASM (Rust + meta buffers), WebGPU (WGSL + uniforms). |
-| [Autograd](/docs/onboarding/autograd)                         | Eager backward pass, per-op gradient catalog, what's still missing.                                            |
-| [State of the project](/docs/onboarding/state-of-the-project) | Works / Partial / Missing matrix across ops, autograd, dtypes, training, distribution.                         |
-| [Bugs and gaps](/docs/onboarding/bugs-and-gaps)               | Severity-tagged defects with file:line, symptoms, fix sketches.                                                |
-| [Contributor guide](/docs/onboarding/contributor-guide)       | Local dev loop, test patterns, common pitfalls.                                                                |
-| [Rearchitect notes](/docs/onboarding/rearchitect-notes)       | Forward-looking — what each future change touches.                                                             |
+| [System walkthrough](/docs/onboarding/system-walkthrough)     | End-to-end execution: tensor → graph → engine → backend → result. With a worked example.                                                                 |
+| [Package deep-dive](/docs/onboarding/package-deep-dive)       | Per-package responsibilities, key types, public surface, dependency rules.                                                                               |
+| [Backends and kernels](/docs/onboarding/backends-and-kernels) | Three backends in detail: registry pattern, CPU kernels, WASM (Rust + meta buffers), WebGPU (WGSL + uniforms).                                           |
+| [Autograd](/docs/onboarding/autograd)                         | Eager backward pass, per-op gradient catalog, what's still missing.                                                                                      |
+| [State of the project](/docs/onboarding/state-of-the-project) | Works / Partial / Missing matrix across ops, autograd, dtypes, training, distribution.                                                                   |
+| [Bugs and gaps](/docs/onboarding/bugs-and-gaps)               | Severity-tagged defects with file:line, symptoms, fix sketches.                                                                                          |
+| [Contributor guide](/docs/onboarding/contributor-guide)       | Local dev loop, test patterns, common pitfalls.                                                                                                          |
+| [Rearchitect notes](/docs/onboarding/rearchitect-notes)       | Forward-looking — what each future change touches.                                                                                                       |
 
 ---
 

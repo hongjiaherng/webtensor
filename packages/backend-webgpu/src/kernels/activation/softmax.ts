@@ -6,6 +6,7 @@ import {
   createUniformBuffer,
   packSoftmaxMeta,
   computeContiguousStrides,
+  injectMeta,
 } from '../utils';
 
 export const softmaxKernel: WebGPUKernel = {
@@ -13,7 +14,7 @@ export const softmaxKernel: WebGPUKernel = {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'SoftmaxShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'SoftmaxShader' }),
         entryPoint: 'main',
       },
       label: 'SoftmaxPipeline',

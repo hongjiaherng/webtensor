@@ -22,18 +22,37 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('row broadcast [2,3] + [3]', async () => {
       const y = await run(
-        add(tensor([[1, 2, 3], [4, 5, 6]]), tensor([10, 20, 30])),
+        add(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          tensor([10, 20, 30]),
+        ),
         { engine },
       );
-      expect(y.equals(tensor([[11, 22, 33], [14, 25, 36]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [11, 22, 33],
+            [14, 25, 36],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('rank 3 broadcast [2,2,3] + [3]', async () => {
       const y = await run(
         add(
           tensor([
-            [[1, 2, 3], [4, 5, 6]],
-            [[7, 8, 9], [10, 11, 12]],
+            [
+              [1, 2, 3],
+              [4, 5, 6],
+            ],
+            [
+              [7, 8, 9],
+              [10, 11, 12],
+            ],
           ]),
           tensor([1, 2, 3]),
         ),
@@ -42,8 +61,14 @@ BACKENDS.forEach(({ name, create }) => {
       expect(
         y.equals(
           tensor([
-            [[2, 4, 6], [5, 7, 9]],
-            [[8, 10, 12], [11, 13, 15]],
+            [
+              [2, 4, 6],
+              [5, 7, 9],
+            ],
+            [
+              [8, 10, 12],
+              [11, 13, 15],
+            ],
           ]),
         ),
       ).toBe(true);
@@ -71,8 +96,14 @@ BACKENDS.forEach(({ name, create }) => {
 
 describe('add — shape errors', () => {
   it('incompatible shapes throw at graph-build time', () => {
-    const a = tensor([[1, 2, 3], [4, 5, 6]]);
-    const b = tensor([[1, 2], [3, 4]]);
+    const a = tensor([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
+    const b = tensor([
+      [1, 2],
+      [3, 4],
+    ]);
     expect(() => add(a, b)).toThrow();
   });
 });

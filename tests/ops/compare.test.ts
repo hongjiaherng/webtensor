@@ -19,10 +19,28 @@ describe('equal', () => {
 
   it('rank 2', () => {
     expect(
-      equal(tensor([[1, 2], [3, 4]]), tensor([[1, 2], [3, 4]])),
+      equal(
+        tensor([
+          [1, 2],
+          [3, 4],
+        ]),
+        tensor([
+          [1, 2],
+          [3, 4],
+        ]),
+      ),
     ).toBe(true);
     expect(
-      equal(tensor([[1, 2], [3, 4]]), tensor([[1, 2], [3, 5]])),
+      equal(
+        tensor([
+          [1, 2],
+          [3, 4],
+        ]),
+        tensor([
+          [1, 2],
+          [3, 5],
+        ]),
+      ),
     ).toBe(false);
   });
 

@@ -8,10 +8,9 @@ const engine = new Engine(new CPUBackend());
 
 describe('Graph: relu(a + b)', () => {
   it('zeros negatives after add', async () => {
-    const y = await run(
-      relu(add(tensor([-3, -1, 0, 1, 3]), tensor([4, 2, 1, -2, -4]))),
-      { engine },
-    );
+    const y = await run(relu(add(tensor([-3, -1, 0, 1, 3]), tensor([4, 2, 1, -2, -4]))), {
+      engine,
+    });
     expect(y.equals(tensor([1, 1, 1, 0, 0]))).toBe(true);
   });
 });
@@ -50,7 +49,14 @@ describe('Graph: relu(matmul(x,W) + b)', () => {
     expect(compileGraph([y]).nodes.length).toBe(6);
 
     const out = await run(y, { engine });
-    expect(out.allclose(tensor([[0.5, 0, 0.5], [0.5, 2.5, 0.5]]))).toBe(true);
+    expect(
+      out.allclose(
+        tensor([
+          [0.5, 0, 0.5],
+          [0.5, 2.5, 0.5],
+        ]),
+      ),
+    ).toBe(true);
   });
 });
 

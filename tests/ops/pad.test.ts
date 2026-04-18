@@ -23,7 +23,10 @@ BACKENDS_CPU_WASM.forEach(({ name, create }) => {
     });
 
     it('pads 2D with zeros around the interior', async () => {
-      const a = tensor([[1.0, 2.0], [3.0, 4.0]]);
+      const a = tensor([
+        [1.0, 2.0],
+        [3.0, 4.0],
+      ]);
       // pads = [before_0, before_1, after_0, after_1] = [1, 1, 1, 1]
       const y = await run(pad(a, [1, 1, 1, 1]), { engine });
       expect(y.shape).toEqual([4, 4]);
@@ -59,7 +62,10 @@ BACKENDS_CPU_WASM.forEach(({ name, create }) => {
     });
 
     it('handles strided input (post-transpose)', async () => {
-      const a = tensor([[1.0, 2.0], [3.0, 4.0]]).transpose();
+      const a = tensor([
+        [1.0, 2.0],
+        [3.0, 4.0],
+      ]).transpose();
       const y = await run(pad(a, [1, 0, 0, 1]), { engine });
       expect(
         y.equals(
@@ -73,7 +79,10 @@ BACKENDS_CPU_WASM.forEach(({ name, create }) => {
     });
 
     it('zero pads on all sides is identity', async () => {
-      const a = tensor([[1.0, 2.0], [3.0, 4.0]]);
+      const a = tensor([
+        [1.0, 2.0],
+        [3.0, 4.0],
+      ]);
       const y = await run(pad(a, [0, 0, 0, 0]), { engine });
       expect(y.equals(a)).toBe(true);
     });

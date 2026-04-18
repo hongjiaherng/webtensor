@@ -1,12 +1,12 @@
 import source from './neg.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const negKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'NegShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'NegShader' }),
         entryPoint: 'main',
       },
       label: 'NegPipeline',

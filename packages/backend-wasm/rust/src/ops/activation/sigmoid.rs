@@ -1,3 +1,4 @@
+use crate::ops::{UNARY_META_WORDS, UNARY_OFFSET_OFF, UNARY_SHAPE_OFF, UNARY_STRIDES_OFF};
 use crate::utils::strided_idx;
 use std::slice;
 use wasm_bindgen::prelude::*;
@@ -5,12 +6,12 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub fn sigmoid_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *const u32) {
     unsafe {
-        let meta = slice::from_raw_parts(meta_ptr, 19);
+        let meta = slice::from_raw_parts(meta_ptr, UNARY_META_WORDS);
         let total = meta[0] as usize;
         let rank = meta[1] as usize;
-        let shape = &meta[2..2 + rank];
-        let strides = &meta[10..10 + rank];
-        let offset = meta[18];
+        let shape = &meta[UNARY_SHAPE_OFF..UNARY_SHAPE_OFF + rank];
+        let strides = &meta[UNARY_STRIDES_OFF..UNARY_STRIDES_OFF + rank];
+        let offset = meta[UNARY_OFFSET_OFF];
         let out = slice::from_raw_parts_mut(out_ptr, total);
 
         for i in 0..total {

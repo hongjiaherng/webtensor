@@ -1,21 +1,14 @@
 // Strided softmax. One invocation per "slice" (non-axis index).
 // Output is contiguous with same shape as input.
 
-struct TensorMeta {
-  rank:    u32,
-  offset:  u32,
-  _p0:     u32,
-  _p1:     u32,
-  shape:   array<vec4<u32>, 2>,
-  strides: array<vec4<u32>, 2>,
-};
+__TENSOR_META__
 
 struct SoftmaxMeta {
   axis:        u32,
   slice_count: u32,
   axis_len:    u32,
   _pad:        u32,
-  out_strides: array<vec4<u32>, 2>,
+  out_strides: array<u32, 64>,
 };
 
 @group(0) @binding(0) var<storage, read>       a:        array<f32>;
@@ -23,17 +16,17 @@ struct SoftmaxMeta {
 @group(0) @binding(2) var<uniform>             u_meta_a: TensorMeta;
 @group(0) @binding(3) var<uniform>             u_sm:     SoftmaxMeta;
 
-fn shape_of(ax: u32) -> u32 { return u_meta_a.shape[ax / 4u][ax % 4u]; }
-fn stride_of(ax: u32) -> u32 { return u_meta_a.strides[ax / 4u][ax % 4u]; }
-fn out_stride_of(ax: u32) -> u32 { return u_sm.out_strides[ax / 4u][ax % 4u]; }
+fn shape_of(ax: u32) -> u32 { return u_meta_a.shape[ax]; }
+fn stride_of(ax: u32) -> u32 { return u_meta_a.strides[ax]; }
+fn out_stride_of(ax: u32) -> u32 { return u_sm.out_strides[ax]; }
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let s = gid.x;
   if (s >= u_sm.slice_count) { return; }
 
-  var coord: array<u32, 8>;
-  for (var i = 0u; i < 8u; i++) { coord[i] = 0u; }
+  var coord: array<u32, 64>;
+  for (var i = 0u; i < 64u; i++) { coord[i] = 0u; }
 
   var rem = s;
   for (var d = u_meta_a.rank; d > 0u; d--) {

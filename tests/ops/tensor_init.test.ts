@@ -18,12 +18,26 @@ const engine = new Engine(new CPUBackend());
 describe('tensor factories', () => {
   it('zeros produces all-zero tensor', async () => {
     const y = await run(zeros([2, 3]), { engine });
-    expect(y.equals(tensor([[0, 0, 0], [0, 0, 0]]))).toBe(true);
+    expect(
+      y.equals(
+        tensor([
+          [0, 0, 0],
+          [0, 0, 0],
+        ]),
+      ),
+    ).toBe(true);
   });
 
   it('ones produces all-one tensor', async () => {
     const y = await run(ones([2, 3]), { engine });
-    expect(y.equals(tensor([[1, 1, 1], [1, 1, 1]]))).toBe(true);
+    expect(
+      y.equals(
+        tensor([
+          [1, 1, 1],
+          [1, 1, 1],
+        ]),
+      ),
+    ).toBe(true);
   });
 
   it('rand with seed is deterministic', async () => {
@@ -46,12 +60,22 @@ describe('tensor factories', () => {
   });
 
   it('zerosLike matches shape + dtype of source', async () => {
-    const src = tensor([[1, 2, 3], [4, 5, 6]]);
+    const src = tensor([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
     const z = zerosLike(src);
     expect(z.shape).toEqual([2, 3]);
     expect(z.dtype).toBe('float32');
     const y = await run(z, { engine });
-    expect(y.equals(tensor([[0, 0, 0], [0, 0, 0]]))).toBe(true);
+    expect(
+      y.equals(
+        tensor([
+          [0, 0, 0],
+          [0, 0, 0],
+        ]),
+      ),
+    ).toBe(true);
   });
 
   it('onesLike matches shape of source', async () => {
@@ -60,7 +84,10 @@ describe('tensor factories', () => {
   });
 
   it('randnLike matches shape of source', () => {
-    const src = tensor([[1, 2], [3, 4]]);
+    const src = tensor([
+      [1, 2],
+      [3, 4],
+    ]);
     const r = randnLike(src, { seed: 1 });
     expect(r.shape).toEqual([2, 2]);
   });

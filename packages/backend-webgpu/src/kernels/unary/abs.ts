@@ -1,12 +1,12 @@
 import source from './abs.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const absKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'AbsShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'AbsShader' }),
         entryPoint: 'main',
       },
       label: 'AbsPipeline',

@@ -1,5 +1,7 @@
-import { Node, computeContiguousStrides, DType } from '@webtensor/ir';
+import { Node, computeContiguousStrides, DType, MAX_RANK } from '@webtensor/ir';
 import { RuntimeTensor, getShapeSize, broadcastStridesOf } from '@webtensor/runtime';
+
+export { MAX_RANK };
 
 // ---------------------------------------------------------------------------
 // Dtype → WGSL scalar type mapping.
@@ -14,9 +16,29 @@ const WGSL_SCALAR: Record<DType, string> = {
   bool: 'u32',
 };
 
-/** Substitute the `SCALAR` placeholder in a WGSL template with the dtype. */
+// ---------------------------------------------------------------------------
+// Shared WGSL struct for tensor metadata. Hoisted out of individual shaders so
+// a layout change (e.g. lifting MAX_RANK) is one edit here, not 20 across the
+// kernel tree. Injected into shaders via the `__TENSOR_META__` placeholder.
+export const TENSOR_META_WGSL = `struct TensorMeta {
+  rank:    u32,
+  offset:  u32,
+  shape:   array<u32, ${MAX_RANK}>,
+  strides: array<u32, ${MAX_RANK}>,
+};`;
+
+/**
+ * Inject the shared `TensorMeta` struct into a WGSL source at the
+ * `__TENSOR_META__` placeholder. Safe to call on any shader; templates without
+ * the placeholder are returned unchanged.
+ */
+export function injectMeta(template: string): string {
+  return template.replace(/__TENSOR_META__/g, TENSOR_META_WGSL);
+}
+
+/** Substitute `SCALAR` and `__TENSOR_META__` in a WGSL template. */
 export function renderWgsl(template: string, dtype: DType): string {
-  return template.replace(/\bSCALAR\b/g, WGSL_SCALAR[dtype]);
+  return injectMeta(template).replace(/\bSCALAR\b/g, WGSL_SCALAR[dtype]);
 }
 
 export { computeContiguousStrides, getShapeSize, broadcastStridesOf };
@@ -24,33 +46,27 @@ export { computeContiguousStrides, getShapeSize, broadcastStridesOf };
 // ---------------------------------------------------------------------------
 // TensorMeta uniform buffer
 //
-// WGSL struct layout (80 bytes, 20 × u32):
-//
+// WGSL struct layout (8 + 4*MAX_RANK*2 bytes, 2 + MAX_RANK*2 u32):
 //   struct TensorMeta {
-//     rank:    u32,                     // bytes  0-3
-//     offset:  u32,                     // bytes  4-7
-//     _p0:     u32,                     // bytes  8-11  (padding)
-//     _p1:     u32,                     // bytes 12-15  (padding)
-//     shape:   array<vec4<u32>, 2>,     // bytes 16-47  shape[0..7]
-//     strides: array<vec4<u32>, 2>,     // bytes 48-79  strides[0..7]
+//     rank:    u32,
+//     offset:  u32,
+//     shape:   array<u32, MAX_RANK>,
+//     strides: array<u32, MAX_RANK>,
 //   }
 //
-// Using var<uniform> (not storage) — uniform buffers with mappedAtCreation
-// are proven reliable in Chromium's WebGPU implementation.
-//
-// TypeScript packing (u32 index → value):
-//   [0]  rank
-//   [1]  offset
-//   [2]  0   (padding)
-//   [3]  0   (padding)
-//   [4..11]  shape[0..7]   (unused dims padded with 1)
-//   [12..19] strides[0..7] (unused dims padded with 0)
+// TypeScript packing:
+//   [0]                           rank
+//   [1]                           offset
+//   [2 .. 2+MAX_RANK)             shape   (unused slots padded with 1)
+//   [2+MAX_RANK .. 2+2*MAX_RANK)  strides (unused slots padded with 0)
 
-const META_WORDS = 20; // 80 bytes
-const META_BYTES = 80;
+const META_WORDS = 2 + MAX_RANK * 2;
+const META_BYTES = META_WORDS * 4;
+const SHAPE_OFFSET = 2;
+const STRIDES_OFFSET = 2 + MAX_RANK;
 
 /**
- * Pack a RuntimeTensor's metadata into a 20-element Uint32Array that matches
+ * Pack a RuntimeTensor's metadata into a MAX_RANK-slot Uint32Array matching
  * the TensorMeta uniform struct layout. `outShape` (optional) overrides the
  * shape used for index decomposition — pass the broadcast output shape when
  * building meta for a binary-op input.
@@ -61,6 +77,9 @@ const META_BYTES = 80;
 export function packMeta(tensor: RuntimeTensor, outShape?: number[]): Uint32Array {
   const shape = (outShape ?? tensor.shape) as number[];
   const rank = shape.length;
+  if (rank > MAX_RANK) {
+    throw new Error(`packMeta: rank ${rank} exceeds MAX_RANK ${MAX_RANK}`);
+  }
   const strides = outShape
     ? broadcastStridesOf(outShape, tensor.shape as number[], tensor.strides)
     : tensor.strides;
@@ -68,18 +87,15 @@ export function packMeta(tensor: RuntimeTensor, outShape?: number[]): Uint32Arra
   const data = new Uint32Array(META_WORDS);
   data[0] = rank;
   data[1] = tensor.offset;
-  // data[2] and data[3] are padding zeros
-  for (let i = 0; i < 8; i++) {
-    data[4 + i] = i < rank ? shape[i] : 1;
-    data[12 + i] = i < rank ? strides[i] : 0;
+  for (let i = 0; i < MAX_RANK; i++) {
+    data[SHAPE_OFFSET + i] = i < rank ? shape[i] : 1;
+    data[STRIDES_OFFSET + i] = i < rank ? strides[i] : 0;
   }
   return data;
 }
 
 /**
  * Create a GPU uniform buffer pre-filled with TensorMeta data.
- * Uses mappedAtCreation for reliable initialization (proven to work for
- * uniform buffers in Chromium's WebGPU implementation).
  */
 export function createMetaBuffer(device: GPUDevice, data: Uint32Array): GPUBuffer {
   const buffer = device.createBuffer({
@@ -93,13 +109,13 @@ export function createMetaBuffer(device: GPUDevice, data: Uint32Array): GPUBuffe
 }
 
 /**
- * Create a GPU uniform buffer of arbitrary size (multiple of 16 bytes).
+ * Create a GPU uniform buffer of arbitrary size (padded to 16 B alignment).
  * Used by op-specific auxiliary uniforms (reduce, softmax, batched matmul).
  */
 export function createUniformBuffer(device: GPUDevice, data: Uint32Array): GPUBuffer {
-  const size = data.byteLength;
+  const paddedBytes = Math.max(16, Math.ceil(data.byteLength / 16) * 16);
   const buffer = device.createBuffer({
-    size,
+    size: paddedBytes,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     mappedAtCreation: true,
   });
@@ -110,7 +126,7 @@ export function createUniformBuffer(device: GPUDevice, data: Uint32Array): GPUBu
 
 /**
  * Pack batch-aware matmul meta for one input (A or B).
- * Produces a 20-u32 TensorMeta describing shape = [...batchOut, *matrixDims],
+ * Produces a TensorMeta describing shape = [...batchOut, *matrixDims],
  * with strides broadcast-aligned on batch dims and preserving matrix strides.
  */
 export function packMetaMatMulInput(
@@ -122,8 +138,8 @@ export function packMetaMatMulInput(
   const matrixRank = 2;
   const batchRank = batchOutShape.length;
   const outRank = batchRank + matrixRank;
-  if (outRank > 8) {
-    throw new Error(`matmul: combined rank ${outRank} exceeds WebGPU kernel cap of 8`);
+  if (outRank > MAX_RANK) {
+    throw new Error(`matmul: combined rank ${outRank} exceeds MAX_RANK ${MAX_RANK}`);
   }
 
   const batchShape = shape.slice(0, rank - matrixRank);
@@ -131,26 +147,26 @@ export function packMetaMatMulInput(
   const bcastBatch =
     batchRank === 0 ? [] : broadcastStridesOf(batchOutShape, batchShape, batchStrides);
 
-  const data = new Uint32Array(20);
+  const data = new Uint32Array(META_WORDS);
   data[0] = outRank;
   data[1] = tensor.offset;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < MAX_RANK; i++) {
     if (i < batchRank) {
-      data[4 + i] = batchOutShape[i];
-      data[12 + i] = bcastBatch[i];
+      data[SHAPE_OFFSET + i] = batchOutShape[i];
+      data[STRIDES_OFFSET + i] = bcastBatch[i];
     } else if (i < outRank) {
-      data[4 + i] = shape[rank - matrixRank + (i - batchRank)];
-      data[12 + i] = tensor.strides[rank - matrixRank + (i - batchRank)];
+      data[SHAPE_OFFSET + i] = shape[rank - matrixRank + (i - batchRank)];
+      data[STRIDES_OFFSET + i] = tensor.strides[rank - matrixRank + (i - batchRank)];
     } else {
-      data[4 + i] = 1;
-      data[12 + i] = 0;
+      data[SHAPE_OFFSET + i] = 1;
+      data[STRIDES_OFFSET + i] = 0;
     }
   }
   return data;
 }
 
 /**
- * Pack a 12-u32 BatchMeta uniform: (batch_rank, M, K, N, batch_out_shape[8]).
+ * Pack BatchMeta uniform: (batch_rank, M, K, N, batch_out_shape[MAX_RANK]).
  * Matches WGSL layout of BatchMeta in matmul.wgsl.
  */
 export function packBatchMeta(
@@ -159,21 +175,20 @@ export function packBatchMeta(
   K: number,
   N: number,
 ): Uint32Array {
-  const data = new Uint32Array(12);
+  const data = new Uint32Array(4 + MAX_RANK);
   data[0] = batchOutShape.length;
   data[1] = M;
   data[2] = K;
   data[3] = N;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < MAX_RANK; i++) {
     data[4 + i] = i < batchOutShape.length ? batchOutShape[i] : 1;
   }
   return data;
 }
 
 /**
- * Pack a 20-u32 ReduceMeta uniform:
- * (kept_rank, reduce_rank, kept_total, reduce_total, kept_axes[8], reduce_axes[8]).
- * Matches WGSL layout of ReduceMeta in reduce*.wgsl.
+ * Pack ReduceMeta uniform: (kept_rank, reduce_rank, kept_total, reduce_total,
+ *                          kept_axes[MAX_RANK], reduce_axes[MAX_RANK]).
  */
 export function packReduceMeta(
   keptAxes: number[],
@@ -181,21 +196,21 @@ export function packReduceMeta(
   keptTotal: number,
   reduceTotal: number,
 ): Uint32Array {
-  const data = new Uint32Array(20);
+  const data = new Uint32Array(4 + MAX_RANK * 2);
   data[0] = keptAxes.length;
   data[1] = reduceAxes.length;
   data[2] = keptTotal;
   data[3] = reduceTotal;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < MAX_RANK; i++) {
     data[4 + i] = i < keptAxes.length ? keptAxes[i] : 0;
-    data[12 + i] = i < reduceAxes.length ? reduceAxes[i] : 0;
+    data[4 + MAX_RANK + i] = i < reduceAxes.length ? reduceAxes[i] : 0;
   }
   return data;
 }
 
 /**
- * Pack a 12-u32 SoftmaxMeta uniform:
- * (axis, slice_count, axis_len, _pad, out_strides[8]).
+ * Pack SoftmaxMeta uniform: (axis, slice_count, axis_len, _pad,
+ *                            out_strides[MAX_RANK]).
  */
 export function packSoftmaxMeta(
   axis: number,
@@ -203,11 +218,11 @@ export function packSoftmaxMeta(
   axisLen: number,
   outStrides: number[],
 ): Uint32Array {
-  const data = new Uint32Array(12);
+  const data = new Uint32Array(4 + MAX_RANK);
   data[0] = axis;
   data[1] = sliceCount;
   data[2] = axisLen;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < MAX_RANK; i++) {
     data[4 + i] = i < outStrides.length ? outStrides[i] : 0;
   }
   return data;

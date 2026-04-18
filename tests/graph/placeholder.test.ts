@@ -1,5 +1,15 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { tensor, placeholder, matmul, add, mul, sub, mean, compileGraph, Engine } from '@webtensor/core';
+import {
+  tensor,
+  placeholder,
+  matmul,
+  add,
+  mul,
+  sub,
+  mean,
+  compileGraph,
+  Engine,
+} from '@webtensor/core';
 import { relu } from '@webtensor/nn';
 import { BACKENDS } from '../helpers';
 

@@ -1,5 +1,13 @@
 export type DType = 'float32' | 'int32' | 'bool';
 
+/**
+ * Maximum tensor rank supported across all backends. PyTorch-aligned.
+ * All kernel meta layouts (WASM, WebGPU) size their fixed shape/strides arrays
+ * to this bound; bumping it requires rebuilding the WASM package and updating
+ * the WGSL `__TENSOR_META__` struct (via `@webtensor/backend-webgpu` utils).
+ */
+export const MAX_RANK = 64;
+
 export type AttributeValue =
   | number
   | string

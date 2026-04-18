@@ -15,28 +15,66 @@ CONCAT_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('concat along axis 0 (default)', async () => {
-      const a = tensor([[1, 2], [3, 4]]);
-      const b = tensor([[5, 6], [7, 8]]);
+      const a = tensor([
+        [1, 2],
+        [3, 4],
+      ]);
+      const b = tensor([
+        [5, 6],
+        [7, 8],
+      ]);
       const y = await run(concat([a, b]), { engine });
       expect(y.shape).toEqual([4, 2]);
-      expect(y.equals(tensor([[1, 2], [3, 4], [5, 6], [7, 8]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [1, 2],
+            [3, 4],
+            [5, 6],
+            [7, 8],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('concat along axis 1', async () => {
-      const a = tensor([[1, 2], [3, 4]]);
-      const b = tensor([[5, 6, 7], [8, 9, 10]]);
+      const a = tensor([
+        [1, 2],
+        [3, 4],
+      ]);
+      const b = tensor([
+        [5, 6, 7],
+        [8, 9, 10],
+      ]);
       const y = await run(concat([a, b], 1), { engine });
       expect(y.shape).toEqual([2, 5]);
-      expect(y.equals(tensor([[1, 2, 5, 6, 7], [3, 4, 8, 9, 10]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [1, 2, 5, 6, 7],
+            [3, 4, 8, 9, 10],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('concat three tensors along axis -1', async () => {
       const a = tensor([[1], [2]]);
-      const b = tensor([[3, 4], [5, 6]]);
+      const b = tensor([
+        [3, 4],
+        [5, 6],
+      ]);
       const c = tensor([[7], [8]]);
       const y = await run(concat([a, b, c], -1), { engine });
       expect(y.shape).toEqual([2, 4]);
-      expect(y.equals(tensor([[1, 3, 4, 7], [2, 5, 6, 8]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [1, 3, 4, 7],
+            [2, 5, 6, 8],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('concat rank-1 tensors', async () => {
@@ -51,16 +89,30 @@ CONCAT_BACKENDS.forEach(({ name, create }) => {
       // [2,1,3] + [2,2,3] → [2,3,3]
       const a = tensor([[[1, 2, 3]], [[4, 5, 6]]]);
       const b = tensor([
-        [[7, 8, 9], [10, 11, 12]],
-        [[13, 14, 15], [16, 17, 18]],
+        [
+          [7, 8, 9],
+          [10, 11, 12],
+        ],
+        [
+          [13, 14, 15],
+          [16, 17, 18],
+        ],
       ]);
       const y = await run(concat([a, b], 1), { engine });
       expect(y.shape).toEqual([2, 3, 3]);
       expect(
         y.equals(
           tensor([
-            [[1, 2, 3], [7, 8, 9], [10, 11, 12]],
-            [[4, 5, 6], [13, 14, 15], [16, 17, 18]],
+            [
+              [1, 2, 3],
+              [7, 8, 9],
+              [10, 11, 12],
+            ],
+            [
+              [4, 5, 6],
+              [13, 14, 15],
+              [16, 17, 18],
+            ],
           ]),
         ),
       ).toBe(true);
@@ -76,15 +128,33 @@ CONCAT_BACKENDS.forEach(({ name, create }) => {
 
     it('concat handles non-contiguous inputs (post-transpose)', async () => {
       // a.T is [[1,3],[2,4]], b.T is [[5,7],[6,8]]; concat along axis 0 → 4x2
-      const a = tensor([[1, 2], [3, 4]]).transpose();
-      const b = tensor([[5, 6], [7, 8]]).transpose();
+      const a = tensor([
+        [1, 2],
+        [3, 4],
+      ]).transpose();
+      const b = tensor([
+        [5, 6],
+        [7, 8],
+      ]).transpose();
       const y = await run(concat([a, b]), { engine });
       expect(y.shape).toEqual([4, 2]);
-      expect(y.equals(tensor([[1, 3], [2, 4], [5, 7], [6, 8]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [1, 3],
+            [2, 4],
+            [5, 7],
+            [6, 8],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('single-input concat is identity', async () => {
-      const a = tensor([[1, 2], [3, 4]]);
+      const a = tensor([
+        [1, 2],
+        [3, 4],
+      ]);
       const y = await run(concat([a]), { engine });
       expect(y.equals(a)).toBe(true);
     });
@@ -139,8 +209,11 @@ describe('concat — input validation', () => {
   });
 
   it('rejects mismatched non-axis dim', () => {
-    const a = tensor([[1, 2], [3, 4]]); // [2,2]
-    const b = tensor([[5, 6, 7]]);       // [1,3]
+    const a = tensor([
+      [1, 2],
+      [3, 4],
+    ]); // [2,2]
+    const b = tensor([[5, 6, 7]]); // [1,3]
     expect(() => concat([a, b], 0)).toThrow(/dim 1/);
   });
 
@@ -150,7 +223,10 @@ describe('concat — input validation', () => {
   });
 
   it('negative axis is normalized', () => {
-    const a = tensor([[1, 2], [3, 4]]);
+    const a = tensor([
+      [1, 2],
+      [3, 4],
+    ]);
     const y = concat([a, a], -1);
     expect(y.shape).toEqual([2, 4]);
   });

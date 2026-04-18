@@ -2,14 +2,7 @@
 // inputs[0] = grad (upstream gradient), inputs[1] = a (original relu input)
 // Both inputs may have arbitrary strides and offset; output is always contiguous.
 
-struct TensorMeta {
-  rank:    u32,
-  offset:  u32,
-  _p0:     u32,
-  _p1:     u32,
-  shape:   array<vec4<u32>, 2>,
-  strides: array<vec4<u32>, 2>,
-};
+__TENSOR_META__
 
 @group(0) @binding(0) var<storage, read>       grad_in: array<f32>;
 @group(0) @binding(1) var<storage, read>       a_in:    array<f32>;
@@ -23,8 +16,8 @@ fn strided_idx(m: TensorMeta, flat: u32) -> u32 {
   var idx = m.offset;
   for (var d = rank; d > 0u; d--) {
     let ax  = d - 1u;
-    let dim = m.shape[ax / 4u][ax % 4u];
-    let s   = m.strides[ax / 4u][ax % 4u];
+    let dim = m.shape[ax];
+    let s   = m.strides[ax];
     idx += (rem % dim) * s;
     rem  /= dim;
   }

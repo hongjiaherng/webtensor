@@ -22,9 +22,9 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('log of positive values', async () => {
       const y = await run(log(tensor([2, 10, 100])), { engine });
-      expect(
-        y.allclose(tensor([Math.log(2), Math.log(10), Math.log(100)]), { atol: 1e-4 }),
-      ).toBe(true);
+      expect(y.allclose(tensor([Math.log(2), Math.log(10), Math.log(100)]), { atol: 1e-4 })).toBe(
+        true,
+      );
     });
   });
 });

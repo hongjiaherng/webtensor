@@ -3,21 +3,14 @@
 // B shape: [...batchOut, K, N]   (packed with broadcast-aligned batch strides)
 // Out: contiguous [...batchOut, M, N]
 
-struct TensorMeta {
-  rank:    u32,
-  offset:  u32,
-  _p0:     u32,
-  _p1:     u32,
-  shape:   array<vec4<u32>, 2>,
-  strides: array<vec4<u32>, 2>,
-};
+__TENSOR_META__
 
 struct BatchMeta {
   batch_rank: u32,
   M:          u32,
   K:          u32,
   N:          u32,
-  batch_out_shape: array<vec4<u32>, 2>,
+  batch_out_shape: array<u32, 64>,
 };
 
 @group(0) @binding(0) var<storage, read>       a:        array<f32>;
@@ -27,10 +20,10 @@ struct BatchMeta {
 @group(0) @binding(4) var<uniform>             u_meta_b: TensorMeta;
 @group(0) @binding(5) var<uniform>             u_batch:  BatchMeta;
 
-fn a_shape(ax: u32) -> u32 { return u_meta_a.shape[ax / 4u][ax % 4u]; }
-fn a_stride(ax: u32) -> u32 { return u_meta_a.strides[ax / 4u][ax % 4u]; }
-fn b_stride(ax: u32) -> u32 { return u_meta_b.strides[ax / 4u][ax % 4u]; }
-fn batch_shape(ax: u32) -> u32 { return u_batch.batch_out_shape[ax / 4u][ax % 4u]; }
+fn a_shape(ax: u32) -> u32 { return u_meta_a.shape[ax]; }
+fn a_stride(ax: u32) -> u32 { return u_meta_a.strides[ax]; }
+fn b_stride(ax: u32) -> u32 { return u_meta_b.strides[ax]; }
+fn batch_shape(ax: u32) -> u32 { return u_batch.batch_out_shape[ax]; }
 
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {

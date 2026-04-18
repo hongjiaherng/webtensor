@@ -17,15 +17,39 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('on a transposed view reorders data', async () => {
       const y = await run(
-        contiguous(transpose(tensor([[1, 2, 3], [4, 5, 6]]))),
+        contiguous(
+          transpose(
+            tensor([
+              [1, 2, 3],
+              [4, 5, 6],
+            ]),
+          ),
+        ),
         { engine },
       );
-      expect(y.equals(tensor([[1, 4], [2, 5], [3, 6]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [1, 4],
+            [2, 5],
+            [3, 6],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('on a sliced view', async () => {
       const y = await run(
-        contiguous(slice(tensor([[1, 2, 3], [4, 5, 6]]), [1, 0], [2, 3])),
+        contiguous(
+          slice(
+            tensor([
+              [1, 2, 3],
+              [4, 5, 6],
+            ]),
+            [1, 0],
+            [2, 3],
+          ),
+        ),
         { engine },
       );
       expect(y.equals(tensor([[4, 5, 6]]))).toBe(true);
@@ -33,19 +57,27 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('reshape on a transposed tensor auto-materializes', async () => {
       const y = await run(
-        reshape(transpose(tensor([[1, 2, 3], [4, 5, 6]])), [6]),
+        reshape(
+          transpose(
+            tensor([
+              [1, 2, 3],
+              [4, 5, 6],
+            ]),
+          ),
+          [6],
+        ),
         { engine },
       );
       expect(y.equals(tensor([1, 4, 2, 5, 3, 6]))).toBe(true);
     });
 
     it('auto-contiguous reshape matches explicit contiguous + reshape', async () => {
-      const data = [[1, 2, 3], [4, 5, 6]];
+      const data = [
+        [1, 2, 3],
+        [4, 5, 6],
+      ];
       const auto = await run(reshape(transpose(tensor(data)), [6]), { engine });
-      const explicit = await run(
-        reshape(contiguous(transpose(tensor(data))), [6]),
-        { engine },
-      );
+      const explicit = await run(reshape(contiguous(transpose(tensor(data))), [6]), { engine });
       expect(auto.equals(explicit)).toBe(true);
     });
   });

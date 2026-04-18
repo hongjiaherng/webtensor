@@ -68,6 +68,7 @@ Shipped with PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, and N-D ba
 **Decided design:** weights live as plain `Float32Array`s outside the graph, fed in each step through `Placeholder` nodes. The user writes the training loop explicitly; no `Trainer` wrapper (deliberately — see the FAQ on HuggingFace/Lightning antipatterns). `makeParam` is a thin helper pairing data with a shape; we do not have a rich `Parameter` class.
 
 **Remaining:**
+
 - `logSoftmax(a, axis)` — numerically stable via `x - logsumexp(x, axis)`. Backward: `grad - softmax(x) * sum(grad, axis, keepdim=true)`.
 - `crossEntropy(logits, target)` — combined `logSoftmax` + NLL.
 - `bceLoss(pred, target)` for binary classification.
@@ -142,8 +143,8 @@ Previously `compileGraph` treated every tensor as a `Constant` (initializer). No
 **Training loop pattern with placeholders:**
 
 ```ts
-const W = placeholder([784, 128]);   // no data yet
-const x = placeholder([32, 784]);    // batch input
+const W = placeholder([784, 128]); // no data yet
+const x = placeholder([32, 784]); // batch input
 const y = matmul(x, W);
 // ... define loss ...
 loss.backward();
@@ -153,7 +154,7 @@ let wData = randomInit([784, 128]);
 for (let step = 0; step < 1000; step++) {
   const xData = nextBatch();
   await engine.evaluate(trainGraph, { [W.id]: wData, [x.id]: xData });
-  const gradData = await engine.get(W.grad.id) as Float32Array;
+  const gradData = (await engine.get(W.grad.id)) as Float32Array;
   // SGD step
   for (let i = 0; i < wData.length; i++) wData[i] -= lr * gradData[i];
 }
@@ -168,6 +169,7 @@ This is how JAX works, and it avoids the PyTorch "mutable Parameter" graph-rewri
 For the placeholder training loop, the optimizer step is pure host code: read gradients, apply update, feed updated weights next step. No in-place GPU ops needed.
 
 For a more PyTorch-like feel where weights stay "in" the graph, you would need:
+
 - `engine.update(id, newData)` — overwrite a retained tensor's buffer without reloading from IR
 - This requires marking weights as "mutable constants" — a flag separate from `requiresGrad`
 
@@ -177,34 +179,34 @@ For now, the placeholder approach is cleaner and sufficient. The `SGD` class in 
 
 All op names in `_ctx.op` and backend registries follow ONNX op names. This is already true for existing ops (`Add`, `MatMul`, `Relu`, etc.). New ops must also use ONNX names:
 
-| User-facing function | ONNX op name in IR | Notes |
-|---|---|---|
-| `reduceSum(a, axes, keepdim)` | `ReduceSum` | ONNX 13+ |
-| `reduceMean(a, axes, keepdim)` | `ReduceMean` | ONNX 13+ |
-| `softmax(a, axis)` | `Softmax` | ONNX 13+ |
-| `placeholder(shape, dtype)` | `Placeholder` | webtensor-specific; maps to ONNX graph inputs |
-| Future `concat(tensors, axis)` | `Concat` | |
-| Future `gather(data, indices, axis)` | `Gather` | |
+| User-facing function                 | ONNX op name in IR | Notes                                         |
+| ------------------------------------ | ------------------ | --------------------------------------------- |
+| `reduceSum(a, axes, keepdim)`        | `ReduceSum`        | ONNX 13+                                      |
+| `reduceMean(a, axes, keepdim)`       | `ReduceMean`       | ONNX 13+                                      |
+| `softmax(a, axis)`                   | `Softmax`          | ONNX 13+                                      |
+| `placeholder(shape, dtype)`          | `Placeholder`      | webtensor-specific; maps to ONNX graph inputs |
+| Future `concat(tensors, axis)`       | `Concat`           |                                               |
+| Future `gather(data, indices, axis)` | `Gather`           |                                               |
 
 ---
 
 ## Summary table — order of attack
 
-| #   | Change                                           | Unblocks                                            | Status                |
-| --- | ------------------------------------------------ | --------------------------------------------------- | --------------------- |
-| 1   | Reductions (ReduceSum/ReduceMean)                | Unbroadcast in autograd; loss functions; expand bwd | ✅ done               |
-| 2   | Apply unbroadcast in autograd                    | Correct gradients with broadcasting                 | ✅ done               |
-| 3   | Batched matmul (PyTorch semantics incl. 1D)      | Real models (transformers, batched MLPs)            | ✅ done               |
-| 4   | Softmax                                          | Classification tasks, cross-entropy loss            | ✅ done               |
-| 5   | Placeholder inputs + engine feeds                | Compile-once training loop                          | ✅ done               |
-| 6   | SGD optimizer (host-side)                        | Basic training                                      | ✅ done               |
-| 7   | `compile()` + `grad()` high-level helpers        | Training DX matches JAX `@jit`                       | ✅ done               |
-| 8   | `logSoftmax`, `crossEntropy`, `bceLoss`, `Adam`  | Classification training, production optimizers      | TODO                  |
-| 9   | Missing backwards (Slice via pad/scatter, Abs)   | Full autograd coverage                              | TODO                  |
-| 10  | Int32 / bool kernels                             | Embedding lookups, masking                          | TODO (scaffolded)     |
-| 11  | `concat`, `gather`, `split`                      | Residual connections, attention, embeddings        | TODO                  |
-| 12  | WebGPU `TensorMeta` rank > 8 redesign            | Removes rank ceiling                                | TODO                  |
-| 13  | Distribution hardening + CI                      | Confidence in publish                               | TODO                  |
-| 14  | ONNX import/export (`packages/onnx`)             | Pretrained models                                   | TODO (weeks)          |
+| #   | Change                                          | Unblocks                                            | Status            |
+| --- | ----------------------------------------------- | --------------------------------------------------- | ----------------- |
+| 1   | Reductions (ReduceSum/ReduceMean)               | Unbroadcast in autograd; loss functions; expand bwd | ✅ done           |
+| 2   | Apply unbroadcast in autograd                   | Correct gradients with broadcasting                 | ✅ done           |
+| 3   | Batched matmul (PyTorch semantics incl. 1D)     | Real models (transformers, batched MLPs)            | ✅ done           |
+| 4   | Softmax                                         | Classification tasks, cross-entropy loss            | ✅ done           |
+| 5   | Placeholder inputs + engine feeds               | Compile-once training loop                          | ✅ done           |
+| 6   | SGD optimizer (host-side)                       | Basic training                                      | ✅ done           |
+| 7   | `compile()` + `grad()` high-level helpers       | Training DX matches JAX `@jit`                      | ✅ done           |
+| 8   | `logSoftmax`, `crossEntropy`, `bceLoss`, `Adam` | Classification training, production optimizers      | TODO              |
+| 9   | Missing backwards (Slice via pad/scatter, Abs)  | Full autograd coverage                              | TODO              |
+| 10  | Int32 / bool kernels                            | Embedding lookups, masking                          | TODO (scaffolded) |
+| 11  | `concat`, `gather`, `split`                     | Residual connections, attention, embeddings         | TODO              |
+| 12  | WebGPU `TensorMeta` rank > 8 redesign           | Removes rank ceiling                                | TODO              |
+| 13  | Distribution hardening + CI                     | Confidence in publish                               | TODO              |
+| 14  | ONNX import/export (`packages/onnx`)            | Pretrained models                                   | TODO (weeks)      |
 
 For overall direction see [Roadmap](/docs/roadmap). For every concrete bug see [Bugs and gaps](/docs/onboarding/bugs-and-gaps).

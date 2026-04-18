@@ -1,6 +1,6 @@
 import { DType } from '@webtensor/ir';
 import source from './cast.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 const WGSL_SCALAR: Record<DType, string> = {
   float32: 'f32',
@@ -32,7 +32,7 @@ export const castKernel: WebGPUKernel = {
     const outDType = outputs[0].dtype;
     assertSupported(inDType, 'in');
     assertSupported(outDType, 'out');
-    const code = source
+    const code = injectMeta(source)
       .replace(/\bIN_SCALAR\b/g, WGSL_SCALAR[inDType])
       .replace(/\bOUT_SCALAR\b/g, WGSL_SCALAR[outDType]);
     return device.createComputePipeline({

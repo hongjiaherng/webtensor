@@ -1,10 +1,4 @@
-import {
-  WebGPUKernel,
-  packMeta,
-  createMetaBuffer,
-  getShapeSize,
-  renderWgsl,
-} from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, renderWgsl } from '../utils';
 
 /**
  * All binary kernels share the same bind-group layout (a, b, out, meta_a, meta_b)

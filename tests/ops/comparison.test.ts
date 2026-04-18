@@ -76,10 +76,28 @@ CMP_BACKENDS.forEach(({ name, create }) => {
     });
 
     it('handles strided inputs (post-transpose)', async () => {
-      const a = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-      const b = tensor([[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
+      const a = tensor([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+      ]);
+      const b = tensor([
+        [1.0, 4.0],
+        [2.0, 5.0],
+        [3.0, 6.0],
+      ]);
       const y = await run(eq(a.transpose(), b), { engine });
-      expect(y.equals(tensor([[1, 1], [1, 1], [1, 1]], { dtype: 'bool' }))).toBe(true);
+      expect(
+        y.equals(
+          tensor(
+            [
+              [1, 1],
+              [1, 1],
+              [1, 1],
+            ],
+            { dtype: 'bool' },
+          ),
+        ),
+      ).toBe(true);
     });
 
     it('isclose: tight and loose tolerances', async () => {

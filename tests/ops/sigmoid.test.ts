@@ -29,9 +29,9 @@ BACKENDS.forEach(({ name, create }) => {
     it('sigmoid of mixed values', async () => {
       const vals = [-2, -1, 0, 1, 2];
       const y = await run(sigmoid(tensor(vals)), { engine });
-      expect(
-        y.allclose(tensor(vals.map((v) => 1 / (1 + Math.exp(-v)))), { atol: 1e-4 }),
-      ).toBe(true);
+      expect(y.allclose(tensor(vals.map((v) => 1 / (1 + Math.exp(-v)))), { atol: 1e-4 })).toBe(
+        true,
+      );
     });
   });
 });

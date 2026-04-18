@@ -22,7 +22,11 @@ BACKENDS.forEach(({ name, create }) => {
 
       const y = await forward({
         x: tensor([[1, -1, 0.5]]),
-        W: tensor([[1, 0], [0, 1], [1, 0]]),
+        W: tensor([
+          [1, 0],
+          [0, 1],
+          [1, 0],
+        ]),
         b: tensor([0, 0]),
       });
       // [1,-1,0.5] @ W + 0 → [1.5, -1]; relu → [1.5, 0]

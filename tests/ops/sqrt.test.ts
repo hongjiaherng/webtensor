@@ -17,9 +17,9 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('sqrt of non-perfect squares', async () => {
       const y = await run(sqrt(tensor([2, 3, 5])), { engine });
-      expect(
-        y.allclose(tensor([Math.sqrt(2), Math.sqrt(3), Math.sqrt(5)]), { atol: 1e-4 }),
-      ).toBe(true);
+      expect(y.allclose(tensor([Math.sqrt(2), Math.sqrt(3), Math.sqrt(5)]), { atol: 1e-4 })).toBe(
+        true,
+      );
     });
   });
 });

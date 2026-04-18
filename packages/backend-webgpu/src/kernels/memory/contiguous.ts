@@ -1,12 +1,12 @@
 import source from './contiguous.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const contiguousKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'ContiguousShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'ContiguousShader' }),
         entryPoint: 'main',
       },
       label: 'ContiguousPipeline',

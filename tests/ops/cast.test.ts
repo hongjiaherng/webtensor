@@ -31,7 +31,10 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('same-dtype cast is a pure copy', async () => {
-      const a = tensor([[1.5, 2.5], [3.5, 4.5]]);
+      const a = tensor([
+        [1.5, 2.5],
+        [3.5, 4.5],
+      ]);
       const y = await run(cast(a, 'float32'), { engine });
       expect(y.dtype).toBe('float32');
       expect(y.equals(a)).toBe(true);
@@ -39,10 +42,24 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('respects strided input (post-transpose)', async () => {
       // transpose returns a non-contiguous view; cast must read via strides.
-      const a = tensor([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]);
+      const a = tensor([
+        [1.1, 2.2, 3.3],
+        [4.4, 5.5, 6.6],
+      ]);
       const y = await run(cast(a.transpose(), 'int32'), { engine });
       expect(y.dtype).toBe('int32');
-      expect(y.equals(tensor([[1, 4], [2, 5], [3, 6]], { dtype: 'int32' }))).toBe(true);
+      expect(
+        y.equals(
+          tensor(
+            [
+              [1, 4],
+              [2, 5],
+              [3, 6],
+            ],
+            { dtype: 'int32' },
+          ),
+        ),
+      ).toBe(true);
     });
   });
 });
@@ -92,7 +109,10 @@ describe('cast — user-facing properties', () => {
   });
 
   it('preserves shape', () => {
-    const a = tensor([[1.5, 2.5], [3.5, 4.5]]);
+    const a = tensor([
+      [1.5, 2.5],
+      [3.5, 4.5],
+    ]);
     const y = cast(a, 'int32');
     expect(y.shape).toEqual([2, 2]);
     expect(y.dtype).toBe('int32');

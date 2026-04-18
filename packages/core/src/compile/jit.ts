@@ -103,10 +103,7 @@ type CompiledOutput<O> = O extends Tensor
  * }
  * ```
  */
-export async function compile<
-  S extends Record<string, ShapeLike>,
-  O extends OutputShape,
->(
+export async function compile<S extends Record<string, ShapeLike>, O extends OutputShape>(
   fn: (inputs: InputsFromSpec<S>) => O,
   spec: S,
   options: CompileOptions = {},
@@ -250,9 +247,7 @@ export function grad(loss: Tensor, param: Tensor): Tensor {
     backwardDone.add(loss);
   }
   if (!param.grad) {
-    throw new Error(
-      'grad: param has no gradient — it is not part of the loss computation graph.',
-    );
+    throw new Error('grad: param has no gradient — it is not part of the loss computation graph.');
   }
   return param.grad;
 }

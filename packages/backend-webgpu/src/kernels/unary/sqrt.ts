@@ -1,12 +1,12 @@
 import source from './sqrt.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const sqrtKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'SqrtShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'SqrtShader' }),
         entryPoint: 'main',
       },
       label: 'SqrtPipeline',

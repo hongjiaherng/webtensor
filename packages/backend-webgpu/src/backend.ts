@@ -25,8 +25,11 @@ export class WebGPUBackend implements Backend {
 
   allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
     const size = getShapeSize(shape);
-    // WebGPU storage buffers must be a multiple of 4 bytes — round up for bool (1 B/elem).
-    const rawByteLength = size * bytesPerElement(dtype);
+    // Bool tensors are stored as u32 on device (WGSL storage buffers have no array<u8>,
+    // and kernels that touch bool already operate in u32). CPU/WASM keep 1 B/elem.
+    // Translation happens at write/read.
+    const bytesPerElemDevice = dtype === 'bool' ? 4 : bytesPerElement(dtype);
+    const rawByteLength = size * bytesPerElemDevice;
     const byteSize = Math.max(4, Math.ceil(rawByteLength / 4) * 4);
 
     const gpuBuffer = this.device.createBuffer({
@@ -59,6 +62,17 @@ export class WebGPUBackend implements Backend {
     const arrayBuffer = stagingBuffer.getMappedRange();
 
     const size = getShapeSize(tensor.shape);
+
+    if (tensor.dtype === 'bool') {
+      // On device: one u32 per element. Host-side bool type: Uint8Array.
+      const u32 = new Uint32Array(arrayBuffer.slice(0, size * 4));
+      const u8 = new Uint8Array(size);
+      for (let i = 0; i < size; i++) u8[i] = u32[i] !== 0 ? 1 : 0;
+      stagingBuffer.unmap();
+      stagingBuffer.destroy();
+      return u8;
+    }
+
     const bpe = bytesPerElement(tensor.dtype);
     const Ctor = typedArrayCtor(tensor.dtype);
     const view = new Ctor(arrayBuffer.slice(0, size * bpe));
@@ -71,6 +85,14 @@ export class WebGPUBackend implements Backend {
 
   write(tensor: RuntimeTensor, data: ArrayBufferView): void {
     const destBuffer = tensor.storage.buffer as GPUBuffer;
+    if (tensor.dtype === 'bool') {
+      // Expand Uint8Array (host) → Uint32Array (device).
+      const src = data as Uint8Array;
+      const u32 = new Uint32Array(src.length);
+      for (let i = 0; i < src.length; i++) u32[i] = src[i] !== 0 ? 1 : 0;
+      this.device.queue.writeBuffer(destBuffer, 0, u32.buffer, u32.byteOffset, u32.byteLength);
+      return;
+    }
     this.device.queue.writeBuffer(destBuffer, 0, data.buffer, data.byteOffset, data.byteLength);
   }
 
@@ -137,9 +159,7 @@ export class WebGPUBackend implements Backend {
     // Kernels that vary by dtype (or any other build-time attribute) expose
     // a `pipelineKey`. The cache keys on op + key so multiple dtype variants
     // coexist per backend instance.
-    const key = kernel.pipelineKey
-      ? `${op}:${kernel.pipelineKey(node, inputs, outputs)}`
-      : op;
+    const key = kernel.pipelineKey ? `${op}:${kernel.pipelineKey(node, inputs, outputs)}` : op;
     const cached = this.pipelineCache.get(key);
     if (cached) return cached;
     const pipeline = kernel.createPipeline(this.device, node, inputs, outputs);

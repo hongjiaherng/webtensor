@@ -1,12 +1,12 @@
 import source from './tanh.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const tanhKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'TanhShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'TanhShader' }),
         entryPoint: 'main',
       },
       label: 'TanhPipeline',

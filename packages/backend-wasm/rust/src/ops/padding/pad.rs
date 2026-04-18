@@ -1,16 +1,11 @@
 //! Constant-value Pad (ONNX `Pad`, mode="constant"). Fills the output with
 //! `value`, then copies the input into the region starting at `pads_before`.
-//!
-//! meta layout (36 × u32):
-//!   [0]       src_total
-//!   [1]       rank
-//!   [2..9]    src_shape[0..7]
-//!   [10..17]  src_strides[0..7]
-//!   [18]      src_offset
-//!   [19..26]  out_shape[0..7]
-//!   [27..34]  pads_before[0..7]
-//!   [35]      padding
+//! Meta layout: see `ops::PAD_META_WORDS`.
 
+use crate::ops::{
+    MAX_RANK, PAD_META_WORDS, PAD_OUT_SHAPE_OFF, PAD_PADS_BEFORE_OFF, PAD_SRC_OFFSET_OFF,
+    PAD_SRC_SHAPE_OFF, PAD_SRC_STRIDES_OFF,
+};
 use crate::utils::strided_idx;
 use std::slice;
 use wasm_bindgen::prelude::*;
@@ -25,16 +20,16 @@ macro_rules! pad_kernel {
             value: $scalar,
         ) {
             unsafe {
-                let meta = slice::from_raw_parts(meta_ptr, 36);
+                let meta = slice::from_raw_parts(meta_ptr, PAD_META_WORDS);
                 let src_total = meta[0] as usize;
                 let rank = meta[1] as usize;
-                let src_shape = &meta[2..2 + rank];
-                let src_strides = &meta[10..10 + rank];
-                let src_offset = meta[18];
-                let out_shape = &meta[19..19 + rank];
-                let pads_before = &meta[27..27 + rank];
+                let src_shape = &meta[PAD_SRC_SHAPE_OFF..PAD_SRC_SHAPE_OFF + rank];
+                let src_strides = &meta[PAD_SRC_STRIDES_OFF..PAD_SRC_STRIDES_OFF + rank];
+                let src_offset = meta[PAD_SRC_OFFSET_OFF];
+                let out_shape = &meta[PAD_OUT_SHAPE_OFF..PAD_OUT_SHAPE_OFF + rank];
+                let pads_before = &meta[PAD_PADS_BEFORE_OFF..PAD_PADS_BEFORE_OFF + rank];
 
-                let mut out_strides = [0u32; 8];
+                let mut out_strides = [0u32; MAX_RANK];
                 let mut out_total: usize = 1;
                 let mut acc: u32 = 1;
                 for d in (0..rank).rev() {

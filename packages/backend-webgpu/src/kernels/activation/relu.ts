@@ -1,12 +1,12 @@
 import source from './relu.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const reluKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'ReluShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'ReluShader' }),
         entryPoint: 'main',
       },
       label: 'ReluPipeline',

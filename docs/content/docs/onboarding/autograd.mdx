@@ -60,40 +60,40 @@ All ops live in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webte
 
 All binary op backward closures apply `unbroadcastGrad(grad, input.shape)` — a helper that uses `sum()` over any axes the input was broadcast on, then reshapes back to the input's shape. This means broadcasted gradients are correct; bias-like shapes (`[1]`, `[N]` added to `[B, N]`) receive the right scalar/vector gradient.
 
-| Op  | Backward formula                         | Status |
-| --- | ---------------------------------------- | ------ |
-| Add | `(unbroadcast(grad, a.shape), unbroadcast(grad, b.shape))`           | ✅    |
-| Sub | `(unbroadcast(grad, a.shape), unbroadcast(-grad, b.shape))`          | ✅    |
-| Mul | `(unbroadcast(grad·b, a.shape), unbroadcast(grad·a, b.shape))`       | ✅    |
-| Div | `(unbroadcast(grad/b, a.shape), unbroadcast(-grad·a/(b·b), b.shape))` | ✅    |
+| Op  | Backward formula                                                      | Status |
+| --- | --------------------------------------------------------------------- | ------ |
+| Add | `(unbroadcast(grad, a.shape), unbroadcast(grad, b.shape))`            | ✅     |
+| Sub | `(unbroadcast(grad, a.shape), unbroadcast(-grad, b.shape))`           | ✅     |
+| Mul | `(unbroadcast(grad·b, a.shape), unbroadcast(grad·a, b.shape))`        | ✅     |
+| Div | `(unbroadcast(grad/b, a.shape), unbroadcast(-grad·a/(b·b), b.shape))` | ✅     |
 
 ### Linalg
 
-| Op     | Backward formula         | Status                                                                                                     |
-| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Op     | Backward formula                                               | Status                                                             |
+| ------ | -------------------------------------------------------------- | ------------------------------------------------------------------ |
 | MatMul | `(grad @ Bᵀ, Aᵀ @ grad)`, with `unbroadcastGrad` on batch dims | ✅ for 1D·1D, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast. |
 
 ### Reductions and activations
 
-| Op         | Backward formula                                                        | Status |
-| ---------- | ----------------------------------------------------------------------- | ------ |
-| ReduceSum  | Reshape grad to input-shape-with-reduced-dims-as-1, then `expand` to original shape (materialised via `contiguous`) | ✅    |
-| ReduceMean | Same as ReduceSum, scaled by `1 / reduce_size`                          | ✅    |
-| Softmax    | `s · (grad − sum(grad·s, axis, keepdim=true))` where `s = softmax(a)`   | ✅    |
+| Op         | Backward formula                                                                                                    | Status |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- | ------ |
+| ReduceSum  | Reshape grad to input-shape-with-reduced-dims-as-1, then `expand` to original shape (materialised via `contiguous`) | ✅     |
+| ReduceMean | Same as ReduceSum, scaled by `1 / reduce_size`                                                                      | ✅     |
+| Softmax    | `s · (grad − sum(grad·s, axis, keepdim=true))` where `s = softmax(a)`                                               | ✅     |
 
 ### Views (zero-copy in forward; backward inverses the view)
 
-| Op        | Backward                        | Status                                                                              |
-| --------- | ------------------------------- | ----------------------------------------------------------------------------------- |
-| Transpose | `transpose(grad)`               | ✅                                                                                  |
-| Reshape   | `reshape(grad, original_shape)` | ✅                                                                                  |
-| View      | `view(grad, original_shape)`    | ✅                                                                                  |
-| Slice     | (none)                          | ❌ **Missing.** Needs Pad/Scatter to place gradient into zeros at the slice region. |
-| Unsqueeze | `squeeze(grad, dim)`            | ✅                                                                                  |
-| Squeeze   | `reshape(grad, original_shape)` | ✅                                                                                  |
-| Permute   | `permute(grad, inverse_axes)`   | ✅                                                                                  |
-| Flatten   | (delegates to reshape)          | ✅                                                                                  |
-| Expand    | `unbroadcastGrad(grad, input.shape)` — sums over expanded dims | ✅                                                                  |
+| Op        | Backward                                                       | Status                                                                              |
+| --------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Transpose | `transpose(grad)`                                              | ✅                                                                                  |
+| Reshape   | `reshape(grad, original_shape)`                                | ✅                                                                                  |
+| View      | `view(grad, original_shape)`                                   | ✅                                                                                  |
+| Slice     | (none)                                                         | ❌ **Missing.** Needs Pad/Scatter to place gradient into zeros at the slice region. |
+| Unsqueeze | `squeeze(grad, dim)`                                           | ✅                                                                                  |
+| Squeeze   | `reshape(grad, original_shape)`                                | ✅                                                                                  |
+| Permute   | `permute(grad, inverse_axes)`                                  | ✅                                                                                  |
+| Flatten   | (delegates to reshape)                                         | ✅                                                                                  |
+| Expand    | `unbroadcastGrad(grad, input.shape)` — sums over expanded dims | ✅                                                                                  |
 
 ### Memory
 

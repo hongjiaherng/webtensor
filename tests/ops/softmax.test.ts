@@ -56,13 +56,31 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('rank 2 axis = -1', async () => {
       const input = [1, 2, 3, 4, 5, 6];
-      const y = await run(softmax(tensor([[1, 2, 3], [4, 5, 6]]), -1), { engine });
+      const y = await run(
+        softmax(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          -1,
+        ),
+        { engine },
+      );
       expect(y.allclose(tensor(jsRefSoftmax(input, [2, 3], -1), { shape: [2, 3] }))).toBe(true);
     });
 
     it('rank 2 axis = 0', async () => {
       const input = [1, 2, 3, 4, 5, 6];
-      const y = await run(softmax(tensor([[1, 2, 3], [4, 5, 6]]), 0), { engine });
+      const y = await run(
+        softmax(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          0,
+        ),
+        { engine },
+      );
       expect(y.allclose(tensor(jsRefSoftmax(input, [2, 3], 0), { shape: [2, 3] }))).toBe(true);
     });
 
@@ -77,9 +95,7 @@ BACKENDS.forEach(({ name, create }) => {
         }
       }
       const y = await run(softmax(tensor(nested), 1), { engine });
-      expect(
-        y.allclose(tensor(jsRefSoftmax(flat, [2, 3, 4], 1), { shape: [2, 3, 4] })),
-      ).toBe(true);
+      expect(y.allclose(tensor(jsRefSoftmax(flat, [2, 3, 4], 1), { shape: [2, 3, 4] }))).toBe(true);
     });
 
     it('length-1 axis yields 1.0', async () => {
@@ -109,11 +125,25 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('grad of softmax(x) · 1 is zero everywhere (saturated)', async () => {
-      const a = tensor([[1, 2, 3], [4, 5, 6]], { requiresGrad: true });
+      const a = tensor(
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        { requiresGrad: true },
+      );
       const loss = sum(softmax(a, -1));
       loss.backward();
       const g = await run(a.grad!, { engine });
-      expect(g.allclose(tensor([[0, 0, 0], [0, 0, 0]]), { atol: 1e-5 })).toBe(true);
+      expect(
+        g.allclose(
+          tensor([
+            [0, 0, 0],
+            [0, 0, 0],
+          ]),
+          { atol: 1e-5 },
+        ),
+      ).toBe(true);
     });
   });
 });

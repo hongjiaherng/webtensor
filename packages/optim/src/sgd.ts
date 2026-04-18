@@ -37,9 +37,7 @@ export class SGD implements Optimizer {
 
   step(params: Tensor[], grads: Tensor[]): void {
     if (params.length !== grads.length) {
-      throw new Error(
-        `SGD.step: params length ${params.length} !== grads length ${grads.length}`,
-      );
+      throw new Error(`SGD.step: params length ${params.length} !== grads length ${grads.length}`);
     }
     for (let i = 0; i < params.length; i++) {
       const p = params[i];

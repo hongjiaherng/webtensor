@@ -86,15 +86,43 @@ CPU_ONLY.forEach(({ name, create }) => {
     });
 
     it('matmul works on int32 inputs', async () => {
-      const a = tensor([[1, 2], [3, 4]], { dtype: 'int32' });
-      const b = tensor([[5, 6], [7, 8]], { dtype: 'int32' });
+      const a = tensor(
+        [
+          [1, 2],
+          [3, 4],
+        ],
+        { dtype: 'int32' },
+      );
+      const b = tensor(
+        [
+          [5, 6],
+          [7, 8],
+        ],
+        { dtype: 'int32' },
+      );
       const y = await run(matmul(a, b), { engine });
       expect(y.dtype).toBe('int32');
-      expect(y.equals(tensor([[19, 22], [43, 50]], { dtype: 'int32' }))).toBe(true);
+      expect(
+        y.equals(
+          tensor(
+            [
+              [19, 22],
+              [43, 50],
+            ],
+            { dtype: 'int32' },
+          ),
+        ),
+      ).toBe(true);
     });
 
     it('sum on int32 stays int32', async () => {
-      const a = tensor([[1, 2, 3], [4, 5, 6]], { dtype: 'int32' });
+      const a = tensor(
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        { dtype: 'int32' },
+      );
       const y = await run(sum(a), { engine });
       expect(y.dtype).toBe('int32');
       expect(y.equals(tensor([21], { dtype: 'int32' }))).toBe(true);

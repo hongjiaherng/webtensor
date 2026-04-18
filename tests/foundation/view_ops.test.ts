@@ -227,18 +227,32 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('[2,3] → view([6]) on contiguous tensor', async () => {
       const out = (
-        await run(tensor([[1, 2, 3], [4, 5, 6]]).view([6]).contiguous(), { engine })
+        await run(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ])
+            .view([6])
+            .contiguous(),
+          { engine },
+        )
       ).data!;
       expectClose(out, [1, 2, 3, 4, 5, 6]);
     });
 
     it('[6] → view([2,3]) on contiguous tensor', async () => {
-      const out = (await run(tensor([1, 2, 3, 4, 5, 6]).view([2, 3]).contiguous(), { engine })).data!;
+      const out = (await run(tensor([1, 2, 3, 4, 5, 6]).view([2, 3]).contiguous(), { engine }))
+        .data!;
       expectClose(out, [1, 2, 3, 4, 5, 6]);
     });
 
     it('view on non-contiguous tensor throws', async () => {
-      const t = tensor([[1, 2, 3], [4, 5, 6]]).transpose().view([6]);
+      const t = tensor([
+        [1, 2, 3],
+        [4, 5, 6],
+      ])
+        .transpose()
+        .view([6]);
       await expect(run(t, { engine })).rejects.toThrow(/contiguous/i);
     });
   });

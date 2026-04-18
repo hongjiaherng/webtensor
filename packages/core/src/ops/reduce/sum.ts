@@ -10,11 +10,7 @@ import { contiguous } from '../memory/contiguous';
  * `axis` matches NumPy/JAX convention — accepts a single int, an array, or
  * undefined (reduce-all). Negative indices count from the end.
  */
-export function sum(
-  a: Tensor,
-  axis?: number | number[],
-  keepdim = false,
-): Tensor {
+export function sum(a: Tensor, axis?: number | number[], keepdim = false): Tensor {
   const normalizedAxes = normalizeAxes(axis, a.shape.length);
   const outShape = reduceOutputShape(a.shape, normalizedAxes, keepdim);
   const axisSet = new Set(normalizedAxes);

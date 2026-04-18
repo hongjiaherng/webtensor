@@ -22,25 +22,55 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('row broadcast [2,3] * [3]', async () => {
       const y = await run(
-        mul(tensor([[1, 2, 3], [4, 5, 6]]), tensor([2, 3, 4])),
+        mul(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          tensor([2, 3, 4]),
+        ),
         { engine },
       );
-      expect(y.equals(tensor([[2, 6, 12], [8, 15, 24]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [2, 6, 12],
+            [8, 15, 24],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('rank 3 [2,2,2] * [2]', async () => {
       const y = await run(
         mul(
           tensor([
-            [[1, 2], [3, 4]],
-            [[5, 6], [7, 8]],
+            [
+              [1, 2],
+              [3, 4],
+            ],
+            [
+              [5, 6],
+              [7, 8],
+            ],
           ]),
           tensor([10, 100]),
         ),
         { engine },
       );
       expect(
-        y.equals(tensor([[[10, 200], [30, 400]], [[50, 600], [70, 800]]])),
+        y.equals(
+          tensor([
+            [
+              [10, 200],
+              [30, 400],
+            ],
+            [
+              [50, 600],
+              [70, 800],
+            ],
+          ]),
+        ),
       ).toBe(true);
     });
 

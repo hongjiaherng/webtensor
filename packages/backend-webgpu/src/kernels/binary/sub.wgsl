@@ -1,11 +1,4 @@
-struct TensorMeta {
-  rank:    u32,
-  offset:  u32,
-  _p0:     u32,
-  _p1:     u32,
-  shape:   array<vec4<u32>, 2>,
-  strides: array<vec4<u32>, 2>,
-};
+__TENSOR_META__
 
 @group(0) @binding(0) var<storage, read>       a:      array<SCALAR>;
 @group(0) @binding(1) var<storage, read>       b:      array<SCALAR>;
@@ -19,8 +12,8 @@ fn strided_idx_a(flat: u32) -> u32 {
   var idx = u_meta_a.offset;
   for (var d = rank; d > 0u; d--) {
     let ax  = d - 1u;
-    let dim = u_meta_a.shape[ax / 4u][ax % 4u];
-    let s   = u_meta_a.strides[ax / 4u][ax % 4u];
+    let dim = u_meta_a.shape[ax];
+    let s   = u_meta_a.strides[ax];
     idx += (rem % dim) * s;
     rem  /= dim;
   }
@@ -33,8 +26,8 @@ fn strided_idx_b(flat: u32) -> u32 {
   var idx = u_meta_b.offset;
   for (var d = rank; d > 0u; d--) {
     let ax  = d - 1u;
-    let dim = u_meta_b.shape[ax / 4u][ax % 4u];
-    let s   = u_meta_b.strides[ax / 4u][ax % 4u];
+    let dim = u_meta_b.shape[ax];
+    let s   = u_meta_b.strides[ax];
     idx += (rem % dim) * s;
     rem  /= dim;
   }

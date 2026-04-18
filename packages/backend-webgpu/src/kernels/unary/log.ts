@@ -1,12 +1,12 @@
 import source from './log.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const logKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'LogShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'LogShader' }),
         entryPoint: 'main',
       },
       label: 'LogPipeline',

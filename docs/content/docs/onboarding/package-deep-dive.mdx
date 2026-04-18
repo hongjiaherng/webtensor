@@ -221,12 +221,20 @@ For end users, the entry point is `@webtensor/core`. A typical training app impo
 
 ```ts
 import {
-  compile, grad,              // high-level: JAX-style jit + differentiation
-  randn, zeros,                // factory functions
-  matmul, add, relu, sum, mean, softmax,   // ops
-  mseLoss, SGD,                // loss + optimizer
+  compile,
+  grad, // high-level: JAX-style jit + differentiation
+  randn,
+  zeros, // factory functions
+  matmul,
+  add,
+  relu,
+  sum,
+  mean,
+  softmax, // ops
+  mseLoss,
+  SGD, // loss + optimizer
 } from '@webtensor/core';
-import '@webtensor/backend-cpu';     // pick one backend (or several)
+import '@webtensor/backend-cpu'; // pick one backend (or several)
 import '@webtensor/backend-wasm';
 import '@webtensor/backend-webgpu';
 ```

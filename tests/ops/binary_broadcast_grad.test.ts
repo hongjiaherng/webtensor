@@ -53,7 +53,13 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('rank-3 broadcast [2,3] + [4,1,3] → correct grad shapes', async () => {
-      const a = tensor([[1, 2, 3], [4, 5, 6]], { requiresGrad: true }); // [2,3]
+      const a = tensor(
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        { requiresGrad: true },
+      ); // [2,3]
       const b = tensor([[[1, 1, 1]], [[2, 2, 2]], [[3, 3, 3]], [[4, 4, 4]]], {
         requiresGrad: true,
       }); // [4,1,3]
@@ -63,11 +69,16 @@ BACKENDS.forEach(({ name, create }) => {
       const aGrad = await run(a.grad!, { engine });
       const bGrad = await run(b.grad!, { engine });
       // a appears 4 times across the leading batch dim
-      expect(aGrad.equals(tensor([[4, 4, 4], [4, 4, 4]]))).toBe(true);
-      // each slice of b appears 2 times across the middle dim
       expect(
-        bGrad.equals(tensor([[[2, 2, 2]], [[2, 2, 2]], [[2, 2, 2]], [[2, 2, 2]]])),
+        aGrad.equals(
+          tensor([
+            [4, 4, 4],
+            [4, 4, 4],
+          ]),
+        ),
       ).toBe(true);
+      // each slice of b appears 2 times across the middle dim
+      expect(bGrad.equals(tensor([[[2, 2, 2]], [[2, 2, 2]], [[2, 2, 2]], [[2, 2, 2]]]))).toBe(true);
     });
   });
 });

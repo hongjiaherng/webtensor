@@ -1,12 +1,12 @@
 import source from './exp.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const expKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'ExpShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'ExpShader' }),
         entryPoint: 'main',
       },
       label: 'ExpPipeline',

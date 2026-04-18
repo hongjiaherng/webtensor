@@ -24,11 +24,11 @@ The compile step is cheap — it's just a DFS to collect nodes and values. The e
 
 ### Why are there three backends? When should I use each?
 
-| Backend | Storage | Execution | When to use |
-|---------|---------|-----------|-------------|
-| **CPU** | TypeScript `TypedArray` | Synchronous, single-threaded | Development, debugging, any environment, correctness oracle |
-| **WASM** | Rust pointer into linear memory | Synchronous, Rust speed | Medium-sized workloads where CPU is too slow; zero extra bundler config |
-| **WebGPU** | `GPUBuffer` on the GPU | Asynchronous, massively parallel | Large tensors, production inference, training |
+| Backend    | Storage                         | Execution                        | When to use                                                             |
+| ---------- | ------------------------------- | -------------------------------- | ----------------------------------------------------------------------- |
+| **CPU**    | TypeScript `TypedArray`         | Synchronous, single-threaded     | Development, debugging, any environment, correctness oracle             |
+| **WASM**   | Rust pointer into linear memory | Synchronous, Rust speed          | Medium-sized workloads where CPU is too slow; zero extra bundler config |
+| **WebGPU** | `GPUBuffer` on the GPU          | Asynchronous, massively parallel | Large tensors, production inference, training                           |
 
 For day-to-day development, use **CPU** — it's the simplest to debug and the reference for numerical correctness. Switch to **WebGPU** when performance matters. The API is identical across all three.
 
@@ -95,17 +95,17 @@ This is deliberate: the forward graph and the backward graph are the same kind o
 **Everyday usage is a one-liner** via the high-level API:
 
 ```ts
-const dW = grad(loss, W);                // unevaluated gradient Tensor
+const dW = grad(loss, W); // unevaluated gradient Tensor
 // Inside a compile(), the returned gradient is evaluated along with the loss.
 ```
 
 **Low-level form** (what `grad()` does internally):
 
 ```ts
-loss.backward();                                   // builds gradient graph
-const gradGraph = compileGraph([W.grad]);          // traces to IR
-await engine.evaluate(gradGraph);                  // executes on backend
-const values = await engine.get(W.grad.id);        // reads result
+loss.backward(); // builds gradient graph
+const gradGraph = compileGraph([W.grad]); // traces to IR
+await engine.evaluate(gradGraph); // executes on backend
+const values = await engine.get(W.grad.id); // reads result
 ```
 
 ---
@@ -122,9 +122,9 @@ import '@webtensor/backend-webgpu';
 
 // Params — plain Tensors with requiresGrad. compile() auto-feeds them.
 const W1 = randn([784, 128], { requiresGrad: true, std: 1 / Math.sqrt(784) });
-const b1 = zeros([128],      { requiresGrad: true });
-const W2 = randn([128, 10],  { requiresGrad: true, std: 1 / Math.sqrt(128) });
-const b2 = zeros([10],       { requiresGrad: true });
+const b1 = zeros([128], { requiresGrad: true });
+const W2 = randn([128, 10], { requiresGrad: true, std: 1 / Math.sqrt(128) });
+const b2 = zeros([10], { requiresGrad: true });
 
 const step = await compile(
   ({ x, y }) => {
@@ -132,15 +132,17 @@ const step = await compile(
     const loss = mseLoss(add(matmul(h, W2), b2), y);
     return {
       loss,
-      dW1: grad(loss, W1), db1: grad(loss, b1),
-      dW2: grad(loss, W2), db2: grad(loss, b2),
+      dW1: grad(loss, W1),
+      db1: grad(loss, b1),
+      dW2: grad(loss, W2),
+      db2: grad(loss, b2),
     };
   },
   { x: [32, 784], y: [32, 10] },
   { device: 'webgpu' },
 );
 
-const opt = new SGD(0.01, 0.9);   // lr, momentum
+const opt = new SGD(0.01, 0.9); // lr, momentum
 for (let i = 0; i < 1000; i++) {
   const { loss, dW1, db1, dW2, db2 } = await step({ x: xBatch, y: yBatch });
   opt.step([W1, b1, W2, b2], [dW1, db1, dW2, db2]);
@@ -160,9 +162,9 @@ The training loop stays in user space. You can log any intermediate, clip gradie
 import { tensor, run, add } from '@webtensor/core';
 
 const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
-expect(y.equals(tensor([5, 7, 9]))).toBe(true);              // strict
-expect(y.allclose(tensor([5, 7, 9]))).toBe(true);            // with tolerance
-expect(y.allclose(expected, { rtol: 1e-5, atol: 1e-8 }));    // PyTorch default
+expect(y.equals(tensor([5, 7, 9]))).toBe(true); // strict
+expect(y.allclose(tensor([5, 7, 9]))).toBe(true); // with tolerance
+expect(y.allclose(expected, { rtol: 1e-5, atol: 1e-8 })); // PyTorch default
 ```
 
 Both are shape-aware — a bug that returns `[5, 7, 9]` with shape `[1, 3]` instead of `[3]` fails, unlike a raw `Array.from(y.data).toEqual([5, 7, 9])` comparison.
@@ -209,11 +211,11 @@ for (...) { const y = await forward({ x: batch }); }
 
 **Partially.** The answer depends on which backend you use:
 
-| Backend | Node.js / Bun | Notes |
-|---------|---------------|-------|
-| **CPU** | ✅ Yes | Pure TypeScript — works anywhere JS runs |
-| **WASM** | ✅ Yes | WebAssembly is supported by Node.js ≥ 12 and Bun natively |
-| **WebGPU** | ❌ Not currently | Uses `navigator.gpu`, which is browser-only |
+| Backend    | Node.js / Bun    | Notes                                                     |
+| ---------- | ---------------- | --------------------------------------------------------- |
+| **CPU**    | ✅ Yes           | Pure TypeScript — works anywhere JS runs                  |
+| **WASM**   | ✅ Yes           | WebAssembly is supported by Node.js ≥ 12 and Bun natively |
+| **WebGPU** | ❌ Not currently | Uses `navigator.gpu`, which is browser-only               |
 
 For **CPU and WASM training on the server**, webtensor works today. Import the packages, `Engine.create('cpu')` or `Engine.create('wasm')`, and evaluate graphs normally.
 
@@ -249,17 +251,20 @@ ONNX is the open standard for neural network model exchange. The webtensor IR wa
 The plan is a future `@webtensor/onnx` package with two directions:
 
 **Import (`.onnx` → webtensor):**
+
 1. Parse the protobuf binary into an ONNX model.
 2. Walk nodes and values, mapping ONNX op names to webtensor IR node `op` strings.
 3. Produce a `Graph` object.
 4. Pass it to `engine.evaluate()` — works without any changes to `runtime`.
 
 **Export (webtensor → `.onnx`):**
+
 1. Call `compileGraph(outputs)` — you already have a `Graph`.
 2. Write the `Graph` nodes and values into an ONNX protobuf using a writer library.
 3. Embed initializer data from `Graph.initializers`.
 
 **Current blockers** (not started yet):
+
 - The `@webtensor/onnx` package does not exist.
 - Many ONNX ops (softmax, concat, reduce, gather, etc.) are not yet implemented in webtensor.
 - A protobuf serialization library (e.g. `protobufjs`) is needed.
@@ -306,6 +311,7 @@ Building graphs inside `beforeAll` delays construction until the test suite actu
 The GPU has a high **startup cost** (device initialization, pipeline compilation on first use) but near-linear throughput scaling. The crossover point depends on tensor size.
 
 Rough rule of thumb:
+
 - Small tensors (< ~10,000 elements): CPU is often faster because GPU dispatch overhead dominates.
 - Large tensors (> ~100,000 elements): WebGPU wins by orders of magnitude.
 - First op on WebGPU: the pipeline compilation adds latency; subsequent calls to the same op are cached.

@@ -12,49 +12,82 @@ BACKENDS.forEach(({ name, create }) => {
     });
 
     it('[4] → slice([1],[3])', async () => {
-      const y = await run(
-        contiguous(slice(tensor([10, 20, 30, 40]), [1], [3])),
-        { engine },
-      );
+      const y = await run(contiguous(slice(tensor([10, 20, 30, 40]), [1], [3])), { engine });
       expect(y.equals(tensor([20, 30]))).toBe(true);
     });
 
     it('[2,4] → rows 0:2, cols 1:3', async () => {
       const y = await run(
-        contiguous(slice(tensor([[1, 2, 3, 4], [5, 6, 7, 8]]), [0, 1], [2, 3])),
+        contiguous(
+          slice(
+            tensor([
+              [1, 2, 3, 4],
+              [5, 6, 7, 8],
+            ]),
+            [0, 1],
+            [2, 3],
+          ),
+        ),
         { engine },
       );
-      expect(y.equals(tensor([[2, 3], [6, 7]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [2, 3],
+            [6, 7],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('[3,3] → rows 1:3, cols 0:2', async () => {
       const y = await run(
         contiguous(
-          slice(tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), [1, 0], [3, 2]),
+          slice(
+            tensor([
+              [1, 2, 3],
+              [4, 5, 6],
+              [7, 8, 9],
+            ]),
+            [1, 0],
+            [3, 2],
+          ),
         ),
         { engine },
       );
-      expect(y.equals(tensor([[4, 5], [7, 8]]))).toBe(true);
+      expect(
+        y.equals(
+          tensor([
+            [4, 5],
+            [7, 8],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('slice → add (strided input)', async () => {
-      const y = await run(
-        add(slice(tensor([0, 1, 2, 3, 4, 5]), [2], [5]), tensor([10, 10, 10])),
-        { engine },
-      );
+      const y = await run(add(slice(tensor([0, 1, 2, 3, 4, 5]), [2], [5]), tensor([10, 10, 10])), {
+        engine,
+      });
       expect(y.equals(tensor([12, 13, 14]))).toBe(true);
     });
 
     it('slice → relu', async () => {
-      const y = await run(
-        relu(slice(tensor([-3, -2, -1, 0, 1, 2, 3]), [2], [6])),
-        { engine },
-      );
+      const y = await run(relu(slice(tensor([-3, -2, -1, 0, 1, 2, 3]), [2], [6])), { engine });
       expect(y.equals(tensor([0, 0, 1, 2]))).toBe(true);
     });
 
     it('rank mismatch throws', () => {
-      expect(() => slice(tensor([[1, 2], [3, 4]]), [0], [1])).toThrow();
+      expect(() =>
+        slice(
+          tensor([
+            [1, 2],
+            [3, 4],
+          ]),
+          [0],
+          [1],
+        ),
+      ).toThrow();
     });
   });
 });

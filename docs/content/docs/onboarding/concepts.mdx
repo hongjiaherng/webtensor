@@ -3,7 +3,7 @@ title: 'Key concepts'
 description: 'A progressive deep-dive into the five core ideas you need to internalize to read, modify, and maintain webtensor with confidence.'
 ---
 
-The existing reference docs describe *what* each piece does. This page explains *why* it works the way it does, and builds the five mental models you need in the right order. Read these once, slowly — each section is a dependency for the next.
+The existing reference docs describe _what_ each piece does. This page explains _why_ it works the way it does, and builds the five mental models you need in the right order. Read these once, slowly — each section is a dependency for the next.
 
 ---
 
@@ -13,7 +13,7 @@ Before anything else, understand how tensors are stored.
 
 ### Memory is always flat
 
-A tensor's data lives in a single contiguous 1-D array in memory — a `Float32Array` on CPU, a `GPUBuffer` on WebGPU, a raw pointer in WASM. The *logical* shape (rows, columns, depth, …) is separate from the storage.
+A tensor's data lives in a single contiguous 1-D array in memory — a `Float32Array` on CPU, a `GPUBuffer` on WebGPU, a raw pointer in WASM. The _logical_ shape (rows, columns, depth, …) is separate from the storage.
 
 ```
 shape   = [3, 4]          // 3 rows, 4 columns
@@ -72,14 +72,14 @@ The returned `RuntimeTensor` shares `storage` with `src` and sets `isView: true`
 
 ### What each view op actually does
 
-| Op | What changes |
-|----|------|
-| `Transpose` | Swap last two elements of `shape` and `strides` |
-| `Permute` | Reorder both `shape` and `strides` by an axis array |
-| `Slice` | Increment `offset` by `start * stride[dim]`, shrink `shape[dim]` |
-| `Expand` | Set `strides[dim] = 0` for any broadcast dimension (size grows, no data) |
-| `Unsqueeze` | Insert a size-1 dim and a stride at position `dim` |
-| `Squeeze` | Remove size-1 dims from both `shape` and `strides` |
+| Op          | What changes                                                             |
+| ----------- | ------------------------------------------------------------------------ |
+| `Transpose` | Swap last two elements of `shape` and `strides`                          |
+| `Permute`   | Reorder both `shape` and `strides` by an axis array                      |
+| `Slice`     | Increment `offset` by `start * stride[dim]`, shrink `shape[dim]`         |
+| `Expand`    | Set `strides[dim] = 0` for any broadcast dimension (size grows, no data) |
+| `Unsqueeze` | Insert a size-1 dim and a stride at position `dim`                       |
+| `Squeeze`   | Remove size-1 dims from both `shape` and `strides`                       |
 
 None of these touch `storage`. They're all just arithmetic on three numbers: `shape`, `strides`, `offset`.
 
@@ -88,6 +88,7 @@ None of these touch `storage`. They're all just arithmetic on three numbers: `sh
 A tensor is **contiguous** if its strides are exactly the C-order (row-major) values for its shape and offset is 0. After a transpose, it is not.
 
 `Reshape` checks contiguity:
+
 - **Contiguous input** → keep same storage, just remap shape and strides. Zero-copy.
 - **Non-contiguous input** → the engine inserts a `Contiguous` copy first, then reshapes the result.
 
@@ -124,7 +125,7 @@ Every CPU/WASM/WebGPU kernel calls `broadcastStridesOf` and then accesses inputs
 
 ## 4. The computation graph: why compile-then-execute?
 
-Most tensor libraries are either *purely eager* (compute immediately, no graph) or *purely lazy* (build a graph, then run it). Webtensor does both in sequence.
+Most tensor libraries are either _purely eager_ (compute immediately, no graph) or _purely lazy_ (build a graph, then run it). Webtensor does both in sequence.
 
 ### Phase 1 — Eager graph construction (no compute)
 
@@ -137,7 +138,7 @@ return new Tensor({
   _ctx: {
     op: 'Add',
     inputs: [a, b],
-    backward: (grad) => [grad, grad],   // backward is just a TypeScript function
+    backward: (grad) => [grad, grad], // backward is just a TypeScript function
   },
 });
 ```
@@ -241,10 +242,10 @@ Webtensor exposes two layers for every user action. High-level is the default; l
 
 Every `Tensor` in the graph falls into one of two classes based on where its data comes from:
 
-| Class                     | Built from                                                             | Goes into             | When used                                                   |
-| ------------------------- | ---------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------- |
+| Class                      | Built from                                                                   | Goes into            | When used                                                    |
+| -------------------------- | ---------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------ |
 | **Constant** (initializer) | `tensor([1,2,3])`, `zeros`, `ones`, `rand`, `randn` (without `requiresGrad`) | `Graph.initializers` | Fixed values known at compile time (e.g. look-up tables)     |
-| **Placeholder** (input)   | `placeholder(shape)` or a factory with `{ requiresGrad: true }`        | `Graph.inputs`        | Values fed fresh per-evaluation (batches, trainable weights) |
+| **Placeholder** (input)    | `placeholder(shape)` or a factory with `{ requiresGrad: true }`              | `Graph.inputs`       | Values fed fresh per-evaluation (batches, trainable weights) |
 
 This mirrors ONNX exactly: initializers vs. graph inputs.
 
@@ -258,7 +259,7 @@ import { relu, mseLoss } from '@webtensor/nn';
 import { SGD } from '@webtensor/optim';
 
 const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
-const b = zeros([8],    { requiresGrad: true });
+const b = zeros([8], { requiresGrad: true });
 
 // Compile: trace the function once; the returned callable auto-feeds W and b.
 const step = await compile(
@@ -273,7 +274,7 @@ const step = await compile(
 const opt = new SGD(0.1);
 for (let i = 0; i < 1000; i++) {
   const { loss, dW, db } = await step({ x: xBatch, y: yBatch });
-  opt.step([W, b], [dW, db]);   // mutates W.data and b.data in place
+  opt.step([W, b], [dW, db]); // mutates W.data and b.data in place
 }
 ```
 
@@ -297,7 +298,8 @@ import { CPUBackend } from '@webtensor/backend-cpu';
 
 // 1. Build placeholders by hand — data supplied at runtime via `feeds`.
 const x = placeholder([4, 2]);
-const W = placeholder([2, 8]); W.requiresGrad = true;
+const W = placeholder([2, 8]);
+W.requiresGrad = true;
 const y = matmul(x, W);
 
 // 2. Compile the Tensor DAG into an IR Graph.
@@ -345,15 +347,15 @@ If tensor `B` is a view of tensor `A`, the engine tracks this in `viewParents`. 
 
 With these five models in mind, here is how to navigate unfamiliar code:
 
-| If you're reading… | The relevant model |
-|----|-----|
-| `stridedIdx`, `broadcastStridesOf` | Strided tensors (#1) |
-| `views/transpose.ts`, `views/slice.ts`, etc. | Zero-copy views (#2) |
-| `broadcastShapes` in `core/shape.ts` | Broadcasting shape (#3) |
-| `compileGraph` in `core/compiler.ts` | Compile phase (#4) |
-| `Engine.evaluate` in `runtime/engine.ts` | Execute phase (#4) |
-| `ops.ts` — the backward closures | Autograd (#5) |
-| `compile.ts` — `compile()`, `grad()` | Placeholders & training (#6) |
-| `refCounts`, `viewParents` in `engine.ts` | Memory lifetime (#7) |
+| If you're reading…                           | The relevant model           |
+| -------------------------------------------- | ---------------------------- |
+| `stridedIdx`, `broadcastStridesOf`           | Strided tensors (#1)         |
+| `views/transpose.ts`, `views/slice.ts`, etc. | Zero-copy views (#2)         |
+| `broadcastShapes` in `core/shape.ts`         | Broadcasting shape (#3)      |
+| `compileGraph` in `core/compiler.ts`         | Compile phase (#4)           |
+| `Engine.evaluate` in `runtime/engine.ts`     | Execute phase (#4)           |
+| `ops.ts` — the backward closures             | Autograd (#5)                |
+| `compile.ts` — `compile()`, `grad()`         | Placeholders & training (#6) |
+| `refCounts`, `viewParents` in `engine.ts`    | Memory lifetime (#7)         |
 
 The most common maintainer task is **adding a new op**. The recipe ([Adding an op](/docs/advanced/adding-an-op)) applies all these models: define the forward with a `_ctx` and backward closure, write kernel(s) that handle strides, register in each backend's registry, add tests. Everything else follows from the structure described here.

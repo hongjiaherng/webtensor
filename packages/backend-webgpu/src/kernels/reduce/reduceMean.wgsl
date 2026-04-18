@@ -1,21 +1,14 @@
 // Strided ReduceMean. Same as ReduceSum but divides by reduce_total.
 
-struct TensorMeta {
-  rank:    u32,
-  offset:  u32,
-  _p0:     u32,
-  _p1:     u32,
-  shape:   array<vec4<u32>, 2>,
-  strides: array<vec4<u32>, 2>,
-};
+__TENSOR_META__
 
 struct ReduceMeta {
   kept_rank:    u32,
   reduce_rank:  u32,
   kept_total:   u32,
   reduce_total: u32,
-  kept_axes:    array<vec4<u32>, 2>,
-  reduce_axes:  array<vec4<u32>, 2>,
+  kept_axes:    array<u32, 64>,
+  reduce_axes:  array<u32, 64>,
 };
 
 @group(0) @binding(0) var<storage, read>       a:        array<f32>;
@@ -23,18 +16,18 @@ struct ReduceMeta {
 @group(0) @binding(2) var<uniform>             u_meta_a: TensorMeta;
 @group(0) @binding(3) var<uniform>             u_reduce: ReduceMeta;
 
-fn shape_of(ax: u32) -> u32 { return u_meta_a.shape[ax / 4u][ax % 4u]; }
-fn stride_of(ax: u32) -> u32 { return u_meta_a.strides[ax / 4u][ax % 4u]; }
-fn kept_axis(i: u32) -> u32 { return u_reduce.kept_axes[i / 4u][i % 4u]; }
-fn reduce_axis(i: u32) -> u32 { return u_reduce.reduce_axes[i / 4u][i % 4u]; }
+fn shape_of(ax: u32) -> u32 { return u_meta_a.shape[ax]; }
+fn stride_of(ax: u32) -> u32 { return u_meta_a.strides[ax]; }
+fn kept_axis(i: u32) -> u32 { return u_reduce.kept_axes[i]; }
+fn reduce_axis(i: u32) -> u32 { return u_reduce.reduce_axes[i]; }
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let out_idx = gid.x;
   if (out_idx >= u_reduce.kept_total) { return; }
 
-  var coord: array<u32, 8>;
-  for (var i = 0u; i < 8u; i++) { coord[i] = 0u; }
+  var coord: array<u32, 64>;
+  for (var i = 0u; i < 64u; i++) { coord[i] = 0u; }
 
   var rem = out_idx;
   for (var d = u_reduce.kept_rank; d > 0u; d--) {

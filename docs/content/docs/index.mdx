@@ -19,11 +19,11 @@ Every user action can be done at two levels. The **high-level** API is what 99% 
 import { tensor, randn, add, matmul, compile, grad, run } from '@webtensor/core';
 import { relu, mseLoss } from '@webtensor/nn';
 import { SGD } from '@webtensor/optim';
-import '@webtensor/backend-webgpu';   // pick one (or several)
+import '@webtensor/backend-webgpu'; // pick one (or several)
 
 // Eager one-shot — `run()` evaluates the tensor graph:
 const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
-console.log(y.data);   // Float32Array [5, 7, 9]
+console.log(y.data); // Float32Array [5, 7, 9]
 
 // Or chain via the method form:
 const z = await tensor([-1, 2, -3]).abs().run();
@@ -33,7 +33,7 @@ expect(y.equals(tensor([5, 7, 9]))).toBe(true);
 
 // Training — JAX-style: trace once, call many
 const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
-const b = randn([8],    { requiresGrad: true });
+const b = randn([8], { requiresGrad: true });
 
 const step = await compile(
   ({ x, y }) => {
@@ -63,11 +63,12 @@ const y = add(tensor([1, 2, 3]), tensor([4, 5, 6]));
 const graph = compileGraph([y]);
 const engine = new Engine(new CPUBackend());
 await engine.evaluate(graph);
-const data = await engine.get(y.id);   // Float32Array
+const data = await engine.get(y.id); // Float32Array
 
 // Placeholder + feeds: what `compile()` wires up for you.
 const x = placeholder([4, 2]);
-const W = placeholder([2, 8]); W.requiresGrad = true;
+const W = placeholder([2, 8]);
+W.requiresGrad = true;
 const out = matmul(x, W);
 const graph2 = compileGraph([out]);
 await engine.evaluate(graph2, { [x.id]: xData, [W.id]: wData });

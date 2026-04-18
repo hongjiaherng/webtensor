@@ -5,9 +5,13 @@ import {
   createUniformBuffer,
   packMetaMatMulInput,
   packBatchMeta,
+  injectMeta,
 } from '../utils';
 
-function matmulDims(inputs: { shape: (number | null)[] }[], outputs: { shape: (number | null)[] }[]) {
+function matmulDims(
+  inputs: { shape: (number | null)[] }[],
+  outputs: { shape: (number | null)[] }[],
+) {
   const aShape = inputs[0].shape as number[];
   const bShape = inputs[1].shape as number[];
   const outShape = outputs[0].shape as number[];
@@ -27,7 +31,7 @@ export const matmulKernel: WebGPUKernel = {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'MatMulShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'MatMulShader' }),
         entryPoint: 'main',
       },
       label: 'MatMulPipeline',

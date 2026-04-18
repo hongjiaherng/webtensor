@@ -6,6 +6,7 @@ import {
   createUniformBuffer,
   packReduceMeta,
   getShapeSize,
+  injectMeta,
 } from '../utils';
 
 export const reduceMeanKernel: WebGPUKernel = {
@@ -13,7 +14,7 @@ export const reduceMeanKernel: WebGPUKernel = {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'ReduceMeanShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'ReduceMeanShader' }),
         entryPoint: 'main',
       },
       label: 'ReduceMeanPipeline',

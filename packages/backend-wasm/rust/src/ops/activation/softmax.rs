@@ -1,27 +1,22 @@
+use crate::ops::{MAX_RANK, SOFTMAX_META_WORDS, SOFTMAX_SHAPE_OFF, SOFTMAX_STRIDES_OFF};
 use std::slice;
 use wasm_bindgen::prelude::*;
 
 /// Strided softmax for float32. Output is contiguous with same shape as input.
-///
-/// meta layout (19 × u32):
-///   [0]       in_rank
-///   [1]       axis
-///   [2]       offset
-///   [3..11]   in_shape[0..8]
-///   [11..19]  in_strides[0..8]
+/// Meta layout: see `ops::SOFTMAX_META_WORDS`.
 #[wasm_bindgen]
 pub fn softmax_f32_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *const u32) {
     unsafe {
-        let meta = slice::from_raw_parts(meta_ptr, 19);
+        let meta = slice::from_raw_parts(meta_ptr, SOFTMAX_META_WORDS);
         let rank = meta[0] as usize;
         let axis = meta[1] as usize;
         let offset = meta[2] as usize;
-        let shape = &meta[3..3 + rank];
-        let strides = &meta[11..11 + rank];
+        let shape = &meta[SOFTMAX_SHAPE_OFF..SOFTMAX_SHAPE_OFF + rank];
+        let strides = &meta[SOFTMAX_STRIDES_OFF..SOFTMAX_STRIDES_OFF + rank];
         let axis_len = shape[axis] as usize;
 
-        // Compute contiguous out_strides from shape
-        let mut out_strides = [1usize; 8];
+        // Compute contiguous out_strides from shape.
+        let mut out_strides = [1usize; MAX_RANK];
         for i in (0..rank.saturating_sub(1)).rev() {
             out_strides[i] = out_strides[i + 1] * shape[i + 1] as usize;
         }
@@ -36,9 +31,8 @@ pub fn softmax_f32_strided(a_ptr: *const f32, out_ptr: *mut f32, meta_ptr: *cons
 
         let out = slice::from_raw_parts_mut(out_ptr, total);
 
-        let mut coord = [0u32; 8];
+        let mut coord = [0u32; MAX_RANK];
         for o in 0..slice_count {
-            // Decompose slice index o over non-axis dims
             let mut rem = o;
             for d in (0..rank).rev() {
                 if d == axis {

@@ -87,12 +87,7 @@ export interface WebtensorWasmModule {
     metaPtr: number,
     value: number,
   ) => void;
-  readonly pad_u8_strided: (
-    srcPtr: number,
-    outPtr: number,
-    metaPtr: number,
-    value: number,
-  ) => void;
+  readonly pad_u8_strided: (srcPtr: number, outPtr: number, metaPtr: number, value: number) => void;
 }
 
 type WasmExports = WebAssembly.Exports & {

@@ -64,11 +64,7 @@ BACKENDS.forEach(({ name, create }) => {
     it('forward-only with trainable params captured works', async () => {
       const engine = new Engine(backend);
       const W = randn([2, 3], { requiresGrad: true, seed: 1 });
-      const forward = await compile(
-        ({ x }) => matmul(x, W),
-        { x: [4, 2] },
-        { engine },
-      );
+      const forward = await compile(({ x }) => matmul(x, W), { x: [4, 2] }, { engine });
       const xData = new Float32Array([1, 0, 0, 1, 1, 1, -1, -1]);
       const y = await forward({ x: xData });
       expect(y.shape).toEqual([4, 3]);

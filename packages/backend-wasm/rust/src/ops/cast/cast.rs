@@ -1,9 +1,8 @@
 //! Dtype conversion kernels. One `#[wasm_bindgen]` function per (from, to) pair.
-//!
-//! All cast kernels are strided — they accept the same 19-u32 unary meta layout
-//! (total, rank, shape[8], strides[8], offset) used by other strided unary ops.
-//! The output is written contiguously.
+//! All cast kernels are strided and accept the shared unary meta layout
+//! (see `ops::UNARY_META_WORDS`). Output is contiguous.
 
+use crate::ops::{UNARY_META_WORDS, UNARY_OFFSET_OFF, UNARY_SHAPE_OFF, UNARY_STRIDES_OFF};
 use crate::utils::strided_idx;
 use std::slice;
 use wasm_bindgen::prelude::*;
@@ -15,12 +14,12 @@ macro_rules! cast_kernel {
         #[wasm_bindgen]
         pub fn $name(a_ptr: *const $from, out_ptr: *mut $to, meta_ptr: *const u32) {
             unsafe {
-                let meta = slice::from_raw_parts(meta_ptr, 19);
+                let meta = slice::from_raw_parts(meta_ptr, UNARY_META_WORDS);
                 let total = meta[0] as usize;
                 let rank = meta[1] as usize;
-                let shape = &meta[2..2 + rank];
-                let strides = &meta[10..10 + rank];
-                let offset = meta[18];
+                let shape = &meta[UNARY_SHAPE_OFF..UNARY_SHAPE_OFF + rank];
+                let strides = &meta[UNARY_STRIDES_OFF..UNARY_STRIDES_OFF + rank];
+                let offset = meta[UNARY_OFFSET_OFF];
                 let out = slice::from_raw_parts_mut(out_ptr, total);
                 for i in 0..total {
                     let idx = strided_idx(shape, strides, offset, i as u32);

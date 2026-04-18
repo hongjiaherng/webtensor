@@ -7,11 +7,7 @@ import { mul } from '../binary/mul';
 import { tensor } from '../../init/tensor';
 
 /** Mean over `axis` (or all axes if undefined). IR op: `ReduceMean`. */
-export function mean(
-  a: Tensor,
-  axis?: number | number[],
-  keepdim = false,
-): Tensor {
+export function mean(a: Tensor, axis?: number | number[], keepdim = false): Tensor {
   const normalizedAxes = normalizeAxes(axis, a.shape.length);
   const outShape = reduceOutputShape(a.shape, normalizedAxes, keepdim);
   const reduceSize = normalizedAxes.reduce((acc, ax) => acc * (a.shape[ax] as number), 1);

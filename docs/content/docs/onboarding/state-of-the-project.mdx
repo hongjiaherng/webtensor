@@ -11,29 +11,29 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 ## Forward ops
 
-| Area                | Works                                                                                                    | Partial | Missing                                       |
-| ------------------- | -------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------- |
-| Element-wise binary | `add`, `sub`, `mul`, `div` with broadcasting                                                             |         |                                               |
-| Element-wise unary  | `neg`, `exp`, `log`, `sqrt`, `abs`, `pow`, `sigmoid`, `tanh`, `relu`                                     |         |                                               |
-| Linear algebra      | `matmul` — PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, N-D batched with broadcast over batch dims |         |                                               |
-| Views (zero-copy)   | `transpose`, `reshape`, `view`, `slice`, `unsqueeze`, `squeeze`, `permute`, `expand`, `flatten`          |         |                                               |
-| Memory              | `contiguous`, `clone`, `detach`                                                                          |         |                                               |
-| Reductions          | `sum`, `mean` (arbitrary `axis`, `keepdim`)                                                              |         | `max`, `min`, `argmax`, `argmin`              |
-| Composite           | `softmax` (numerically stable)                                                                           |         | `log_softmax`, `concat`, `split`, `where`     |
-| Indexing            |                                                                                                          |         | `gather`, `scatter`, advanced indexing        |
-| Graph inputs        | `placeholder(shape, dtype, device)` + `evaluate(graph, feeds)` + high-level `compile()`/`grad()` helpers |         | Dynamic shape specialization (shape polymorphism) |
+| Area                | Works                                                                                                      | Partial | Missing                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------- |
+| Element-wise binary | `add`, `sub`, `mul`, `div` with broadcasting                                                               |         |                                                   |
+| Element-wise unary  | `neg`, `exp`, `log`, `sqrt`, `abs`, `pow`, `sigmoid`, `tanh`, `relu`                                       |         |                                                   |
+| Linear algebra      | `matmul` — PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, N-D batched with broadcast over batch dims |         |                                                   |
+| Views (zero-copy)   | `transpose`, `reshape`, `view`, `slice`, `unsqueeze`, `squeeze`, `permute`, `expand`, `flatten`            |         |                                                   |
+| Memory              | `contiguous`, `clone`, `detach`                                                                            |         |                                                   |
+| Reductions          | `sum`, `mean` (arbitrary `axis`, `keepdim`)                                                                |         | `max`, `min`, `argmax`, `argmin`                  |
+| Composite           | `softmax` (numerically stable)                                                                             |         | `log_softmax`, `concat`, `split`, `where`         |
+| Indexing            |                                                                                                            |         | `gather`, `scatter`, advanced indexing            |
+| Graph inputs        | `placeholder(shape, dtype, device)` + `evaluate(graph, feeds)` + high-level `compile()`/`grad()` helpers   |         | Dynamic shape specialization (shape polymorphism) |
 
 ---
 
 ## Autograd
 
-| Area                       | Works                                                                                                                                              | Partial                                                       | Missing                 |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
-| Backward closure mechanism | `Tensor.backward()`, topo build, accumulation via `add()`                                                                                          |                                                               |                         |
-| Broadcast-aware gradients  | `unbroadcastGrad()` inside Add/Sub/Mul/Div/Expand backward correctly sums grads back to each input's shape                                         |                                                               |                         |
-| Per-op gradients           | Binary ops (broadcast-correct), MatMul (batched), Reductions (sum/mean), Softmax, Expand, all unary math (exp/log/sqrt/sigmoid/tanh/relu/neg/pow), all views | Abs backward (needs `sign` op), Slice backward (needs pad/scatter) |                         |
-| Training loop              | `compile(fn, spec)` + `grad(loss, param)` primitives; `SGD` optimizer; user writes the loop explicitly                                             |                                                               |                         |
-| Higher-order gradients     |                                                                                                                                                    | In principle works through the closure mechanism but no tests |                         |
+| Area                       | Works                                                                                                                                                        | Partial                                                            | Missing |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------- |
+| Backward closure mechanism | `Tensor.backward()`, topo build, accumulation via `add()`                                                                                                    |                                                                    |         |
+| Broadcast-aware gradients  | `unbroadcastGrad()` inside Add/Sub/Mul/Div/Expand backward correctly sums grads back to each input's shape                                                   |                                                                    |         |
+| Per-op gradients           | Binary ops (broadcast-correct), MatMul (batched), Reductions (sum/mean), Softmax, Expand, all unary math (exp/log/sqrt/sigmoid/tanh/relu/neg/pow), all views | Abs backward (needs `sign` op), Slice backward (needs pad/scatter) |         |
+| Training loop              | `compile(fn, spec)` + `grad(loss, param)` primitives; `SGD` optimizer; user writes the loop explicitly                                                       |                                                                    |         |
+| Higher-order gradients     |                                                                                                                                                              | In principle works through the closure mechanism but no tests      |         |
 
 ---
 
@@ -50,41 +50,41 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 ## Ranks and shapes
 
-| Area                           | Works                                                        | Partial                                                                                   | Missing                                                            |
-| ------------------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Strided model                  | All kernels handle arbitrary strides + offset + broadcasting |                                                                                           |                                                                    |
-| Rank ≤ 8 on WebGPU             | All current ops fit (matmul caps batch rank at 6 to stay within) | `TensorMeta` uniform packs only 8 shape + 8 stride slots — silent corruption above rank 8 |                                                                    |
-| Rank > 8                       |                                                              |                                                                                           | Not supported on WebGPU; CPU/WASM untested above rank 8            |
-| Max-rank guard at `allocate()` |                                                              |                                                                                           | Not enforced (see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)) |
-| Dynamic shapes (`null` dim)    | Type system supports it; placeholder accepts concrete shapes today |                                                                                         | Shape polymorphism on `compile()` (re-specialize on first call)    |
+| Area                           | Works                                                              | Partial                                                                                   | Missing                                                            |
+| ------------------------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Strided model                  | All kernels handle arbitrary strides + offset + broadcasting       |                                                                                           |                                                                    |
+| Rank ≤ 8 on WebGPU             | All current ops fit (matmul caps batch rank at 6 to stay within)   | `TensorMeta` uniform packs only 8 shape + 8 stride slots — silent corruption above rank 8 |                                                                    |
+| Rank > 8                       |                                                                    |                                                                                           | Not supported on WebGPU; CPU/WASM untested above rank 8            |
+| Max-rank guard at `allocate()` |                                                                    |                                                                                           | Not enforced (see [Bugs and gaps](/docs/onboarding/bugs-and-gaps)) |
+| Dynamic shapes (`null` dim)    | Type system supports it; placeholder accepts concrete shapes today |                                                                                           | Shape polymorphism on `compile()` (re-specialize on first call)    |
 
 ---
 
 ## Training infrastructure
 
-| Area                  | Works                                                                                                                          | Partial | Missing                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- | --------------------------------------------------------------- |
-| Eager autograd        | Yes, with broadcast-aware backward                                                                                             |         |                                                                 |
-| Compile-once loop     | `compile(fn, spec)` + `grad(loss, param)` (high-level) built on `placeholder()` + `evaluate(graph, feeds)` (low-level)         |         |                                                                 |
-| Eager evaluation      | `run(t)` function + `Tensor.run()` method                                                                                      |         |                                                                 |
-| Trainable tensor      | Any factory with `{ requiresGrad: true }` — e.g. `randn([2, 8], { requiresGrad: true })`. No `Float32Array` handling in user code. |         |                                                                 |
-| Comparison            | `equal(a, b)` / `allclose(a, b, opts)` + `.equals()` / `.allclose()` methods (PyTorch / JAX parity, shape-aware)               |         | `isclose` elementwise (needs bool kernels)                      |
-| Loss functions (`@webtensor/nn`) | `mseLoss`                                                                                                         |         | `crossEntropy`, `bceLoss`, `logSoftmax`                         |
-| Activations (`@webtensor/nn`)    | `relu`, `sigmoid`, `tanh`, `softmax`                                                                              |         | `gelu`, `silu`, `leakyRelu`                                      |
-| Optimizers (`@webtensor/optim`)  | `SGD` (optional momentum). Takes `Tensor[]` params + `Tensor[]` grads.                                            |         | `Adam`, `AdamW`, lr schedulers                                  |
-| Dataloader / batching |                                                                                                                                |         | No streaming, no batch sampling                                 |
-| Train/eval mode       |                                                                                                                                |         | No `train()` / `eval()` toggle (matters for dropout, batchnorm) |
-| Checkpointing         |                                                                                                                                |         | No serialization format for trained weights                     |
-| End-to-end training   | XOR MLP convergence verified on all 3 backends (`tests/graph/train_loop.test.ts`)                                              |         |                                                                 |
+| Area                             | Works                                                                                                                              | Partial | Missing                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------- |
+| Eager autograd                   | Yes, with broadcast-aware backward                                                                                                 |         |                                                                 |
+| Compile-once loop                | `compile(fn, spec)` + `grad(loss, param)` (high-level) built on `placeholder()` + `evaluate(graph, feeds)` (low-level)             |         |                                                                 |
+| Eager evaluation                 | `run(t)` function + `Tensor.run()` method                                                                                          |         |                                                                 |
+| Trainable tensor                 | Any factory with `{ requiresGrad: true }` — e.g. `randn([2, 8], { requiresGrad: true })`. No `Float32Array` handling in user code. |         |                                                                 |
+| Comparison                       | `equal(a, b)` / `allclose(a, b, opts)` + `.equals()` / `.allclose()` methods (PyTorch / JAX parity, shape-aware)                   |         | `isclose` elementwise (needs bool kernels)                      |
+| Loss functions (`@webtensor/nn`) | `mseLoss`                                                                                                                          |         | `crossEntropy`, `bceLoss`, `logSoftmax`                         |
+| Activations (`@webtensor/nn`)    | `relu`, `sigmoid`, `tanh`, `softmax`                                                                                               |         | `gelu`, `silu`, `leakyRelu`                                     |
+| Optimizers (`@webtensor/optim`)  | `SGD` (optional momentum). Takes `Tensor[]` params + `Tensor[]` grads.                                                             |         | `Adam`, `AdamW`, lr schedulers                                  |
+| Dataloader / batching            |                                                                                                                                    |         | No streaming, no batch sampling                                 |
+| Train/eval mode                  |                                                                                                                                    |         | No `train()` / `eval()` toggle (matters for dropout, batchnorm) |
+| Checkpointing                    |                                                                                                                                    |         | No serialization format for trained weights                     |
+| End-to-end training              | XOR MLP convergence verified on all 3 backends (`tests/graph/train_loop.test.ts`)                                                  |         |                                                                 |
 
 ---
 
 ## Backends
 
-| Backend | Works                                                                                                       | Partial                        | Missing                                        |
-| ------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------- |
-| CPU     | All 19 kernels (incl. `ReduceSum`, `ReduceMean`, `Softmax`, batched `MatMul`)                               |                                |                                                |
-| WASM    | All 19 kernels; build via `wasm-pack`; function naming scaffolded for future dtype variants (`_f32_` suffix) |                                | Multi-threading, SIMD intrinsics               |
+| Backend | Works                                                                                                                           | Partial                        | Missing                                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------- |
+| CPU     | All 19 kernels (incl. `ReduceSum`, `ReduceMean`, `Softmax`, batched `MatMul`)                                                   |                                |                                                             |
+| WASM    | All 19 kernels; build via `wasm-pack`; function naming scaffolded for future dtype variants (`_f32_` suffix)                    |                                | Multi-threading, SIMD intrinsics                            |
 | WebGPU  | All 19 kernels; pipeline cache; temp buffer cleanup via `onSubmittedWorkDone`; extra uniforms for reduce/softmax/batched-matmul | Rank-8 ceiling on `TensorMeta` | Compute shader fusion, tiled matmul, hierarchical reduction |
 
 ---

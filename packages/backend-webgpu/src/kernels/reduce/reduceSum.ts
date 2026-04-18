@@ -6,6 +6,7 @@ import {
   createUniformBuffer,
   packReduceMeta,
   getShapeSize,
+  injectMeta,
 } from '../utils';
 
 function computeReduceDims(node: { attributes?: Record<string, unknown> }, inShape: number[]) {
@@ -23,7 +24,7 @@ export const reduceSumKernel: WebGPUKernel = {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'ReduceSumShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'ReduceSumShader' }),
         entryPoint: 'main',
       },
       label: 'ReduceSumPipeline',

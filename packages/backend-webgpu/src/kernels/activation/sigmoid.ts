@@ -1,12 +1,12 @@
 import source from './sigmoid.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize } from '../utils';
+import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
 
 export const sigmoidKernel: WebGPUKernel = {
   createPipeline(device) {
     return device.createComputePipeline({
       layout: 'auto',
       compute: {
-        module: device.createShaderModule({ code: source, label: 'SigmoidShader' }),
+        module: device.createShaderModule({ code: injectMeta(source), label: 'SigmoidShader' }),
         entryPoint: 'main',
       },
       label: 'SigmoidPipeline',

@@ -1,10 +1,4 @@
-import {
-  WASMKernel,
-  handleOf,
-  allocMeta,
-  buildReduceMetaData,
-  dtypeSuffix,
-} from '../utils';
+import { WASMKernel, handleOf, allocMeta, buildReduceMetaData, dtypeSuffix } from '../utils';
 import type { WebtensorWasmModule } from '../../module';
 
 export const reduceMeanKernel: WASMKernel = (module, node, inputs, outputs) => {
@@ -15,9 +9,9 @@ export const reduceMeanKernel: WASMKernel = (module, node, inputs, outputs) => {
     const a = handleOf(inputs[0]);
     const out = handleOf(outputs[0]);
     const suffix = dtypeSuffix(inputs[0].dtype);
-    const fn = (module as unknown as Record<string, WebtensorWasmModule['reduce_mean_f32_strided']>)[
-      `reduce_mean_${suffix}_strided`
-    ];
+    const fn = (
+      module as unknown as Record<string, WebtensorWasmModule['reduce_mean_f32_strided']>
+    )[`reduce_mean_${suffix}_strided`];
     if (!fn) {
       throw new Error(`reduceMean: no WASM kernel for dtype ${inputs[0].dtype}`);
     }

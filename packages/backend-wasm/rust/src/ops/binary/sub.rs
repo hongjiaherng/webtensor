@@ -1,8 +1,12 @@
+use crate::ops::{
+    BINARY_A_OFFSET_OFF, BINARY_A_STRIDES_OFF, BINARY_B_OFFSET_OFF, BINARY_B_STRIDES_OFF,
+    BINARY_META_WORDS, BINARY_SHAPE_OFF,
+};
 use crate::utils::strided_idx;
 use std::slice;
 use wasm_bindgen::prelude::*;
 
-/// Strided element-wise subtract. Same meta layout as add (28 × u32).
+/// Strided element-wise subtract. Meta layout: see `ops::BINARY_META_WORDS`.
 
 #[wasm_bindgen]
 pub fn sub_f32_strided(
@@ -12,14 +16,14 @@ pub fn sub_f32_strided(
     meta_ptr: *const u32,
 ) {
     unsafe {
-        let meta = slice::from_raw_parts(meta_ptr, 28);
+        let meta = slice::from_raw_parts(meta_ptr, BINARY_META_WORDS);
         let total = meta[0] as usize;
         let rank = meta[1] as usize;
-        let shape = &meta[2..2 + rank];
-        let a_bcast = &meta[10..10 + rank];
-        let a_off = meta[18];
-        let b_bcast = &meta[19..19 + rank];
-        let b_off = meta[27];
+        let shape = &meta[BINARY_SHAPE_OFF..BINARY_SHAPE_OFF + rank];
+        let a_bcast = &meta[BINARY_A_STRIDES_OFF..BINARY_A_STRIDES_OFF + rank];
+        let a_off = meta[BINARY_A_OFFSET_OFF];
+        let b_bcast = &meta[BINARY_B_STRIDES_OFF..BINARY_B_STRIDES_OFF + rank];
+        let b_off = meta[BINARY_B_OFFSET_OFF];
         let out = slice::from_raw_parts_mut(out_ptr, total);
 
         for i in 0..total {
@@ -38,14 +42,14 @@ pub fn sub_i32_strided(
     meta_ptr: *const u32,
 ) {
     unsafe {
-        let meta = slice::from_raw_parts(meta_ptr, 28);
+        let meta = slice::from_raw_parts(meta_ptr, BINARY_META_WORDS);
         let total = meta[0] as usize;
         let rank = meta[1] as usize;
-        let shape = &meta[2..2 + rank];
-        let a_bcast = &meta[10..10 + rank];
-        let a_off = meta[18];
-        let b_bcast = &meta[19..19 + rank];
-        let b_off = meta[27];
+        let shape = &meta[BINARY_SHAPE_OFF..BINARY_SHAPE_OFF + rank];
+        let a_bcast = &meta[BINARY_A_STRIDES_OFF..BINARY_A_STRIDES_OFF + rank];
+        let a_off = meta[BINARY_A_OFFSET_OFF];
+        let b_bcast = &meta[BINARY_B_STRIDES_OFF..BINARY_B_STRIDES_OFF + rank];
+        let b_off = meta[BINARY_B_OFFSET_OFF];
         let out = slice::from_raw_parts_mut(out_ptr, total);
 
         for i in 0..total {

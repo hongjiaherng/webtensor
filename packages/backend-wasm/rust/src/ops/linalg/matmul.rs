@@ -1,23 +1,14 @@
+use crate::ops::{
+    MATMUL_A_BCAST_OFF, MATMUL_B_BCAST_OFF, MATMUL_BATCH_RANK, MATMUL_BATCH_SHAPE_OFF,
+    MATMUL_META_WORDS,
+};
 use std::slice;
 use wasm_bindgen::prelude::*;
 
 /// Batched strided matmul for float32. Broadcasts over leading batch dims.
-///
-/// meta layout (32 × u32):
-///   [0]       batch_rank     (0..=6)
-///   [1]       M
-///   [2]       K
-///   [3]       N
-///   [4]       a_row_stride
-///   [5]       a_col_stride
-///   [6]       b_row_stride
-///   [7]       b_col_stride
-///   [8]       a_offset
-///   [9]       b_offset
-///   [10..16]  batch_out_shape[0..6]
-///   [16..22]  a_bcast_batch_strides[0..6]   (broadcast-aligned to batch_out_shape)
-///   [22..28]  b_bcast_batch_strides[0..6]
-///   [28..32]  padding
+/// Meta layout: see `ops::MATMUL_META_WORDS`. Batch rank is capped at
+/// `MATMUL_BATCH_RANK` (= `MAX_RANK - 2`) so total tensor rank stays within
+/// the shared `MAX_RANK` cap.
 #[wasm_bindgen]
 pub fn matmul_strided(
     a_ptr: *const f32,
@@ -26,7 +17,7 @@ pub fn matmul_strided(
     meta_ptr: *const u32,
 ) {
     unsafe {
-        let meta = slice::from_raw_parts(meta_ptr, 32);
+        let meta = slice::from_raw_parts(meta_ptr, MATMUL_META_WORDS);
         let batch_rank = meta[0] as usize;
         let m = meta[1] as usize;
         let k = meta[2] as usize;
@@ -38,9 +29,10 @@ pub fn matmul_strided(
         let a_off = meta[8] as usize;
         let b_off = meta[9] as usize;
 
-        let batch_out_shape = &meta[10..10 + batch_rank];
-        let a_bcast = &meta[16..16 + batch_rank];
-        let b_bcast = &meta[22..22 + batch_rank];
+        let batch_out_shape =
+            &meta[MATMUL_BATCH_SHAPE_OFF..MATMUL_BATCH_SHAPE_OFF + batch_rank];
+        let a_bcast = &meta[MATMUL_A_BCAST_OFF..MATMUL_A_BCAST_OFF + batch_rank];
+        let b_bcast = &meta[MATMUL_B_BCAST_OFF..MATMUL_B_BCAST_OFF + batch_rank];
 
         let mut batch_total: usize = 1;
         for i in 0..batch_rank {
@@ -50,7 +42,7 @@ pub fn matmul_strided(
         let out_mat_stride = m * n;
         let out = slice::from_raw_parts_mut(out_ptr, batch_total * out_mat_stride);
 
-        let mut coord = [0u32; 6];
+        let mut coord = [0u32; MATMUL_BATCH_RANK];
         for b_idx in 0..batch_total {
             let mut rem = b_idx;
             for i in (0..batch_rank).rev() {
