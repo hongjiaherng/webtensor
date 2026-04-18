@@ -1,54 +1,37 @@
-import { describe, it, beforeAll } from 'vitest';
-import { sigmoid, tensor, compileGraph } from '@webtensor/core';
-import { Engine, Backend } from '@webtensor/runtime';
-import { BACKENDS, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { tensor, run } from '@webtensor/core';
+import { sigmoid } from '@webtensor/nn';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Sigmoid — ${name}`, () => {
-    let backend: Backend;
+  describe(`sigmoid — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('sigmoid of 0 is 0.5', async () => {
-      const y = sigmoid(tensor([0]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [0.5]);
+    it('sigmoid(0) = 0.5', async () => {
+      const y = await run(sigmoid(tensor([0])), { engine });
+      expect(y.allclose(tensor([0.5]))).toBe(true);
     });
 
-    it('sigmoid of large positive is ~1', async () => {
-      const y = sigmoid(tensor([10]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [1 / (1 + Math.exp(-10))], 1e-4);
+    it('sigmoid(10) ≈ 1', async () => {
+      const y = await run(sigmoid(tensor([10])), { engine });
+      expect(y.allclose(tensor([1 / (1 + Math.exp(-10))]), { atol: 1e-4 })).toBe(true);
     });
 
-    it('sigmoid of large negative is ~0', async () => {
-      const y = sigmoid(tensor([-10]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [1 / (1 + Math.exp(10))], 1e-4);
+    it('sigmoid(-10) ≈ 0', async () => {
+      const y = await run(sigmoid(tensor([-10])), { engine });
+      expect(y.allclose(tensor([1 / (1 + Math.exp(10))]), { atol: 1e-4 })).toBe(true);
     });
 
     it('sigmoid of mixed values', async () => {
       const vals = [-2, -1, 0, 1, 2];
-      const y = sigmoid(tensor(vals));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(
-        out,
-        vals.map((v) => 1 / (1 + Math.exp(-v))),
-        1e-4,
-      );
+      const y = await run(sigmoid(tensor(vals)), { engine });
+      expect(
+        y.allclose(tensor(vals.map((v) => 1 / (1 + Math.exp(-v)))), { atol: 1e-4 }),
+      ).toBe(true);
     });
   });
 });

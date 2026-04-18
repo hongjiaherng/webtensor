@@ -13,55 +13,17 @@ Severity scale:
 
 ---
 
-## HIGH — Gradient unbroadcasting missing
-
-**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `Add`, `Sub`, `Div`, and `Mul` backward closures (search for `// NOTE: missing unbroadcast`).
-
-**Symptom:** When forward broadcasting expands a smaller operand (e.g. `add(a:[3], b:[1]) → out:[3]`), the backward returns gradients matching the **output** shape, not the **input** shape. Whatever consumes `b.grad` will see a shape-`[3]` tensor where it expects `[1]` — either a downstream shape mismatch throws, or worse, a downstream broadcast silently propagates wrong values. Training loops that rely on broadcasted bias / scalar parameters get wildly inflated gradients.
-
-**Fix sketch:** implement `sum(tensor, axes, keepDims)` (Reduce kernel), then in each broadcasting backward call `unbroadcast(grad, originalInputShape)` which sums along axes where the input was size-1 or had lower rank.
-
-The closures already document the gap with `// NOTE: missing unbroadcast — requires ReduceSum op`.
-
-**Blocked on:** Reductions kernel (sum/mean).
-
----
-
 ## HIGH — WebGPU `TensorMeta` rank-8 ceiling
 
 **Where:** [packages/backend-webgpu/src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — see the `TensorMeta` struct and `packMeta()` function.
 
-**Symptom:** The TensorMeta uniform packs exactly 8 shape slots and 8 stride slots (`array<vec4<u32>, 2>`). `packMeta()` writes the first `min(rank, 8)` dims; everything beyond is silently dropped. A rank-9 (or higher) tensor will run, produce no error, and write nonsense — whatever happens to be in the unused slots gets used as shape/stride. With current ops capped at 2D this never fires, but **any future op above rank 8 will silently corrupt**.
+**Symptom:** The TensorMeta uniform packs exactly 8 shape slots and 8 stride slots (`array<vec4<u32>, 2>`). `packMeta()` writes the first `min(rank, 8)` dims; everything beyond is silently dropped. A rank-9 (or higher) tensor will run, produce no error, and write nonsense — whatever happens to be in the unused slots gets used as shape/stride.
+
+**Current mitigation:** batched matmul caps `batch_rank` at 6 (total rank ≤ 8) in `packMetaMatMulInput()`. All current ops stay within 8.
 
 **Fix sketch:** for rank > 8, switch to a `storage` buffer for shape/strides instead of a uniform (uniform-buffer arrays in WGSL are tightly bound by `@minBindingSize`). Or split into multiple uniform structs. Plan covers this in [Rearchitect notes](/docs/onboarding/rearchitect-notes). Also add a guard that throws when `rank > 8` until the redesign lands — turns silent corruption into a clean error.
 
 **Blocked on:** nothing (the guard alone is a one-line fix and worth doing now).
-
----
-
-## HIGH — `MatMul` is 2D only; no batched matmul
-
-**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `matmul()` function (search for `// NOTE: Proper MatMul broadcasting for batch dimensions goes here`). All three matmul kernels assume 2D layouts:
-
-- CPU: [packages/backend-cpu/src/kernels/linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/linalg/matmul.ts)
-- WASM: [packages/backend-wasm/src/kernels/linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/linalg/matmul.ts)
-- WebGPU: [packages/backend-webgpu/src/kernels/linalg/matmul.wgsl](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/linalg/matmul.wgsl)
-
-**Symptom:** `matmul(a:[B, M, K], b:[B, K, N])` will compute the wrong shape (forward inference passes the batch dim through naively) and call kernels that index as if there's no batch axis — output is garbage.
-
-**Fix sketch:** treat the last two dims as the matrix axes; iterate over leading batch dims with broadcasting rules. The CPU implementation is the easiest place to start (extra outer loops). WebGPU needs a 3D dispatch. **Blocked on the rank > 8 / `TensorMeta` redesign** for any batched op that pushes WebGPU above rank 8.
-
----
-
-## MEDIUM — `Expand` backward not implemented
-
-**Where:** [packages/core/src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — the `expand()` op (search for `// NOTE: expand backward requires sum reduction`).
-
-**Symptom:** Calling `.backward()` through an `expand()` silently drops the gradient (the topo walker skips tensors without `_ctx.backward`). Inputs upstream of `expand` get no gradient.
-
-**Fix sketch:** once `sum` exists, the backward is `sum(grad, axes_that_were_expanded, keepDims=true)`. The expanded axes are dims where `input.shape[i] == 1 && output.shape[i] > 1`.
-
-**Blocked on:** Reductions.
 
 ---
 
@@ -137,7 +99,7 @@ The closures already document the gap with `// NOTE: missing unbroadcast — req
 
 ## Process gaps (not bugs, but blockers for serious work)
 
-- **No CI.** The 367-test suite must be run manually before every commit. A GitHub Actions job that runs `bun install`, builds WASM, and runs `bun run test` in headless browser would catch regressions immediately.
+- **No CI.** The ~517-test suite must be run manually before every commit. A GitHub Actions job that runs `bun install`, builds WASM, and runs `bun run test` in headless browser would catch regressions immediately.
 - **No published-package smoke test.** All tests use workspace aliases. Publishing without a test that consumes `@webtensor/core` from a real `node_modules` is a leap of faith.
 - **No example apps.** Hard to validate the user experience without one.
 

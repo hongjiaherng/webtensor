@@ -1,4 +1,4 @@
-import { Tensor } from './tensor';
+import { Tensor } from '../tensor';
 import { Graph, Node, Value } from '@webtensor/ir';
 
 /**
@@ -65,6 +65,10 @@ export function compileGraph(outputs: Tensor[]): Graph {
         // Constant nodes always go to initializers — data is embedded in the graph.
         // requiresGrad does NOT affect this classification.
         initializers.push(t.id);
+      } else if (t._ctx.op === 'Placeholder') {
+        // Placeholder nodes are graph inputs — data is supplied at evaluate time
+        // via feeds, not embedded in the graph.
+        inputs.push(t.id);
       }
     } else {
       // Leaf tensor with no producer op.  In normal usage this shouldn't happen

@@ -11,10 +11,10 @@ The Reference docs ([architecture](/docs/advanced/architecture), [IR reference](
 
 ## Status snapshot
 
-- **Backends:** CPU, WASM, WebGPU — all three at full kernel parity (16/16 ops).
-- **Tests:** ~367 cross-backend tests, browser mode via Playwright/Chromium.
-- **What works today:** eager API, graph compile, evaluate, view ops, autograd for most ops, broadcasting in forward.
-- **What blocks production:** reductions (sum/mean) missing → broadcast unbroadcast in autograd is silently wrong; batched matmul not implemented; WebGPU `TensorMeta` capped at rank 8; only `float32` has kernels; no loss/optimizer; publish path untested.
+- **Backends:** CPU, WASM, WebGPU — all three at full kernel parity (19/19 ops).
+- **Tests:** ~500 cross-backend tests, browser mode via Playwright/Chromium.
+- **What works today:** eager API, graph compile, evaluate, view ops, full autograd with broadcast-aware binary op backward, PyTorch-style `matmul` (1D·1D, 1D·2D, 2D·1D, N-D batched with broadcast), reductions (`reduceSum` / `reduceMean`), `softmax`, **placeholder inputs + compile-once training loop**, host-side `SGD`. End-to-end XOR MLP trains to near-zero loss in ≤ 500 steps.
+- **What still blocks production:** only `float32` has kernels (`int32` / `bool` allocate but have no kernels); no loss modules (`cross_entropy`, etc.) or Adam optimizer in-tree; no `concat` / `gather` / conv ops yet; WebGPU `TensorMeta` capped at rank 8 (matmul caps batch rank at 6 to stay within); publish path untested.
 - **Distribution:** `dist/` exists, `publish:all` script exists, but versions are drifted (`backend-wasm` 0.1.0, others 0.0.0) and not validated outside the workspace.
 
 See [State of the project](/docs/onboarding/state-of-the-project) for the full matrix and [Bugs and gaps](/docs/onboarding/bugs-and-gaps) for severity-tagged defects.

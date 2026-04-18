@@ -1,33 +1,23 @@
-import { describe, it, beforeAll } from 'vitest';
-import { neg, tensor, compileGraph } from '@webtensor/core';
-import { Engine, Backend } from '@webtensor/runtime';
-import { BACKENDS, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { neg, tensor, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Neg — ${name}`, () => {
-    let backend: Backend;
+  describe(`neg — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
     it('negates positive values', async () => {
-      const a = tensor([1, 2, 3]);
-      const y = neg(a);
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [-1, -2, -3]);
+      const y = await run(neg(tensor([1, 2, 3])), { engine });
+      expect(y.equals(tensor([-1, -2, -3]))).toBe(true);
     });
 
     it('negates negative values', async () => {
-      const a = tensor([-1, -2, 0]);
-      const y = neg(a);
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [1, 2, 0]);
+      const y = await run(neg(tensor([-1, -2, 0])), { engine });
+      expect(y.equals(tensor([1, 2, 0]))).toBe(true);
     });
   });
 });

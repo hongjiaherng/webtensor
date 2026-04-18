@@ -30,5 +30,15 @@ fn strided_idx(flat: u32) -> u32 {
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= arrayLength(&out)) { return; }
-  out[i] = pow(a[strided_idx(i)], u_exp);
+  let base = a[strided_idx(i)];
+  // WGSL `pow(x, y)` is undefined for negative x. Use |x|^y, then flip the
+  // sign when the base is negative and the exponent is an odd integer
+  // (so e.g. `pow(-2, 2) = 4` and `pow(-2, 3) = -8`).
+  let abs_base = abs(base);
+  let result = pow(abs_base, u_exp);
+  let n = round(u_exp);
+  let is_int = abs(u_exp - n) < 1e-6;
+  let is_odd = (i32(n) & 1) == 1;
+  let flip = base < 0.0 && is_int && is_odd;
+  out[i] = select(result, -result, flip);
 }

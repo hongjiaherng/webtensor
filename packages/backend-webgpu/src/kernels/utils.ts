@@ -74,6 +74,127 @@ export function createMetaBuffer(device: GPUDevice, data: Uint32Array): GPUBuffe
   return buffer;
 }
 
+/**
+ * Create a GPU uniform buffer of arbitrary size (multiple of 16 bytes).
+ * Used by op-specific auxiliary uniforms (reduce, softmax, batched matmul).
+ */
+export function createUniformBuffer(device: GPUDevice, data: Uint32Array): GPUBuffer {
+  const size = data.byteLength;
+  const buffer = device.createBuffer({
+    size,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    mappedAtCreation: true,
+  });
+  new Uint32Array(buffer.getMappedRange()).set(data);
+  buffer.unmap();
+  return buffer;
+}
+
+/**
+ * Pack batch-aware matmul meta for one input (A or B).
+ * Produces a 20-u32 TensorMeta describing shape = [...batchOut, *matrixDims],
+ * with strides broadcast-aligned on batch dims and preserving matrix strides.
+ */
+export function packMetaMatMulInput(
+  tensor: RuntimeTensor,
+  batchOutShape: number[],
+): Uint32Array {
+  const shape = tensor.shape as number[];
+  const rank = shape.length;
+  const matrixRank = 2;
+  const batchRank = batchOutShape.length;
+  const outRank = batchRank + matrixRank;
+  if (outRank > 8) {
+    throw new Error(`matmul: combined rank ${outRank} exceeds WebGPU kernel cap of 8`);
+  }
+
+  const batchShape = shape.slice(0, rank - matrixRank);
+  const batchStrides = tensor.strides.slice(0, rank - matrixRank);
+  const bcastBatch =
+    batchRank === 0 ? [] : broadcastStridesOf(batchOutShape, batchShape, batchStrides);
+
+  const data = new Uint32Array(20);
+  data[0] = outRank;
+  data[1] = tensor.offset;
+  for (let i = 0; i < 8; i++) {
+    if (i < batchRank) {
+      data[4 + i] = batchOutShape[i];
+      data[12 + i] = bcastBatch[i];
+    } else if (i < outRank) {
+      data[4 + i] = shape[rank - matrixRank + (i - batchRank)];
+      data[12 + i] = tensor.strides[rank - matrixRank + (i - batchRank)];
+    } else {
+      data[4 + i] = 1;
+      data[12 + i] = 0;
+    }
+  }
+  return data;
+}
+
+/**
+ * Pack a 12-u32 BatchMeta uniform: (batch_rank, M, K, N, batch_out_shape[8]).
+ * Matches WGSL layout of BatchMeta in matmul.wgsl.
+ */
+export function packBatchMeta(
+  batchOutShape: number[],
+  M: number,
+  K: number,
+  N: number,
+): Uint32Array {
+  const data = new Uint32Array(12);
+  data[0] = batchOutShape.length;
+  data[1] = M;
+  data[2] = K;
+  data[3] = N;
+  for (let i = 0; i < 8; i++) {
+    data[4 + i] = i < batchOutShape.length ? batchOutShape[i] : 1;
+  }
+  return data;
+}
+
+/**
+ * Pack a 20-u32 ReduceMeta uniform:
+ * (kept_rank, reduce_rank, kept_total, reduce_total, kept_axes[8], reduce_axes[8]).
+ * Matches WGSL layout of ReduceMeta in reduce*.wgsl.
+ */
+export function packReduceMeta(
+  keptAxes: number[],
+  reduceAxes: number[],
+  keptTotal: number,
+  reduceTotal: number,
+): Uint32Array {
+  const data = new Uint32Array(20);
+  data[0] = keptAxes.length;
+  data[1] = reduceAxes.length;
+  data[2] = keptTotal;
+  data[3] = reduceTotal;
+  for (let i = 0; i < 8; i++) {
+    data[4 + i] = i < keptAxes.length ? keptAxes[i] : 0;
+    data[12 + i] = i < reduceAxes.length ? reduceAxes[i] : 0;
+  }
+  return data;
+}
+
+/**
+ * Pack a 12-u32 SoftmaxMeta uniform:
+ * (axis, slice_count, axis_len, _pad, out_strides[8]).
+ */
+export function packSoftmaxMeta(
+  axis: number,
+  sliceCount: number,
+  axisLen: number,
+  outStrides: number[],
+): Uint32Array {
+  const data = new Uint32Array(12);
+  data[0] = axis;
+  data[1] = sliceCount;
+  data[2] = axisLen;
+  for (let i = 0; i < 8; i++) {
+    data[4 + i] = i < outStrides.length ? outStrides[i] : 0;
+  }
+  return data;
+}
+
 // ---------------------------------------------------------------------------
 // Kernel interface
 

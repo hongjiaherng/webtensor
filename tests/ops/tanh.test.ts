@@ -1,32 +1,25 @@
-import { describe, it, beforeAll } from 'vitest';
-import { tanh, tensor, compileGraph } from '@webtensor/core';
-import { Engine, Backend } from '@webtensor/runtime';
-import { BACKENDS, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { tensor, run } from '@webtensor/core';
+import { tanh } from '@webtensor/nn';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Tanh — ${name}`, () => {
-    let backend: Backend;
+  describe(`tanh — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('tanh of 0 is 0', async () => {
-      const y = tanh(tensor([0]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [0]);
+    it('tanh(0) = 0', async () => {
+      const y = await run(tanh(tensor([0])), { engine });
+      expect(y.allclose(tensor([0]))).toBe(true);
     });
 
     it('tanh of mixed values', async () => {
       const vals = [-2, -1, 0, 1, 2];
-      const y = tanh(tensor(vals));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, vals.map(Math.tanh), 1e-4);
+      const y = await run(tanh(tensor(vals)), { engine });
+      expect(y.allclose(tensor(vals.map(Math.tanh)), { atol: 1e-4 })).toBe(true);
     });
   });
 });

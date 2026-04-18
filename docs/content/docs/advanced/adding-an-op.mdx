@@ -17,6 +17,12 @@ In [`/roadmap`](/docs/roadmap), add a row to the **Ops** table (or relevant sect
 
 **File:** `packages/core/src/ops.ts`
 
+Naming conventions to follow:
+
+- **Function name:** user-facing, in camelCase, matching NumPy / PyTorch / JAX where possible — `sum`, `mean`, `matmul`, `softmax`. Not `reduceSum` or `doMatrixMultiply`.
+- **IR op name (`ctx.op`):** ONNX-aligned PascalCase — `ReduceSum`, `ReduceMean`, `Softmax`, `MatMul`. This is the string the kernel registries key on, and it must match the ONNX operator name so an ONNX importer can emit nodes without a translation layer.
+- **Parameter names:** `axis` (not `axes`), `keepdim` (not `keep_dims`), `dim` for single-axis ops — matching PyTorch/NumPy.
+
 Add a function that constructs the IR node. Mirror the existing pattern:
 
 ```ts
@@ -142,6 +148,14 @@ export const sigmoidKernel: WASMKernel = (module, _node, inputs, outputs) => {
 ```
 
 **Register in `packages/backend-wasm/src/kernels/registry.ts`.**
+
+**Dtype-ready naming (recommended):** name Rust functions with a `_f32_` suffix (e.g. `reduce_sum_f32_strided`) so later `int32` / `bool` variants can slot in additively. In the TS wrapper, resolve the function via `dtypeSuffix(inputs[0].dtype)` from `src/kernels/utils.ts`:
+
+```ts
+const fn = (module as unknown as Record<string, WebtensorWasmModule['reduce_sum_f32_strided']>)[
+  `reduce_sum_${dtypeSuffix(inputs[0].dtype)}_strided`
+];
+```
 
 **Rebuild WASM** after changing Rust:
 

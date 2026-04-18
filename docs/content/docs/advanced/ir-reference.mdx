@@ -69,7 +69,7 @@ interface Node {
 interface Graph {
   nodes: Node[];
   values: Record<string, Value>; // keyed by Value.name
-  inputs: string[]; // reserved for future placeholder tensors (dynamic batch data)
+  inputs: string[]; // value names of Placeholder nodes — data supplied per-evaluation via `feeds`
   outputs: string[]; // value names of graph outputs
   initializers: string[]; // value names of fixed weights/constants (Constant nodes)
   name?: string;
@@ -77,7 +77,9 @@ interface Graph {
 }
 ```
 
-`initializers` are Constant nodes — their data is embedded in the graph and retained for the full evaluation lifetime. `inputs` is reserved for future placeholder tensors (dynamic batch data supplied per inference call); currently unused.
+`initializers` are `Constant` nodes — their data is embedded in the graph and retained for the full evaluation lifetime.
+
+`inputs` are `Placeholder` nodes — they have no data in the graph. Callers supply data at runtime via `engine.evaluate(graph, feeds)` where `feeds: Record<valueName, ArrayBufferView>`. This is the ONNX graph-input model, and it is what powers compile-once training loops (the high-level `compile()` / `grad()` helpers in `packages/core/src/compile.ts` build on top).
 
 ---
 

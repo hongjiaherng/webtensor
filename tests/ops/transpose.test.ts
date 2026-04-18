@@ -1,113 +1,76 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { tensor } from '@webtensor/core';
-import { Backend } from '@webtensor/runtime';
-import { BACKENDS, runGraph, expectClose } from '../helpers';
+import { tensor, transpose, contiguous, matmul, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
-const TRANSPOSE_BACKENDS = BACKENDS;
-
-TRANSPOSE_BACKENDS.forEach(({ name, create }) => {
-  describe(`Transpose — ${name}`, () => {
-    let backend: Backend;
+BACKENDS.forEach(({ name, create }) => {
+  describe(`transpose — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('[2,3] → transpose → [3,2]', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-        ])
-          .transpose()
-          .contiguous(),
+    it('[2,3] → [3,2]', async () => {
+      const y = await run(
+        contiguous(transpose(tensor([[1, 2, 3], [4, 5, 6]]))),
+        { engine },
       );
-      expectClose(out, [1, 4, 2, 5, 3, 6]);
+      expect(y.equals(tensor([[1, 4], [2, 5], [3, 6]]))).toBe(true);
     });
 
     it('[3,3] square matrix', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-          [7, 8, 9],
-        ])
-          .transpose()
-          .contiguous(),
+      const y = await run(
+        contiguous(transpose(tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))),
+        { engine },
       );
-      expectClose(out, [1, 4, 7, 2, 5, 8, 3, 6, 9]);
+      expect(y.equals(tensor([[1, 4, 7], [2, 5, 8], [3, 6, 9]]))).toBe(true);
     });
 
-    it('[1,4] row vector → [4,1] col vector', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([[10, 20, 30, 40]])
-          .transpose()
-          .contiguous(),
+    it('[1,4] row → [4,1] col', async () => {
+      const y = await run(
+        contiguous(transpose(tensor([[10, 20, 30, 40]]))),
+        { engine },
       );
-      expectClose(out, [10, 20, 30, 40]);
+      expect(y.equals(tensor([[10], [20], [30], [40]]))).toBe(true);
     });
 
-    it('[4,1] col vector → [1,4] row vector', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([[10], [20], [30], [40]])
-          .transpose()
-          .contiguous(),
+    it('[4,1] col → [1,4] row', async () => {
+      const y = await run(
+        contiguous(transpose(tensor([[10], [20], [30], [40]]))),
+        { engine },
       );
-      expectClose(out, [10, 20, 30, 40]);
+      expect(y.equals(tensor([[10, 20, 30, 40]]))).toBe(true);
     });
 
     it('double transpose = identity', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-        ])
-          .transpose()
-          .transpose()
-          .contiguous(),
+      const y = await run(
+        contiguous(transpose(transpose(tensor([[1, 2, 3], [4, 5, 6]])))),
+        { engine },
       );
-      expectClose(out, [1, 2, 3, 4, 5, 6]);
+      expect(y.equals(tensor([[1, 2, 3], [4, 5, 6]]))).toBe(true);
     });
 
     it('rank-3 swap last two dims [2,2,3] → [2,3,2]', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [
-            [1, 2, 3],
-            [4, 5, 6],
-          ],
-          [
-            [7, 8, 9],
-            [10, 11, 12],
-          ],
-        ])
-          .transpose()
-          .contiguous(),
+      const y = await run(
+        contiguous(
+          transpose(tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])),
+        ),
+        { engine },
       );
-      expectClose(out, [1, 4, 2, 5, 3, 6, 7, 10, 8, 11, 9, 12]);
+      expect(
+        y.equals(tensor([[[1, 4], [2, 5], [3, 6]], [[7, 10], [8, 11], [9, 12]]])),
+      ).toBe(true);
     });
 
-    it('transpose → matmul (strided input to kernel)', async () => {
-      // a.T [3,2] @ identity [2,2] → [3,2] unchanged
-      const a = tensor([
-        [1, 2, 3],
-        [4, 5, 6],
-      ]);
-      const b = tensor([
-        [1, 0],
-        [0, 1],
-      ]);
-      const out = await runGraph(backend, a.transpose().matmul(b));
-      expectClose(out, [1, 4, 2, 5, 3, 6]);
+    it('transpose → matmul with strided input', async () => {
+      const a = tensor([[1, 2, 3], [4, 5, 6]]);
+      const b = tensor([[1, 0], [0, 1]]);
+      const y = await run(matmul(transpose(a), b), { engine });
+      expect(y.equals(tensor([[1, 4], [2, 5], [3, 6]]))).toBe(true);
     });
 
     it('1D input throws', () => {
-      expect(() => tensor([1, 2, 3]).transpose()).toThrow();
+      expect(() => transpose(tensor([1, 2, 3]))).toThrow();
     });
   });
 });

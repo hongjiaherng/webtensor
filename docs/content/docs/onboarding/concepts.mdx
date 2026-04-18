@@ -223,11 +223,9 @@ const wGrad = await engine.get(w.grad.id);
 
 You can combine forward and backward into one `compileGraph` call, which gives the engine full visibility to eliminate common subexpressions.
 
-### Why some backward closures return wrong shapes
+### Unbroadcasting: making gradients match input shapes
 
-The Add backward returns `[grad, grad]` — both shaped like the output. If the inputs had different shapes (broadcasting), the gradient for the smaller input should be summed over the broadcast dimensions (the "unbroadcast" reduction). This requires a `sum` op, which isn't implemented yet.
-
-This is the current single largest functional gap. **Any model trained with broadcasting will produce silently wrong gradients** until `sum`/`mean` are added and applied in every binary op's backward closure.
+When `add(a, b)` broadcasts — say `a:[3,1] + b:[1,4] → [3,4]` — the raw gradient at the output has shape `[3,4]`. But `a.grad` must be `[3,1]` and `b.grad` must be `[1,4]`. The helper `unbroadcastGrad(grad, targetShape)` in [ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) sums over axes where the target is size-1 (or missing, from leading broadcast dims), then reshapes back. Every binary op and `Expand` route their gradients through this helper.
 
 ### Gradient accumulation
 
@@ -235,7 +233,72 @@ If a tensor is used multiple times (e.g., `y = a * a`), `a.grad` is built up by 
 
 ---
 
-## 6. Reference counting and memory lifetime
+## 6. Placeholder inputs and `compile()` — compile once, feed many
+
+Everything you've read so far constructs a graph that bakes *data* into the IR as `Constant` nodes. That's fine for one-shot inference, but for training you need to reuse the same graph across many steps with different batches and different weight values. Webtensor splits tensor provenance into two classes:
+
+| Class | Built from | Goes into | When used |
+|------|-----------|-----------|-----------|
+| **Constant** (initializer) | `tensor([1,2,3])`, `zeros`, `ones`, `randn`, ... | `Graph.initializers` — data embedded in graph | Fixed values known at compile time |
+| **Placeholder** (input) | `placeholder(shape, dtype)` | `Graph.inputs` — no data at compile time | Values fed per-evaluation via `evaluate(graph, feeds)` |
+
+This mirrors ONNX exactly: initializers vs. graph inputs.
+
+### Low-level primitive
+
+```ts
+const x = placeholder([4, 2]);                          // graph input
+const W = placeholder([2, 8]); W.requiresGrad = true;   // trainable weight
+const y = matmul(x, W);
+const graph = compileGraph([y]);
+
+await engine.evaluate(graph, {
+  [x.id]: xBatchData,     // Float32Array of length 8
+  [W.id]: wData,          // Float32Array of length 16 (mutated by optimizer)
+});
+const yOut = await engine.get(y.id);
+```
+
+This works but leaks tensor IDs (`x.id`, `W.id`) into user code. For day-to-day use, prefer the high-level helpers.
+
+### High-level: `compile(fn, spec)` (JAX's `@jit` in TypeScript)
+
+```ts
+const forward = await compile(
+  ({ x, W, b }) => relu(add(matmul(x, W), b)),
+  { x: [4, 2], W: [2, 8], b: [8] },
+);
+const y = await forward({ x: xData, W: wData, b: bData });
+```
+
+`compile` creates placeholders internally, traces `fn` once, and returns a callable that takes a feed dict keyed by the spec's own field names. You never touch `.id`.
+
+### High-level: `grad(loss, param)` for training
+
+```ts
+const step = await compile(
+  ({ x, y, W, b }) => {
+    W.requiresGrad = true; b.requiresGrad = true;
+    const loss = mseLoss(add(matmul(x, W), b), y);
+    return { loss, dW: grad(loss, W), db: grad(loss, b) };
+  },
+  { x: [4, 2], y: [4, 1], W: [2, 1], b: [1] },
+);
+
+const opt = new SGD(0.1);
+for (let i = 0; i < 1000; i++) {
+  const { loss, dW, db } = await step({ x, y, W: wArr, b: bArr });
+  opt.step({ W: wArr, b: bArr }, { W: dW, b: db });
+}
+```
+
+`grad(loss, param)` runs `loss.backward()` internally (once per loss, cached) and returns `param.grad` — an unevaluated gradient tensor that compile includes in the graph. The user writes the training loop explicitly: log loss, clip grads, schedule learning rate, whatever — no hidden `trainer.fit()` semantics to debug.
+
+**Key design choice:** we don't provide a `trainStep` or `Trainer` wrapper. Every loop stays in user space, visible and customizable. This is the same philosophy as JAX core and PyTorch: small primitives over fat abstractions.
+
+---
+
+## 7. Reference counting and memory lifetime
 
 The engine manages tensor memory without a garbage collector. Here is how:
 
@@ -271,6 +334,7 @@ With these five models in mind, here is how to navigate unfamiliar code:
 | `compileGraph` in `core/compiler.ts` | Compile phase (#4) |
 | `Engine.evaluate` in `runtime/engine.ts` | Execute phase (#4) |
 | `ops.ts` — the backward closures | Autograd (#5) |
-| `refCounts`, `viewParents` in `engine.ts` | Memory lifetime (#6) |
+| `compile.ts` — `compile()`, `grad()` | Placeholders & training (#6) |
+| `refCounts`, `viewParents` in `engine.ts` | Memory lifetime (#7) |
 
 The most common maintainer task is **adding a new op**. The recipe ([Adding an op](/docs/advanced/adding-an-op)) applies all these models: define the forward with a `_ctx` and backward closure, write kernel(s) that handle strides, register in each backend's registry, add tests. Everything else follows from the structure described here.

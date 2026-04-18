@@ -1,7 +1,7 @@
 import { WASMKernel, handleOf, allocMeta, buildMatmulMetaData } from '../utils';
 
 export const matmulKernel: WASMKernel = (module, _node, inputs, outputs) => {
-  const meta = buildMatmulMetaData(inputs);
+  const meta = buildMatmulMetaData(inputs, outputs);
   const metaPtr = allocMeta(module, meta);
   try {
     const a = handleOf(inputs[0]);

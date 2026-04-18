@@ -1,88 +1,78 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { tensor, add } from '@webtensor/core';
-import { Backend } from '@webtensor/runtime';
-import { BACKENDS, runBinary } from '../helpers';
+import { tensor, add, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Add — ${name} Backend`, () => {
-    let backend: Backend;
-
+  describe(`add — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('same-shape vector (rank 1)', async () => {
-      const out = await runBinary(backend, add, [1, 2, 3, 4], [10, 20, 30, 40]);
-      expect(Array.from(out)).toEqual([11, 22, 33, 44]);
+    it('same-shape vectors', async () => {
+      const y = await run(add(tensor([1, 2, 3, 4]), tensor([10, 20, 30, 40])), { engine });
+      expect(y.equals(tensor([11, 22, 33, 44]))).toBe(true);
     });
 
     it('scalar broadcast [1] + [4]', async () => {
-      const out = await runBinary(backend, add, [5], [1, 2, 3, 4]);
-      expect(Array.from(out)).toEqual([6, 7, 8, 9]);
+      const y = await run(add(tensor([5]), tensor([1, 2, 3, 4])), { engine });
+      expect(y.equals(tensor([6, 7, 8, 9]))).toBe(true);
     });
 
     it('row broadcast [2,3] + [3]', async () => {
-      const out = await runBinary(
-        backend,
-        add,
-        [
-          [1, 2, 3],
-          [4, 5, 6],
-        ],
-        [10, 20, 30],
+      const y = await run(
+        add(tensor([[1, 2, 3], [4, 5, 6]]), tensor([10, 20, 30])),
+        { engine },
       );
-      expect(Array.from(out)).toEqual([11, 22, 33, 14, 25, 36]);
+      expect(y.equals(tensor([[11, 22, 33], [14, 25, 36]]))).toBe(true);
     });
 
-    it('rank 3: [2,2,3] + [3]', async () => {
-      const out = await runBinary(
-        backend,
-        add,
-        [
-          [
-            [1, 2, 3],
-            [4, 5, 6],
-          ],
-          [
-            [7, 8, 9],
-            [10, 11, 12],
-          ],
-        ],
-        [1, 2, 3],
+    it('rank 3 broadcast [2,2,3] + [3]', async () => {
+      const y = await run(
+        add(
+          tensor([
+            [[1, 2, 3], [4, 5, 6]],
+            [[7, 8, 9], [10, 11, 12]],
+          ]),
+          tensor([1, 2, 3]),
+        ),
+        { engine },
       );
-      expect(Array.from(out)).toEqual([2, 4, 6, 5, 7, 9, 8, 10, 12, 11, 13, 15]);
+      expect(
+        y.equals(
+          tensor([
+            [[2, 4, 6], [5, 7, 9]],
+            [[8, 10, 12], [11, 13, 15]],
+          ]),
+        ),
+      ).toBe(true);
     });
 
     it('large tensor (1024 elements)', async () => {
-      const a = Array.from({ length: 1024 }, () => 1.0);
-      const b = Array.from({ length: 1024 }, () => 2.0);
-      const out = await runBinary(backend, add, a, b);
-      expect(out.length).toBe(1024);
-      expect(out.every((v) => v === 3.0)).toBe(true);
+      const a = tensor(Array.from({ length: 1024 }, () => 1.0));
+      const b = tensor(Array.from({ length: 1024 }, () => 2.0));
+      const y = await run(add(a, b), { engine });
+      const expected = tensor(Array.from({ length: 1024 }, () => 3.0));
+      expect(y.equals(expected)).toBe(true);
     });
 
     it('zeros', async () => {
-      const out = await runBinary(backend, add, [0, 0, 0], [0, 0, 0]);
-      expect(Array.from(out)).toEqual([0, 0, 0]);
+      const y = await run(add(tensor([0, 0, 0]), tensor([0, 0, 0])), { engine });
+      expect(y.equals(tensor([0, 0, 0]))).toBe(true);
     });
 
     it('negatives cancel', async () => {
-      const out = await runBinary(backend, add, [-5, -3, 0, 3], [5, 3, 0, -3]);
-      expect(Array.from(out)).toEqual([0, 0, 0, 0]);
+      const y = await run(add(tensor([-5, -3, 0, 3]), tensor([5, 3, 0, -3])), { engine });
+      expect(y.equals(tensor([0, 0, 0, 0]))).toBe(true);
     });
   });
 });
 
-describe('Add — shape error (no backend)', () => {
-  it('incompatible shapes throw during graph construction', () => {
-    const a = tensor([
-      [1, 2, 3],
-      [4, 5, 6],
-    ]); // [2,3]
-    const b = tensor([
-      [1, 2],
-      [3, 4],
-    ]); // [2,2]
+describe('add — shape errors', () => {
+  it('incompatible shapes throw at graph-build time', () => {
+    const a = tensor([[1, 2, 3], [4, 5, 6]]);
+    const b = tensor([[1, 2], [3, 4]]);
     expect(() => add(a, b)).toThrow();
   });
 });

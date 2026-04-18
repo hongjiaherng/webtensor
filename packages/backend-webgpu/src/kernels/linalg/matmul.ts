@@ -1,5 +1,26 @@
 import source from './matmul.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer } from '../utils';
+import {
+  WebGPUKernel,
+  createMetaBuffer,
+  createUniformBuffer,
+  packMetaMatMulInput,
+  packBatchMeta,
+} from '../utils';
+
+function matmulDims(inputs: { shape: (number | null)[] }[], outputs: { shape: (number | null)[] }[]) {
+  const aShape = inputs[0].shape as number[];
+  const bShape = inputs[1].shape as number[];
+  const outShape = outputs[0].shape as number[];
+  const rankA = aShape.length;
+  const rankB = bShape.length;
+  const outRank = outShape.length;
+  const batchOutShape = outShape.slice(0, outRank - 2);
+  const M = aShape[rankA - 2];
+  const K = aShape[rankA - 1];
+  const N = bShape[rankB - 1];
+  const batchTotal = batchOutShape.reduce((acc, d) => acc * d, 1);
+  return { batchOutShape, M, K, N, batchTotal };
+}
 
 export const matmulKernel: WebGPUKernel = {
   createPipeline(device) {
@@ -14,10 +35,14 @@ export const matmulKernel: WebGPUKernel = {
   },
 
   buildBindGroupEntries(device, _node, inputs, outputs) {
-    // packMeta with no outShape: uses each tensor's own shape + strides + offset.
-    // This preserves the actual strides (e.g. swapped for a transposed view).
-    const metaABuf = createMetaBuffer(device, packMeta(inputs[0]));
-    const metaBBuf = createMetaBuffer(device, packMeta(inputs[1]));
+    const { batchOutShape, M, K, N } = matmulDims(inputs, outputs);
+    const metaA = packMetaMatMulInput(inputs[0], batchOutShape);
+    const metaB = packMetaMatMulInput(inputs[1], batchOutShape);
+    const batch = packBatchMeta(batchOutShape, M, K, N);
+
+    const metaABuf = createMetaBuffer(device, metaA);
+    const metaBBuf = createMetaBuffer(device, metaB);
+    const batchBuf = createUniformBuffer(device, batch);
     return {
       entries: [
         { binding: 0, resource: { buffer: inputs[0].storage.buffer as GPUBuffer } },
@@ -25,16 +50,14 @@ export const matmulKernel: WebGPUKernel = {
         { binding: 2, resource: { buffer: outputs[0].storage.buffer as GPUBuffer } },
         { binding: 3, resource: { buffer: metaABuf } },
         { binding: 4, resource: { buffer: metaBBuf } },
+        { binding: 5, resource: { buffer: batchBuf } },
       ],
-      tempBuffers: [metaABuf, metaBBuf],
+      tempBuffers: [metaABuf, metaBBuf, batchBuf],
     };
   },
 
-  getDispatch(_node, inputs, _outputs) {
-    const shapeA = inputs[0].shape as number[];
-    const shapeB = inputs[1].shape as number[];
-    const M = shapeA[shapeA.length - 2] ?? 1;
-    const N = shapeB[shapeB.length - 1];
-    return [Math.ceil(M / 8), Math.ceil(N / 8), 1];
+  getDispatch(_node, inputs, outputs) {
+    const { M, N, batchTotal } = matmulDims(inputs, outputs);
+    return [Math.ceil(M / 8), Math.ceil(N / 8), Math.max(batchTotal, 1)];
   },
 };

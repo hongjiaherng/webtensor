@@ -1,5 +1,16 @@
 import { describe, it, beforeAll } from 'vitest';
-import { tensor, compileGraph, add, sub, mul, div, matmul, relu } from '@webtensor/core';
+import {
+  tensor,
+  compileGraph,
+  add,
+  sub,
+  mul,
+  div,
+  matmul,
+  sum,
+  mean,
+} from '@webtensor/core';
+import { relu, softmax } from '@webtensor/nn';
 import { Engine, type Backend } from '@webtensor/runtime';
 import { CPUBackend } from '@webtensor/backend-cpu';
 import { WASMBackend } from '@webtensor/backend-wasm';
@@ -213,4 +224,181 @@ describe('Consistency: Composite pipeline relu(matmul(x,W) + b)', () => {
   it('WebGPU matches CPU', () => {
     expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]);
   });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('Consistency: ReduceSum axis 0', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        sum(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          0,
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: ReduceSum rank-3 axes [0,2]', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        sum(
+          tensor([
+            [
+              [1, 2],
+              [3, 4],
+            ],
+            [
+              [5, 6],
+              [7, 8],
+            ],
+          ]),
+          [0, 2],
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: ReduceMean all axes', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        mean(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: Softmax axis -1 rank 2', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        softmax(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          -1,
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: Softmax axis 0 rank 3', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        softmax(
+          tensor([
+            [
+              [1, 2],
+              [3, 4],
+            ],
+            [
+              [5, 6],
+              [7, 8],
+            ],
+          ]),
+          0,
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: Batched MatMul [2,2,3] × [2,3,2]', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        matmul(
+          tensor([
+            [
+              [1, 2, 3],
+              [4, 5, 6],
+            ],
+            [
+              [7, 8, 9],
+              [10, 11, 12],
+            ],
+          ]),
+          tensor([
+            [
+              [1, 0],
+              [0, 1],
+              [1, 1],
+            ],
+            [
+              [2, 0],
+              [0, 2],
+              [1, 1],
+            ],
+          ]),
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: 1D @ 1D (dot)', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () => matmul(tensor([1, 2, 3]), tensor([4, 5, 6])),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
 });

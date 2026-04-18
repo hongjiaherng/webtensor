@@ -1,34 +1,34 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { relu } from '@webtensor/core';
-import { Backend } from '@webtensor/runtime';
-import { BACKENDS, runUnary, expectClose } from '../helpers';
+import { tensor, run } from '@webtensor/core';
+import { relu } from '@webtensor/nn';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Relu — ${name} Backend`, () => {
-    let backend: Backend;
-
+  describe(`relu — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
     it('mixed values', async () => {
-      const out = await runUnary(backend, relu, [-2, -1, 0, 1, 2]);
-      expect(Array.from(out)).toEqual([0, 0, 0, 1, 2]);
+      const y = await run(relu(tensor([-2, -1, 0, 1, 2])), { engine });
+      expect(y.equals(tensor([0, 0, 0, 1, 2]))).toBe(true);
     });
 
     it('all positive (pass-through)', async () => {
-      const out = await runUnary(backend, relu, [0.1, 1.5, 3.0, 100.0]);
-      expectClose(out, [0.1, 1.5, 3.0, 100.0]);
+      const y = await run(relu(tensor([0.1, 1.5, 3.0, 100.0])), { engine });
+      expect(y.allclose(tensor([0.1, 1.5, 3.0, 100.0]))).toBe(true);
     });
 
     it('all negative (zero out)', async () => {
-      const out = await runUnary(backend, relu, [-0.1, -1.5, -100.0]);
-      expect(Array.from(out)).toEqual([0, 0, 0]);
+      const y = await run(relu(tensor([-0.1, -1.5, -100.0])), { engine });
+      expect(y.equals(tensor([0, 0, 0]))).toBe(true);
     });
 
     it('all zeros', async () => {
-      const out = await runUnary(backend, relu, [0, 0, 0, 0]);
-      expect(Array.from(out)).toEqual([0, 0, 0, 0]);
+      const y = await run(relu(tensor([0, 0, 0, 0])), { engine });
+      expect(y.equals(tensor([0, 0, 0, 0]))).toBe(true);
     });
 
     it('large tensor (1024 elements: 512 neg + 512 pos)', async () => {
@@ -36,15 +36,17 @@ BACKENDS.forEach(({ name, create }) => {
         ...Array.from({ length: 512 }, () => -1.0),
         ...Array.from({ length: 512 }, () => 1.0),
       ];
-      const out = await runUnary(backend, relu, data);
-      expect(out.length).toBe(1024);
-      expect(out.slice(0, 512).every((v) => v === 0)).toBe(true);
-      expect(out.slice(512).every((v) => v === 1)).toBe(true);
+      const expected = tensor([
+        ...Array.from({ length: 512 }, () => 0),
+        ...Array.from({ length: 512 }, () => 1.0),
+      ]);
+      const y = await run(relu(tensor(data)), { engine });
+      expect(y.equals(expected)).toBe(true);
     });
 
     it('boundary at zero', async () => {
-      const out = await runUnary(backend, relu, [-0.0001, 0.0, 0.0001]);
-      expectClose(out, [0, 0, 0.0001]);
+      const y = await run(relu(tensor([-0.0001, 0.0, 0.0001])), { engine });
+      expect(y.allclose(tensor([0, 0, 0.0001]))).toBe(true);
     });
   });
 });

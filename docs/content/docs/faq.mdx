@@ -72,7 +72,7 @@ When `add(a, b)` is called with `a.shape = [3, 1]` and `b.shape = [1, 4]`, the o
 
 The same mechanism drives `expand()`: it sets stride to `0` on the expanded dimension and increases `shape`. No allocation.
 
-The catch is in **autograd**: the gradient for a broadcast dimension must be summed back to the original shape (called "unbroadcast"). That reduction requires a `sum` op, which isn't implemented yet. Until it is, binary op gradients are silently wrong when shapes differ.
+On the backward pass, the gradient for a broadcast dimension must be summed back to the original shape ("unbroadcast"). The helper `unbroadcastGrad(grad, inputShape)` in `ops.ts` handles this using the `sum` kernel; every binary op and `Expand` route their gradients through it.
 
 ---
 
@@ -103,11 +103,51 @@ This design means you can combine forward and backward into one `compileGraph([l
 
 ---
 
-### Why are some backward closures silently wrong?
+### How do I train a model?
 
-Binary ops (`add`, `sub`, `mul`, `div`) don't implement gradient unbroadcasting yet. When `a.shape = [3]` and `b.shape = [1]`, the forward output is `[3]`. The backward for `b` should be `sum(grad, axis=0)` to reduce it back to `[1]`. Without a `sum` op, the backward just returns `grad` at shape `[3]` — wrong shape, wrong values.
+Use `compile()` + `grad()` from `@webtensor/core`. Write a plain function, declare the shape of each input, and `compile` traces it into a callable:
 
-This is documented in [Autograd](/docs/onboarding/autograd) and tracked in [Bugs and gaps](/docs/onboarding/bugs-and-gaps). Fixing it requires implementing `sum`/`mean` first (the highest-priority roadmap item).
+```ts
+import {
+  compile, grad, mseLoss, matmul, add, relu, randn, SGD,
+} from '@webtensor/core';
+import '@webtensor/backend-cpu';
+
+const step = await compile(
+  ({ x, y, W, b }) => {
+    W.requiresGrad = true; b.requiresGrad = true;
+    const loss = mseLoss(add(matmul(x, W), b), y);
+    return { loss, dW: grad(loss, W), db: grad(loss, b) };
+  },
+  { x: [32, 784], y: [32, 10], W: [784, 10], b: [10] },
+);
+
+// Weights live outside the graph as Float32Arrays you own.
+const W = new Float32Array(784 * 10); /* init randomly */
+const b = new Float32Array(10);
+const opt = new SGD(0.01);
+
+for (let i = 0; i < 1000; i++) {
+  const { loss, dW, db } = await step({ x: xBatch, y: yBatch, W, b });
+  opt.step({ W, b }, { W: dW, b: db });
+  if (i % 100 === 0) console.log(`step ${i} loss ${loss[0]}`);
+}
+```
+
+The training loop stays in user space. You can log any intermediate, clip gradients, change the lr, switch optimizers, or run a second `compile()` for evaluation — no hidden trainer class, no hooks to override.
+
+---
+
+### What is `placeholder()` and when should I use it?
+
+`placeholder(shape, dtype, device)` is the low-level primitive underneath `compile()`. It creates a `Tensor` whose data is supplied at `engine.evaluate(graph, feeds)` time rather than baked into the graph as a `Constant`. In modern frameworks it corresponds to:
+
+- **TensorFlow 1.x**: `tf.placeholder` (exactly — where the name comes from).
+- **TensorFlow 2.x**: traced `@tf.function` arguments.
+- **JAX**: `@jit`-decorated function arguments.
+- **PyTorch**: doesn't have one — PyTorch is eager-only, so every tensor is both structure and value.
+
+For day-to-day use, prefer `compile(fn, spec)` — it creates placeholders under the hood and keeps the user code tensor-ID-free. Reach for raw `placeholder()` + `compileGraph` + `evaluate(feeds)` only when you need something `compile()` can't express — e.g. custom graph stitching, ONNX export, or writing your own compiler.
 
 ---
 

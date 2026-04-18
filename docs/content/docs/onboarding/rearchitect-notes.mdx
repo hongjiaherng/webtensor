@@ -7,41 +7,17 @@ Forward-looking. For each significant future change, what it touches across the 
 
 ---
 
-## 1. Reductions (sum / mean / max / argmax)
+## 1. ~~Reductions (sum / mean / max / argmax)~~ — DONE
 
-**Why first:** unblocks gradient unbroadcasting, loss functions, normalization layers, accuracy metrics. Highest-leverage single change in the codebase.
+Shipped: `sum`, `mean` on all three backends with axis / keepdim support, broadcast-aware autograd via `unbroadcastGrad`, and Expand backward. Remaining: `max`, `min`, `argmax`, `argmin` (not blocking anything critical).
 
-**Touches:**
-
-- `packages/core/src/ops.ts` — add `sum(a, axes?, keepDims?)` and `mean(...)` op functions with backward closures (broadcast back the gradient).
-- `packages/core/src/shape.ts` — shape inference for axis-reductions.
-- All three backends — new `Sum` (and `Mean` if not done as `Sum / N`) kernel:
-  - CPU: straightforward — outer loop over output, inner loop accumulating along reduce axes.
-  - WASM: same as CPU, in Rust.
-  - WebGPU: tree reduction inside a workgroup with `workgroupBarrier()`; partial outputs combined in a second pass for large reductions.
-- `packages/backend-*/src/kernels/registry.ts` — register new kernels.
-- Tests — `tests/ops/sum.test.ts`, parity tests, gradient tests.
-
-**Then immediately:** apply unbroadcast in `add` / `sub` / `mul` / `div` backward. Implement `Expand` backward (sum over expanded axes).
-
-**Risk:** the WebGPU implementation needs care — naive serial accumulation in a single thread is slow; a proper hierarchical reduction is the right pattern.
+**WebGPU note:** the v1 reduction kernel uses a serial inner loop (one invocation per output). A proper hierarchical workgroup reduction with `workgroupBarrier()` is a future optimization — needed when reductions become a bottleneck.
 
 ---
 
-## 2. Batched MatMul (rank ≥ 3)
+## 2. ~~Batched MatMul (rank ≥ 3)~~ — DONE
 
-**Why:** every transformer, every batched MLP, every conv-via-im2col needs this.
-
-**Touches:**
-
-- `packages/core/src/ops.ts` — fix shape inference in `matmul()` (search for the placeholder comment). Output shape = `broadcast(a.shape[:-2], b.shape[:-2]) + [a.shape[-2], b.shape[-1]]`.
-- CPU matmul kernel — extra outer loop over batch indices.
-- WASM matmul kernel — same in Rust.
-- WebGPU matmul shader — 3D dispatch; batch index in `gid.z`.
-- **Prerequisite:** WebGPU `TensorMeta` redesign (next entry) before any batched op pushes rank above 8.
-- Backward — current `(grad @ Bᵀ, Aᵀ @ grad)` works if `transpose` and `matmul` both handle batch dims. Verify gradients of broadcast-batched matmul.
-
-**Risk:** broadcast semantics for the leading batch dims (PyTorch-style). Don't forget to broadcast in the backward as well.
+Shipped with PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast over leading dims. WebGPU caps `batch_rank` at 6 to stay within the rank-8 TensorMeta ceiling (see §3). Backward uses `unbroadcastGrad` on batch dims, covering broadcast-batched cases correctly.
 
 ---
 
@@ -85,18 +61,17 @@ Forward-looking. For each significant future change, what it touches across the 
 
 ---
 
-## 5. Loss functions and optimizers
+## 5. Loss functions and optimizers — PARTIALLY DONE
 
-**Blocked on reductions** (need `mean`, `sum`).
+**Shipped:** `mseLoss` in `packages/core/src/nn.ts`, `SGD` (with optional momentum) in `packages/core/src/optim.ts`, `makeParam(data, shape)` helper, `compile()` + `grad()` primitives in `packages/core/src/compile.ts`. End-to-end XOR MLP convergence test in `tests/graph/train_loop.test.ts`.
 
-**Touches (new code, mostly composable from existing ops):**
+**Decided design:** weights live as plain `Float32Array`s outside the graph, fed in each step through `Placeholder` nodes. The user writes the training loop explicitly; no `Trainer` wrapper (deliberately — see the FAQ on HuggingFace/Lightning antipatterns). `makeParam` is a thin helper pairing data with a shape; we do not have a rich `Parameter` class.
 
-- A new module — possibly `packages/core/src/nn/loss.ts` and `nn/optim.ts`.
-- `mse_loss(pred, target)` = `mean(pow(sub(pred, target), 2))`.
-- `cross_entropy(logits, target)` requires `log_softmax` first — that requires reductions plus a numerically stable implementation.
-- Optimizers — need to either expose in-place ops (`add_`, `mul_`) or have the user replace the weight tensor each step. The simpler short-term path is the latter (functional update); in-place ops require more engine changes.
-
-**Open question:** do weights live as `Tensor` (in core) or as a separate `Parameter` wrapper? The latter mirrors PyTorch and gives a clean place to attach optimizer state.
+**Remaining:**
+- `logSoftmax(a, axis)` — numerically stable via `x - logsumexp(x, axis)`. Backward: `grad - softmax(x) * sum(grad, axis, keepdim=true)`.
+- `crossEntropy(logits, target)` — combined `logSoftmax` + NLL.
+- `bceLoss(pred, target)` for binary classification.
+- `Adam` optimizer next to `SGD` in `optim.ts`.
 
 ---
 
@@ -158,19 +133,78 @@ WASM with threads (atomics + shared memory) and WebGPU with multiple queue submi
 
 ---
 
+## 9. Training loop architecture — DONE (compile-once pattern)
+
+### 9a. Placeholder inputs — compile once, feed many (SHIPPED)
+
+Previously `compileGraph` treated every tensor as a `Constant` (initializer). Now `placeholder(shape, dtype, device)` in `core/src/ops.ts` creates a `Tensor` with `_ctx.op = 'Placeholder'` and no data. `compileGraph` recognises `Placeholder` nodes and adds their output IDs to `Graph.inputs` instead of `Graph.initializers`. `Engine.evaluate(graph, feeds?: Record<string, ArrayBufferView>)` writes feed data at the start and throws on missing feeds.
+
+**Training loop pattern with placeholders:**
+
+```ts
+const W = placeholder([784, 128]);   // no data yet
+const x = placeholder([32, 784]);    // batch input
+const y = matmul(x, W);
+// ... define loss ...
+loss.backward();
+const trainGraph = compileGraph([loss, W.grad]);
+
+let wData = randomInit([784, 128]);
+for (let step = 0; step < 1000; step++) {
+  const xData = nextBatch();
+  await engine.evaluate(trainGraph, { [W.id]: wData, [x.id]: xData });
+  const gradData = await engine.get(W.grad.id) as Float32Array;
+  // SGD step
+  for (let i = 0; i < wData.length; i++) wData[i] -= lr * gradData[i];
+}
+```
+
+Compile once. No recompilation per step. Weight data lives as a `Float32Array` outside the graph and is mutated by the optimizer.
+
+This is how JAX works, and it avoids the PyTorch "mutable Parameter" graph-rewrite machinery. For day-to-day use, the `compile(fn, spec)` helper in `packages/core/src/compile.ts` hides placeholder/feed mechanics entirely — users never touch tensor IDs. The raw placeholder primitive is the escape hatch for ONNX export / custom compilers.
+
+### 9b. In-place weight updates (optimizer step)
+
+For the placeholder training loop, the optimizer step is pure host code: read gradients, apply update, feed updated weights next step. No in-place GPU ops needed.
+
+For a more PyTorch-like feel where weights stay "in" the graph, you would need:
+- `engine.update(id, newData)` — overwrite a retained tensor's buffer without reloading from IR
+- This requires marking weights as "mutable constants" — a flag separate from `requiresGrad`
+
+For now, the placeholder approach is cleaner and sufficient. The `SGD` class in `packages/core/src/optim.ts` implements the step as a pure TypeScript loop over host `Float32Array`s.
+
+### 9c. ONNX op naming throughout
+
+All op names in `_ctx.op` and backend registries follow ONNX op names. This is already true for existing ops (`Add`, `MatMul`, `Relu`, etc.). New ops must also use ONNX names:
+
+| User-facing function | ONNX op name in IR | Notes |
+|---|---|---|
+| `reduceSum(a, axes, keepdim)` | `ReduceSum` | ONNX 13+ |
+| `reduceMean(a, axes, keepdim)` | `ReduceMean` | ONNX 13+ |
+| `softmax(a, axis)` | `Softmax` | ONNX 13+ |
+| `placeholder(shape, dtype)` | `Placeholder` | webtensor-specific; maps to ONNX graph inputs |
+| Future `concat(tensors, axis)` | `Concat` | |
+| Future `gather(data, indices, axis)` | `Gather` | |
+
+---
+
 ## Summary table — order of attack
 
-| #   | Change                                           | Unblocks                                            | Estimated scope       |
+| #   | Change                                           | Unblocks                                            | Status                |
 | --- | ------------------------------------------------ | --------------------------------------------------- | --------------------- |
-| 1   | Reductions (sum/mean)                            | Unbroadcast in autograd; loss functions; expand bwd | 2-3 days × 3 backends |
-| 2   | Apply unbroadcast in autograd                    | Correct gradients with broadcasting                 | 0.5 day               |
-| 3   | Implement missing backwards (Expand, Slice, Abs) | Full coverage of existing ops                       | 1-2 days              |
-| 4   | WebGPU rank > 8 guard                            | Eliminates silent corruption                        | 1 hour                |
-| 5   | WebGPU `TensorMeta` redesign                     | Batched matmul on WebGPU                            | 1-2 days              |
-| 6   | Batched matmul                                   | Real models (transformers, batched MLPs)            | 3-4 days              |
-| 7   | Loss + optimizer                                 | Actual training loop                                | 2-3 days              |
-| 8   | Int32 / bool kernels                             | Embedding lookups, masking                          | 3-5 days × 3 backends |
-| 9   | Distribution hardening + CI                      | Confidence in publish                               | 1-2 days              |
-| 10  | ONNX import                                      | Pretrained models                                   | weeks                 |
+| 1   | Reductions (ReduceSum/ReduceMean)                | Unbroadcast in autograd; loss functions; expand bwd | ✅ done               |
+| 2   | Apply unbroadcast in autograd                    | Correct gradients with broadcasting                 | ✅ done               |
+| 3   | Batched matmul (PyTorch semantics incl. 1D)      | Real models (transformers, batched MLPs)            | ✅ done               |
+| 4   | Softmax                                          | Classification tasks, cross-entropy loss            | ✅ done               |
+| 5   | Placeholder inputs + engine feeds                | Compile-once training loop                          | ✅ done               |
+| 6   | SGD optimizer (host-side)                        | Basic training                                      | ✅ done               |
+| 7   | `compile()` + `grad()` high-level helpers        | Training DX matches JAX `@jit`                       | ✅ done               |
+| 8   | `logSoftmax`, `crossEntropy`, `bceLoss`, `Adam`  | Classification training, production optimizers      | TODO                  |
+| 9   | Missing backwards (Slice via pad/scatter, Abs)   | Full autograd coverage                              | TODO                  |
+| 10  | Int32 / bool kernels                             | Embedding lookups, masking                          | TODO (scaffolded)     |
+| 11  | `concat`, `gather`, `split`                      | Residual connections, attention, embeddings        | TODO                  |
+| 12  | WebGPU `TensorMeta` rank > 8 redesign            | Removes rank ceiling                                | TODO                  |
+| 13  | Distribution hardening + CI                      | Confidence in publish                               | TODO                  |
+| 14  | ONNX import/export (`packages/onnx`)             | Pretrained models                                   | TODO (weeks)          |
 
 For overall direction see [Roadmap](/docs/roadmap). For every concrete bug see [Bugs and gaps](/docs/onboarding/bugs-and-gaps).

@@ -1,40 +1,28 @@
-import { describe, it, beforeAll } from 'vitest';
-import { exp, tensor, compileGraph } from '@webtensor/core';
-import { Engine, Backend } from '@webtensor/runtime';
-import { BACKENDS, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { exp, tensor, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Exp — ${name}`, () => {
-    let backend: Backend;
+  describe(`exp — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('exp of zero is 1', async () => {
-      const y = exp(tensor([0, 0, 0]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [1, 1, 1]);
+    it('exp(0) = 1', async () => {
+      const y = await run(exp(tensor([0, 0, 0])), { engine });
+      expect(y.allclose(tensor([1, 1, 1]))).toBe(true);
     });
 
-    it('exp of 1 is e', async () => {
-      const y = exp(tensor([1]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [Math.E], 1e-4);
+    it('exp(1) = e', async () => {
+      const y = await run(exp(tensor([1])), { engine });
+      expect(y.allclose(tensor([Math.E]), { atol: 1e-4 })).toBe(true);
     });
 
     it('exp of negative values', async () => {
-      const y = exp(tensor([-1, -2]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [Math.exp(-1), Math.exp(-2)], 1e-4);
+      const y = await run(exp(tensor([-1, -2])), { engine });
+      expect(y.allclose(tensor([Math.exp(-1), Math.exp(-2)]), { atol: 1e-4 })).toBe(true);
     });
   });
 });

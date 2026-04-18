@@ -1,73 +1,52 @@
-import { describe, it, beforeAll } from 'vitest';
-import { tensor } from '@webtensor/core';
-import { Backend } from '@webtensor/runtime';
-import { BACKENDS, runGraph, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { tensor, transpose, contiguous, slice, reshape, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Contiguous — ${name}`, () => {
-    let backend: Backend;
+  describe(`contiguous — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('contiguous on already-contiguous tensor (identity)', async () => {
-      const out = await runGraph(backend, tensor([1, 2, 3, 4]).contiguous());
-      expectClose(out, [1, 2, 3, 4]);
+    it('on an already-contiguous tensor (identity)', async () => {
+      const y = await run(contiguous(tensor([1, 2, 3, 4])), { engine });
+      expect(y.equals(tensor([1, 2, 3, 4]))).toBe(true);
     });
 
-    it('contiguous on transposed view reorders data', async () => {
-      // [[1,2,3],[4,5,6]] transposed → [[1,4],[2,5],[3,6]]
-      // flat contiguous: [1,4,2,5,3,6]
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-        ])
-          .transpose()
-          .contiguous(),
+    it('on a transposed view reorders data', async () => {
+      const y = await run(
+        contiguous(transpose(tensor([[1, 2, 3], [4, 5, 6]]))),
+        { engine },
       );
-      expectClose(out, [1, 4, 2, 5, 3, 6]);
+      expect(y.equals(tensor([[1, 4], [2, 5], [3, 6]]))).toBe(true);
     });
 
-    it('contiguous on sliced view', async () => {
-      // [[1,2,3],[4,5,6]] slice rows [1,2) cols [0,3) → [[4,5,6]]
-      const a = tensor([
-        [1, 2, 3],
-        [4, 5, 6],
-      ]);
-      const sliced = a.slice([1, 0], [2, 3]);
-      const out = await runGraph(backend, sliced.contiguous());
-      expectClose(out, [4, 5, 6]);
-    });
-
-    it('reshape after transpose (auto-contiguous copy)', async () => {
-      // [[1,2,3],[4,5,6]] transposed → [[1,4],[2,5],[3,6]] (non-contiguous)
-      // reshape to [6] should auto-copy → [1,4,2,5,3,6]
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-        ])
-          .transpose()
-          .reshape([6]),
+    it('on a sliced view', async () => {
+      const y = await run(
+        contiguous(slice(tensor([[1, 2, 3], [4, 5, 6]]), [1, 0], [2, 3])),
+        { engine },
       );
-      expectClose(out, [1, 4, 2, 5, 3, 6]);
+      expect(y.equals(tensor([[4, 5, 6]]))).toBe(true);
     });
 
-    it('reshape after transpose matches explicit contiguous + reshape', async () => {
-      // Both paths should produce the same result
-      const data = [
-        [1, 2, 3],
-        [4, 5, 6],
-      ];
-      const autoPath = await runGraph(backend, tensor(data).transpose().reshape([6]));
-      const explicitPath = await runGraph(
-        backend,
-        tensor(data).transpose().contiguous().reshape([6]),
+    it('reshape on a transposed tensor auto-materializes', async () => {
+      const y = await run(
+        reshape(transpose(tensor([[1, 2, 3], [4, 5, 6]])), [6]),
+        { engine },
       );
-      expectClose(autoPath, Array.from(explicitPath));
+      expect(y.equals(tensor([1, 4, 2, 5, 3, 6]))).toBe(true);
+    });
+
+    it('auto-contiguous reshape matches explicit contiguous + reshape', async () => {
+      const data = [[1, 2, 3], [4, 5, 6]];
+      const auto = await run(reshape(transpose(tensor(data)), [6]), { engine });
+      const explicit = await run(
+        reshape(contiguous(transpose(tensor(data))), [6]),
+        { engine },
+      );
+      expect(auto.equals(explicit)).toBe(true);
     });
   });
 });

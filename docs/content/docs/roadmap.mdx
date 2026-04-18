@@ -9,46 +9,47 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 
 ## Priority: Next Three
 
-### 1. Batched MatMul (rank ≥ 3, max 64)
+### 1. Dtype Kernels (int32 + bool)
 
-**What it is:** Extend MatMul from strictly 2D (`[M,K] × [K,N]`) to arbitrary batch dimensions (`[..., M, K] × [..., K, N] → [..., M, N]`), with a hard rank ceiling of 64 matching PyTorch's `MAX_TENSORIMPL_DIMS`.
+**What it is:** Extend op kernels beyond `float32` to support `int32` (and `bool`). The dtype infrastructure is already in place — `DType`, `bytesPerElement`, `typedArrayCtor`, dtype-aware `buf()`, and the `dtypeSuffix()` scaffolding in WASM utils. What's missing is per-dtype kernel implementations.
 
-**Why it matters:** Real models — transformers, CNNs with batched projections — use batched matmul constantly. Without it, webtensor can only prototype toy 2D problems.
-
-**What needs to change:**
-
-- **Max-rank constraint** — add a guard at `allocate()` in all three backends throwing if `shape.length > 64`. One line each, do this first so the constraint is enforced everywhere from day one.
-- **CPU kernel** — loop over all batch dimensions (iterate the flat batch index, compute batch offsets via strides), then call the existing 2D inner loop. Strides already support arbitrary layout, so no storage changes are needed.
-- **WASM kernel** — same logic in Rust. The `matmul_raw` function signature needs batch dimension parameters or a stride-based interface matching the CPU approach.
-- **WebGPU kernel** — the current shader hardcodes 2D. Replace the `@compute` entry point with a 3D dispatch: `x=rows, y=cols, z=batch_flat`. The batch flat index is decomposed into per-axis coordinates using the existing `TensorMeta` strides for all dims except the last two. The last two dims remain the `M/K/N` contraction. The `TensorMeta` uniform (8 shape + 8 stride slots) already supports up to rank 8; for rank > 8 a different packing strategy is needed — either increase the slot count or restrict batched matmul to ≤ 8 total dims as a documented limitation.
-- **Core `ops.ts`** — update the shape-inference logic in `matmul()` to handle batch dims and validate that the last two dims of A and B are compatible.
-- **Tests** — add `[2,2,3] × [2,3,4] → [2,2,4]` and `[3,1,4,2] × [3,1,2,5] → [3,1,4,5]` cases to `tests/ops/matmul.test.ts`.
-
----
-
-### 2. Reduce Ops (Sum / Mean)
-
-**What it is:** Dimension-reducing operations — `sum(a, axes?, keepdim?)` and `mean(a, axes?, keepdim?)`.
-
-**Why it matters:** Reductions are critical for loss functions (MSE, CrossEntropy), gradient unbroadcasting in autograd, and normalization layers. Without them, training is impossible.
+**Why it matters:** `int32` is needed for index ops (Gather, Scatter, embedding lookups — required for NLP / classification). `bool` is needed for masks and logical ops.
 
 **What needs to change:**
 
-- **Core op** in `ops.ts` — define `sum()` and `mean()`. `mean` can be composed from `sum + div`.
-- **CPU kernel** — loop over output elements, accumulate over reduced dimensions using strided indexing.
-- **WASM kernel** — same logic in Rust.
-- **WebGPU kernel** — each thread computes one output element by accumulating over the reduction space.
-- **Backward** — `sum` backward: `expand(grad, input.shape)`. `mean` backward: same, divided by count.
+- **CPU kernels** — each existing op branches on `inputs[0].dtype`. Because `buf()` already returns a `TypedArray` union, most kernels just need to substitute an accumulator type and rename `Float32Array` → `typedArrayCtor(dtype)(...)` for temp buffers. Comparison ops (`Eq`, `Lt`, `Gt`, `Ne`) produce `bool` outputs.
+- **WASM kernels** — add per-dtype Rust functions (`add_i32_strided`, `add_u8_strided`, etc.). The existing `dtypeSuffix(dtype)` helper in `src/kernels/utils.ts` already drives function-name lookup — add the matching `_i32_` / `_u8_` entries on `WebtensorWasmModule` and wire them up. Meta layouts are already dtype-independent.
+- **WebGPU kernels** — WGSL has no generics. Ship one `.wgsl` per dtype per op; TS wrappers select pipeline by `inputs[0].dtype`.
+- **Promotion rules** — adopt PyTorch rules: `add(int32, float32) → float32`, etc. Define once in a `resultDType(a, b)` helper.
 
 ---
 
-### 3. Dtype Kernels
+### 2. Loss functions and training modules
 
-**What it is:** Extend op kernels beyond `float32` to support `int32` (and eventually `bool`). The dtype infrastructure (type system, `allocate()`, `read()`, `write()`, `TypedArray` union) is already in place — what's missing is per-dtype kernel support.
+**What it is:** A `@webtensor/core/nn` (or similar) module with `mse_loss`, `cross_entropy`, `log_softmax`, plus a `Parameter` convention so weights can be managed uniformly.
 
-**Why it matters:** `int32` is needed for index ops (Gather, Scatter, embedding lookups). `bool` is needed for masks and logical ops.
+**Why it matters:** Today training uses `reduceMean(mul(diff, diff))` ad-hoc. Named losses + `log_softmax` unlock classification training. This also paves the way for an Adam optimizer and richer schedulers.
 
-**Current state:** All three dtypes (`float32`, `int32`, `bool`) can be allocated and round-tripped. Only `float32` has op kernels.
+**What needs to change:**
+
+- **`log_softmax`** in `ops.ts` — numerically stable: `x - logsumexp(x, axis)`. Backward: `grad - softmax(x) * sum(grad, axis, keepdim=true)`.
+- **`mse_loss(pred, target)` = `reduceMean(pow(sub(pred, target), 2))`** — one-liner alias.
+- **`cross_entropy(logits, target)`** — combined `log_softmax` + negative-log-likelihood.
+- **`optim.Adam`** — another host-side optimizer next to `SGD` in `packages/core/src/optim.ts`. Keeps the existing placeholder-fed pattern (weights live as `Float32Array`s, not inside the graph).
+
+---
+
+### 3. Concat / Gather / Slice backward
+
+**What it is:** Fill the remaining gaps in the op set that unblock real models: `concat(tensors, axis)`, `gather(data, indices, axis)`, and a backward for `slice` (requires `Pad` or `Scatter`).
+
+**Why it matters:** `concat` is everywhere (skip connections, attention). `gather` with int32 indices enables embedding lookups. `slice` backward is needed for any training code that slices into tensors.
+
+**What needs to change:**
+
+- **`concat`** — kernel copies N input tensors into one output along the concat axis. Backward: slice the gradient back into N pieces.
+- **`gather`** — blocked on int32 kernels (indices must be int32). Kernel reads `data[indices[i]]` per output element. Backward: `scatter_add`.
+- **`slice` backward** — implement `pad` / `scatter` to write the gradient into a zero tensor at the slice region.
 
 ---
 
@@ -60,8 +61,7 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 | Sub                       | [x] | [x]  |  [x]   |
 | Mul                       | [x] | [x]  |  [x]   |
 | Div                       | [x] | [x]  |  [x]   |
-| MatMul (2D)               | [x] | [x]  |  [x]   |
-| MatMul (rank ≥ 3, max 64) | [ ] | [ ]  |  [ ]   |
+| MatMul (1D/2D + batched)  | [x] | [x]  |  [x]   |
 | Transpose                 | [x] | [x]  |  [x]   |
 | Relu                      | [x] | [x]  |  [x]   |
 | Neg                       | [x] | [x]  |  [x]   |
@@ -72,37 +72,47 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 | Pow                       | [x] | [x]  |  [x]   |
 | Sigmoid                   | [x] | [x]  |  [x]   |
 | Tanh                      | [x] | [x]  |  [x]   |
-| Softmax                   | [ ] | [ ]  |  [ ]   |
+| Softmax                   | [x] | [x]  |  [x]   |
+| ReduceSum                 | [x] | [x]  |  [x]   |
+| ReduceMean                | [x] | [x]  |  [x]   |
 | Reshape                   | [x] | [x]  |  [x]   |
 | Slice                     | [x] | [x]  |  [x]   |
 | Concat                    | [ ] | [ ]  |  [ ]   |
-| Reduce (Sum / Mean)       | [ ] | [ ]  |  [ ]   |
+| Gather                    | [ ] | [ ]  |  [ ]   |
+| LogSoftmax                | [ ] | [ ]  |  [ ]   |
 
 ## Autograd
 
-| Feature                    | Done |
-| -------------------------- | :--: |
-| Add backward               | [x]  |
-| Mul backward               | [x]  |
-| MatMul backward            | [x]  |
-| Transpose backward         | [x]  |
-| Relu backward — CPU + WASM | [x]  |
-| Relu backward — WebGPU     | [x]  |
-| Sub backward               | [x]  |
-| Div backward               | [x]  |
-| Reduce backward            | [ ]  |
-| Sigmoid / Tanh backward    | [x]  |
-| Softmax backward           | [ ]  |
+| Feature                          | Done |
+| -------------------------------- | :--: |
+| Add / Sub / Mul / Div backward   | [x]  |
+| Broadcast-aware unbroadcast      | [x]  |
+| MatMul backward (incl. batched)  | [x]  |
+| Transpose / Permute backward     | [x]  |
+| Relu backward (all 3 backends)   | [x]  |
+| Reshape / Squeeze / Unsqueeze    | [x]  |
+| ReduceSum / ReduceMean backward  | [x]  |
+| Softmax backward                 | [x]  |
+| Expand backward                  | [x]  |
+| Sigmoid / Tanh backward          | [x]  |
+| Exp / Log / Sqrt / Pow backward  | [x]  |
+| Slice backward (needs pad/scatter) | [ ]  |
+| Abs backward (needs sign)        | [ ]  |
 
 ## Training
 
-| Feature                 | Done |
-| ----------------------- | :--: |
-| Loss: MSE               | [ ]  |
-| Loss: CrossEntropy      | [ ]  |
-| Optimizer: SGD          | [ ]  |
-| Optimizer: Adam         | [ ]  |
-| Training loop in `core` | [ ]  |
+| Feature                        | Done |
+| ------------------------------ | :--: |
+| Loss: MSE (`mseLoss`)          | [x]  |
+| Loss: CrossEntropy             | [ ]  |
+| Loss: BCE                      | [ ]  |
+| Optimizer: SGD (incl. momentum) | [x]  |
+| Optimizer: Adam                | [ ]  |
+| Placeholder inputs + feeds     | [x]  |
+| `compile(fn, spec)` helper     | [x]  |
+| `grad(loss, param)` helper     | [x]  |
+| End-to-end XOR MLP converges   | [x]  |
+| Dropout + train/eval mode      | [ ]  |
 
 ## Dtypes
 

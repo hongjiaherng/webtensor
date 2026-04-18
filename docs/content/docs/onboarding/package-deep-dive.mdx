@@ -43,10 +43,13 @@ For the boundary contract see [Architecture](/docs/advanced/architecture). This 
 **Key files:**
 
 - [src/tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts) — `Tensor` class and `backward()`.
-- [src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — every op function and its backward closure.
-- [src/tensor_init.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor_init.ts) — `tensor()`, `zeros()`, `ones()`.
-- [src/compiler.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compiler.ts) — `compileGraph(outputs)`.
-- [src/shape.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/shape.ts) — `broadcastShapes`, `shapeSize`.
+- [src/ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) — every op function (incl. `sum`, `mean`, `softmax`, `matmul`, `placeholder`) and its backward closure. `unbroadcastGrad` helper for broadcast-aware binary backward.
+- [src/tensor_init.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor_init.ts) — `tensor()`, `zeros()`, `ones()`, `rand()`, `randn()`, `zerosLike()`, `onesLike()`, `randnLike()`.
+- [src/compiler.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compiler.ts) — `compileGraph(outputs)`. Classifies Constants as `initializers` and Placeholders as `inputs`.
+- [src/compile.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/compile.ts) — high-level user API: `compile(fn, spec)` (JAX `@jit`-style) and `grad(loss, param)`.
+- [src/nn.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/nn.ts) — `mseLoss`, `makeParam`, `Parameter` interface.
+- [src/optim.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/optim.ts) — `Optimizer` interface, `SGD` (host-side, optional momentum).
+- [src/shape.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/shape.ts) — `broadcastShapes`, `shapeSize`, `reduceOutputShape`, `normalizeAxes`.
 - [src/types.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/types.ts) — `OpContext<T>`, `Device`.
 
 **The `Tensor` class** ([tensor.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/tensor.ts)) carries:
@@ -178,16 +181,23 @@ Tests run in **browser mode** via Vitest + Playwright + Chromium. Use `bun run t
 
 ## Public API surface
 
-For end users, the entry point is `@webtensor/core`. A typical app imports:
+For end users, the entry point is `@webtensor/core`. A typical training app imports:
 
 ```ts
-import { tensor, add, mul, /* ...other ops... */, compileGraph, Engine } from '@webtensor/core';
+import {
+  compile, grad,              // high-level: JAX-style jit + differentiation
+  randn, zeros,                // factory functions
+  matmul, add, relu, sum, mean, softmax,   // ops
+  mseLoss, SGD,                // loss + optimizer
+} from '@webtensor/core';
 import '@webtensor/backend-cpu';     // pick one backend (or several)
 import '@webtensor/backend-wasm';
 import '@webtensor/backend-webgpu';
 ```
 
-The backend imports are **side-effect imports** — they call `registerBackend(device, factory)` at module load. After that, `Engine.create('cpu' | 'wasm' | 'webgpu')` works.
+The backend imports are **side-effect imports** — they call `registerBackend(device, factory)` at module load. After that, `Engine.create('cpu' | 'wasm' | 'webgpu')` works, and `compile(...)` can create its own engine internally via the `device` option.
+
+The low-level primitives (`placeholder`, `compileGraph`, `Engine`) are also exported as an escape hatch for advanced cases (custom compilation, ONNX round-tripping, embedded benchmarking).
 
 ---
 

@@ -24,7 +24,7 @@
     },
     "packages/backend-cpu": {
       "name": "@webtensor/backend-cpu",
-      "version": "0.0.0",
+      "version": "0.3.2",
       "dependencies": {
         "@webtensor/ir": "workspace:*",
         "@webtensor/runtime": "workspace:*",
@@ -32,7 +32,7 @@
     },
     "packages/backend-wasm": {
       "name": "@webtensor/backend-wasm",
-      "version": "0.2.1",
+      "version": "0.3.2",
       "dependencies": {
         "@webtensor/ir": "workspace:*",
         "@webtensor/runtime": "workspace:*",
@@ -44,7 +44,7 @@
     },
     "packages/backend-webgpu": {
       "name": "@webtensor/backend-webgpu",
-      "version": "0.0.0",
+      "version": "0.3.2",
       "dependencies": {
         "@webtensor/ir": "workspace:*",
         "@webtensor/runtime": "workspace:*",
@@ -55,21 +55,36 @@
     },
     "packages/core": {
       "name": "@webtensor/core",
-      "version": "0.0.0",
+      "version": "0.3.2",
       "dependencies": {
-        "@webtensor/ir": "workspace:*",
-        "@webtensor/runtime": "workspace:*",
+        "@webtensor/ir": "workspace:^",
+        "@webtensor/runtime": "workspace:^",
       },
     },
     "packages/ir": {
       "name": "@webtensor/ir",
-      "version": "0.0.0",
+      "version": "0.3.2",
+    },
+    "packages/nn": {
+      "name": "@webtensor/nn",
+      "version": "0.3.2",
+      "dependencies": {
+        "@webtensor/core": "workspace:^",
+      },
+    },
+    "packages/optim": {
+      "name": "@webtensor/optim",
+      "version": "0.3.2",
+      "dependencies": {
+        "@webtensor/core": "workspace:^",
+        "@webtensor/runtime": "workspace:^",
+      },
     },
     "packages/runtime": {
       "name": "@webtensor/runtime",
-      "version": "0.0.0",
+      "version": "0.3.2",
       "dependencies": {
-        "@webtensor/ir": "workspace:*",
+        "@webtensor/ir": "workspace:^",
       },
     },
   },
@@ -213,6 +228,10 @@
     "@webtensor/core": ["@webtensor/core@workspace:packages/core"],
 
     "@webtensor/ir": ["@webtensor/ir@workspace:packages/ir"],
+
+    "@webtensor/nn": ["@webtensor/nn@workspace:packages/nn"],
+
+    "@webtensor/optim": ["@webtensor/optim@workspace:packages/optim"],
 
     "@webtensor/runtime": ["@webtensor/runtime@workspace:packages/runtime"],
 

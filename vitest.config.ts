@@ -41,6 +41,8 @@ export default defineConfig({
       '@webtensor/runtime': resolve(__dirname, 'packages/runtime/src/index.ts'),
       '@webtensor/ir': resolve(__dirname, 'packages/ir/src/index.ts'),
       '@webtensor/core': resolve(__dirname, 'packages/core/src/index.ts'),
+      '@webtensor/nn': resolve(__dirname, 'packages/nn/src/index.ts'),
+      '@webtensor/optim': resolve(__dirname, 'packages/optim/src/index.ts'),
       '@webtensor/backend-cpu': resolve(__dirname, 'packages/backend-cpu/src/index.ts'),
       '@webtensor/backend-wasm': resolve(__dirname, 'packages/backend-wasm/src/index.ts'),
       '@webtensor/backend-webgpu': resolve(__dirname, 'packages/backend-webgpu/src/index.ts'),

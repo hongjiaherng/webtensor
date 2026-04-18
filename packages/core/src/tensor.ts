@@ -1,4 +1,5 @@
 import { DType } from '@webtensor/ir';
+import { TypedArray } from '@webtensor/runtime';
 import { Device, OpContext } from './types';
 import {
   add,
@@ -7,7 +8,6 @@ import {
   div,
   matmul,
   transpose,
-  relu,
   reshape,
   slice,
   contiguous,
@@ -23,13 +23,15 @@ import {
   sqrt,
   abs,
   pow,
-  sigmoid,
-  tanh,
   clone,
   detach,
+  sum,
+  mean,
 } from './ops';
 import { computeContiguousStrides } from '@webtensor/ir';
 import { shapeSize } from './shape';
+import { equal, allclose, AllcloseOptions } from './compare';
+import { run, RunOptions } from './run';
 
 let tensorIdCounter = 0;
 
@@ -54,6 +56,14 @@ export class Tensor {
   requiresGrad: boolean;
   grad?: Tensor;
   _ctx?: OpContext<Tensor>;
+
+  /**
+   * For trainable parameters (created via factory functions with `requiresGrad: true`):
+   * the raw data that `compile()` feeds into the graph each call and that the
+   * optimizer mutates in place via `opt.step()`. Users rarely touch this directly.
+   * Not set for constants or for tensors that are results of ops.
+   */
+  data?: TypedArray;
 
   constructor(options: TensorOptions) {
     this.id = `t_${tensorIdCounter++}`;
@@ -174,9 +184,6 @@ export class Tensor {
   transpose(): Tensor {
     return transpose(this);
   }
-  relu(): Tensor {
-    return relu(this);
-  }
   reshape(shape: number[]): Tensor {
     return reshape(this, shape);
   }
@@ -222,16 +229,42 @@ export class Tensor {
   pow(exponent: number): Tensor {
     return pow(this, exponent);
   }
-  sigmoid(): Tensor {
-    return sigmoid(this);
-  }
-  tanh(): Tensor {
-    return tanh(this);
-  }
   clone(): Tensor {
     return clone(this);
   }
   detach(): Tensor {
     return detach(this);
+  }
+  sum(axis?: number | number[], keepdim: boolean = false): Tensor {
+    return sum(this, axis, keepdim);
+  }
+  mean(axis?: number | number[], keepdim: boolean = false): Tensor {
+    return mean(this, axis, keepdim);
+  }
+  zeroGrad(): void {
+    this.grad = undefined;
+  }
+
+  /**
+   * Eagerly evaluate this tensor and return a new `Tensor` with `.data`
+   * populated. Equivalent to `run(this, options)` — see `./run.ts`.
+   *
+   * ```ts
+   * const y = await add(tensor([1, 2]), tensor([3, 4])).run();
+   * console.log(y.data);   // Float32Array [4, 6]
+   * ```
+   */
+  run(options?: RunOptions): Promise<Tensor> {
+    return run(this, options);
+  }
+
+  /** Strict equality (same shape + exact values). See `compare.equal`. */
+  equals(other: Tensor): boolean {
+    return equal(this, other);
+  }
+
+  /** Numeric closeness (same shape + values within tolerances). See `compare.allclose`. */
+  allclose(other: Tensor, opts?: AllcloseOptions): boolean {
+    return allclose(this, other, opts);
   }
 }

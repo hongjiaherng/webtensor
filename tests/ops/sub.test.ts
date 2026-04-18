@@ -1,42 +1,40 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { sub } from '@webtensor/core';
-import { Backend } from '@webtensor/runtime';
-import { BACKENDS, runBinary, expectClose } from '../helpers';
+import { tensor, sub, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Sub — ${name} Backend`, () => {
-    let backend: Backend;
-
+  describe(`sub — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
     it('basic subtraction', async () => {
-      const out = await runBinary(backend, sub, [10, 20, 30], [1, 2, 3]);
-      expect(Array.from(out)).toEqual([9, 18, 27]);
+      const y = await run(sub(tensor([10, 20, 30]), tensor([1, 2, 3])), { engine });
+      expect(y.equals(tensor([9, 18, 27]))).toBe(true);
     });
 
-    it('scalar broadcast [3] - [1]', async () => {
-      const out = await runBinary(backend, sub, [10, 20, 30], [5]);
-      expect(Array.from(out)).toEqual([5, 15, 25]);
+    it('scalar broadcast', async () => {
+      const y = await run(sub(tensor([10, 20, 30]), tensor([5])), { engine });
+      expect(y.equals(tensor([5, 15, 25]))).toBe(true);
     });
 
     it('negative result', async () => {
-      const out = await runBinary(backend, sub, [1, 2, 3], [4, 5, 6]);
-      expect(Array.from(out)).toEqual([-3, -3, -3]);
+      const y = await run(sub(tensor([1, 2, 3]), tensor([4, 5, 6])), { engine });
+      expect(y.equals(tensor([-3, -3, -3]))).toBe(true);
     });
 
     it('large tensor (1024 elements)', async () => {
-      const a = Array.from({ length: 1024 }, () => 5.0);
-      const b = Array.from({ length: 1024 }, () => 3.0);
-      const out = await runBinary(backend, sub, a, b);
-      expect(out.length).toBe(1024);
-      expect(out.every((v) => v === 2.0)).toBe(true);
+      const a = tensor(Array.from({ length: 1024 }, () => 5.0));
+      const b = tensor(Array.from({ length: 1024 }, () => 3.0));
+      const y = await run(sub(a, b), { engine });
+      expect(y.equals(tensor(Array.from({ length: 1024 }, () => 2.0)))).toBe(true);
     });
 
     it('self-subtraction yields zeros', async () => {
-      const out = await runBinary(backend, sub, [1.5, 2.5, 3.5], [1.5, 2.5, 3.5]);
-      expectClose(out, [0, 0, 0]);
+      const y = await run(sub(tensor([1.5, 2.5, 3.5]), tensor([1.5, 2.5, 3.5])), { engine });
+      expect(y.allclose(tensor([0, 0, 0]))).toBe(true);
     });
   });
 });

@@ -1,40 +1,30 @@
-import { describe, it, beforeAll } from 'vitest';
-import { log, tensor, compileGraph } from '@webtensor/core';
-import { Engine, Backend } from '@webtensor/runtime';
-import { BACKENDS, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { log, tensor, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Log — ${name}`, () => {
-    let backend: Backend;
+  describe(`log — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('log of 1 is 0', async () => {
-      const y = log(tensor([1, 1, 1]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [0, 0, 0]);
+    it('log(1) = 0', async () => {
+      const y = await run(log(tensor([1, 1, 1])), { engine });
+      expect(y.allclose(tensor([0, 0, 0]))).toBe(true);
     });
 
-    it('log of e is 1', async () => {
-      const y = log(tensor([Math.E]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [1], 1e-4);
+    it('log(e) = 1', async () => {
+      const y = await run(log(tensor([Math.E])), { engine });
+      expect(y.allclose(tensor([1]), { atol: 1e-4 })).toBe(true);
     });
 
     it('log of positive values', async () => {
-      const y = log(tensor([2, 10, 100]));
-      const graph = compileGraph([y]);
-      const engine = new Engine(backend);
-      await engine.evaluate(graph);
-      const out = (await engine.get(y.id)) as Float32Array;
-      expectClose(out, [Math.log(2), Math.log(10), Math.log(100)], 1e-4);
+      const y = await run(log(tensor([2, 10, 100])), { engine });
+      expect(
+        y.allclose(tensor([Math.log(2), Math.log(10), Math.log(100)]), { atol: 1e-4 }),
+      ).toBe(true);
     });
   });
 });

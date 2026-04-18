@@ -3,9 +3,9 @@ title: 'webtensor'
 description: 'A tensor library that runs entirely in the browser — WebGPU acceleration, eager autograd, and a torch-like API in TypeScript.'
 ---
 
-**webtensor** is a multi-backend tensor library built for the browser. Train, visualize, and run inference with WebGPU acceleration as a TypeScript library. Backends: CPU (TypeScript), WASM (Rust via wasm-pack), and WebGPU (WGSL compute shaders). All three share full kernel parity across 16 ops.
+**webtensor** is a multi-backend tensor library built for the browser. Train, visualize, and run inference with WebGPU acceleration as a TypeScript library. Backends: CPU (TypeScript), WASM (Rust via wasm-pack), and WebGPU (WGSL compute shaders). All three share full kernel parity across 19 ops.
 
-> **Status: active development — building the foundation.**
+> **Status: active development — foundation done.** Broadcast-aware autograd, PyTorch-style `matmul` (incl. batched), `sum`/`mean`/`softmax`, JAX-style `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
 
 ---
 

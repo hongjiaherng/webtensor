@@ -1,78 +1,56 @@
-import { describe, it, beforeAll } from 'vitest';
-import { tensor } from '@webtensor/core';
-import { Backend } from '@webtensor/runtime';
-import { BACKENDS, runGraph, expectClose } from '../helpers';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { tensor, reshape, contiguous, add, matmul, run } from '@webtensor/core';
+import { Engine } from '@webtensor/runtime';
+import { BACKENDS } from '../helpers';
 
 BACKENDS.forEach(({ name, create }) => {
-  describe(`Reshape — ${name}`, () => {
-    let backend: Backend;
+  describe(`reshape — ${name}`, () => {
+    let engine: Engine;
     beforeAll(async () => {
-      backend = await create();
+      engine = new Engine(await create());
     });
 
-    it('[6] → reshape([2,3]) → contiguous', async () => {
-      const out = await runGraph(backend, tensor([1, 2, 3, 4, 5, 6]).reshape([2, 3]).contiguous());
-      expectClose(out, [1, 2, 3, 4, 5, 6]);
-    });
-
-    it('[2,3] → reshape([3,2]) → contiguous', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-        ])
-          .reshape([3, 2])
-          .contiguous(),
+    it('[6] → [2,3]', async () => {
+      const y = await run(
+        contiguous(reshape(tensor([1, 2, 3, 4, 5, 6]), [2, 3])),
+        { engine },
       );
-      expectClose(out, [1, 2, 3, 4, 5, 6]);
+      expect(y.equals(tensor([[1, 2, 3], [4, 5, 6]]))).toBe(true);
     });
 
-    it('[2,3] → reshape([6]) → add [6]', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2, 3],
-          [4, 5, 6],
-        ])
-          .reshape([6])
-          .add(tensor([10, 20, 30, 40, 50, 60])),
+    it('[2,3] → [3,2]', async () => {
+      const y = await run(
+        contiguous(reshape(tensor([[1, 2, 3], [4, 5, 6]]), [3, 2])),
+        { engine },
       );
-      expectClose(out, [11, 22, 33, 44, 55, 66]);
+      expect(y.equals(tensor([[1, 2], [3, 4], [5, 6]]))).toBe(true);
     });
 
-    it('[2,2,2] → reshape([4,2]) → contiguous', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [
-            [1, 2],
-            [3, 4],
-          ],
-          [
-            [5, 6],
-            [7, 8],
-          ],
-        ])
-          .reshape([4, 2])
-          .contiguous(),
+    it('[2,3] → reshape([6]) + add [6]', async () => {
+      const y = await run(
+        add(reshape(tensor([[1, 2, 3], [4, 5, 6]]), [6]), tensor([10, 20, 30, 40, 50, 60])),
+        { engine },
       );
-      expectClose(out, [1, 2, 3, 4, 5, 6, 7, 8]);
+      expect(y.equals(tensor([11, 22, 33, 44, 55, 66]))).toBe(true);
     });
 
-    it('[4,2] → reshape([2,4]) → matmul([4,1]) → [2,1]', async () => {
-      const out = await runGraph(
-        backend,
-        tensor([
-          [1, 2],
-          [3, 4],
-          [5, 6],
-          [7, 8],
-        ])
-          .reshape([2, 4])
-          .matmul(tensor([[1], [1], [1], [1]])),
+    it('[2,2,2] → [4,2]', async () => {
+      const y = await run(
+        contiguous(reshape(tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]), [4, 2])),
+        { engine },
       );
-      expectClose(out, [10, 26]);
+      expect(y.equals(tensor([[1, 2], [3, 4], [5, 6], [7, 8]]))).toBe(true);
+    });
+
+    it('reshape → matmul pipeline', async () => {
+      const y = await run(
+        matmul(
+          reshape(tensor([[1, 2], [3, 4], [5, 6], [7, 8]]), [2, 4]),
+          tensor([[1], [1], [1], [1]]),
+        ),
+        { engine },
+      );
+      expect(y.equals(tensor([[10], [26]]))).toBe(true);
     });
   });
 });

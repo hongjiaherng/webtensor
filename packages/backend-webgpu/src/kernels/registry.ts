@@ -14,6 +14,9 @@ import { powKernel } from './unary/pow';
 import { sigmoidKernel } from './unary/sigmoid';
 import { tanhKernel } from './unary/tanh';
 import { matmulKernel } from './linalg/matmul';
+import { reduceSumKernel } from './reduce/reduceSum';
+import { reduceMeanKernel } from './reduce/reduceMean';
+import { softmaxKernel } from './activation/softmax';
 import { contiguousKernel } from './memory/contiguous';
 
 export type { WebGPUKernel };
@@ -34,5 +37,8 @@ export const webgpuKernelRegistry = new Map<string, WebGPUKernel>([
   ['Sigmoid', sigmoidKernel],
   ['Tanh', tanhKernel],
   ['MatMul', matmulKernel],
+  ['ReduceSum', reduceSumKernel],
+  ['ReduceMean', reduceMeanKernel],
+  ['Softmax', softmaxKernel],
   ['Contiguous', contiguousKernel],
 ]);

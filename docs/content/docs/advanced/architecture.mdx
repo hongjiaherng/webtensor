@@ -73,7 +73,9 @@ Broadcasting is implemented via stride-0: a dimension that is broadcast (size 1 
 
 ## Engine Execution Model
 
-`Engine.evaluate(graph)` is always async — it awaits each `backend.execute()` call. The `Backend.execute()` interface returns `void | Promise<void>`: CPU and WASM return synchronously, WebGPU returns `device.queue.onSubmittedWorkDone()`. The engine always awaits, so callers get correct behavior on all backends without special-casing.
+`Engine.evaluate(graph, feeds?)` is always async — it awaits each `backend.execute()` call. The `Backend.execute()` interface returns `void | Promise<void>`: CPU and WASM return synchronously, WebGPU returns `device.queue.onSubmittedWorkDone()`. The engine always awaits, so callers get correct behavior on all backends without special-casing.
+
+The optional `feeds: Record<valueName, ArrayBufferView>` supplies data for `Placeholder` nodes. When the engine encounters a `Placeholder`, it allocates an output tensor and writes the matching feed buffer; a missing feed throws. This pattern enables compile-once training loops: the graph is built once, weights and batches are fed fresh per step.
 
 `Engine` can be constructed two ways:
 

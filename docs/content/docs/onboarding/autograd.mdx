@@ -24,7 +24,7 @@ Every op function in [ops.ts](https://github.com/hongjiaherng/webtensor/blob/mai
 }
 ```
 
-Backward is **optional**. Ops without a backward closure (`Abs`, `Slice`, `Expand`) silently skip in the backward pass — gradients won't reach inputs through them. See the missing-gradients table below.
+Backward is **optional**. Ops without a backward closure (`Abs`, `Slice`) silently skip in the backward pass — gradients won't reach inputs through them. See the missing-gradients table below.
 
 ### `Tensor.backward()`
 
@@ -58,18 +58,28 @@ All ops live in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webte
 
 ### Binary
 
-| Op  | Backward formula                | Status                                                                                                      |
-| --- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Add | `(grad, grad)`                  | ⚠️ **Missing unbroadcast** — wrong when shapes differ. See [Bugs and gaps](/docs/onboarding/bugs-and-gaps). |
-| Sub | `(grad, -grad)`                 | ⚠️ **Missing unbroadcast.**                                                                                 |
-| Mul | `(grad * b, grad * a)`          | ⚠️ Inherits the same broadcast issue (no explicit NOTE comment yet).                                        |
-| Div | `(grad / b, -grad * a / (b*b))` | ⚠️ **Missing unbroadcast.**                                                                                 |
+All binary op backward closures apply `unbroadcastGrad(grad, input.shape)` — a helper that uses `sum()` over any axes the input was broadcast on, then reshapes back to the input's shape. This means broadcasted gradients are correct; bias-like shapes (`[1]`, `[N]` added to `[B, N]`) receive the right scalar/vector gradient.
+
+| Op  | Backward formula                         | Status |
+| --- | ---------------------------------------- | ------ |
+| Add | `(unbroadcast(grad, a.shape), unbroadcast(grad, b.shape))`           | ✅    |
+| Sub | `(unbroadcast(grad, a.shape), unbroadcast(-grad, b.shape))`          | ✅    |
+| Mul | `(unbroadcast(grad·b, a.shape), unbroadcast(grad·a, b.shape))`       | ✅    |
+| Div | `(unbroadcast(grad/b, a.shape), unbroadcast(-grad·a/(b·b), b.shape))` | ✅    |
 
 ### Linalg
 
-| Op     | Backward formula         | Status                                                 |
-| ------ | ------------------------ | ------------------------------------------------------ |
-| MatMul | `(grad @ Bᵀ, Aᵀ @ grad)` | ✅ for 2D. ❌ batched matmul unimplemented in forward. |
+| Op     | Backward formula         | Status                                                                                                     |
+| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| MatMul | `(grad @ Bᵀ, Aᵀ @ grad)`, with `unbroadcastGrad` on batch dims | ✅ for 1D·1D, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast. |
+
+### Reductions and activations
+
+| Op         | Backward formula                                                        | Status |
+| ---------- | ----------------------------------------------------------------------- | ------ |
+| ReduceSum  | Reshape grad to input-shape-with-reduced-dims-as-1, then `expand` to original shape (materialised via `contiguous`) | ✅    |
+| ReduceMean | Same as ReduceSum, scaled by `1 / reduce_size`                          | ✅    |
+| Softmax    | `s · (grad − sum(grad·s, axis, keepdim=true))` where `s = softmax(a)`   | ✅    |
 
 ### Views (zero-copy in forward; backward inverses the view)
 
@@ -83,7 +93,7 @@ All ops live in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webte
 | Squeeze   | `reshape(grad, original_shape)` | ✅                                                                                  |
 | Permute   | `permute(grad, inverse_axes)`   | ✅                                                                                  |
 | Flatten   | (delegates to reshape)          | ✅                                                                                  |
-| Expand    | (none)                          | ❌ **Missing.** Needs sum-reduction over expanded dims.                             |
+| Expand    | `unbroadcastGrad(grad, input.shape)` — sums over expanded dims | ✅                                                                  |
 
 ### Memory
 
@@ -109,15 +119,15 @@ All ops live in [packages/core/src/ops.ts](https://github.com/hongjiaherng/webte
 
 ---
 
-## The unbroadcast problem (high-impact)
+## Unbroadcasting (the broadcast-shape reducer)
 
-When you write `add(a, b)` with `a.shape = [3]` and `b.shape = [1]`, the forward output has shape `[3]` (broadcast). The current backward returns `(grad, grad)` — both shape `[3]`. But `b` should receive a gradient of shape `[1]` — the sum across the broadcast axis.
+When `add(a, b)` has `a.shape = [3, 1]` and `b.shape = [1, 4]`, the forward output is `[3, 4]`. The gradient flowing backward is shape `[3, 4]` too — but `a.grad` must be `[3, 1]` and `b.grad` must be `[1, 4]`. The private helper `unbroadcastGrad(grad, targetShape)` in [ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) handles this:
 
-The closures in [ops.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/core/src/ops.ts) document this with `// NOTE: missing unbroadcast — requires ReduceSum op`.
+1. Figure out which axes are leading (prepended by broadcasting) or size-1 in the target but larger in the grad.
+2. Call `sum(grad, thoseAxes, keepdim=true)`.
+3. `reshape` back to the target shape if any leading dims needed removing.
 
-The fix: a `sum`/`reduceSum` kernel that reduces along specified axes. The backward becomes `(unbroadcast(grad, a.shape), unbroadcast(grad, b.shape))`. Until reduce lands, **any model trained with broadcasting will produce wrong gradients silently**. See [Bugs and gaps](/docs/onboarding/bugs-and-gaps).
-
-The same gap blocks `Expand` backward (sum across expanded dims).
+Every binary op and `Expand` route their gradients through this helper. MatMul applies it only on the batch dims (the contraction gradient is already the right shape by construction).
 
 ---
 
@@ -134,6 +144,26 @@ This also means tensor IDs are **process-global** — when Vitest runs multiple 
 - **No gradient checkpointing.** The whole forward graph stays alive until backward runs.
 - **No higher-order gradients.** The backward graph itself has `_ctx` set on each tensor, so in principle you could call `.backward()` again on a gradient — but the broadcasting/expand bugs propagate, and there's no test coverage.
 - **No `no_grad` context.** Use `detach()` to break the gradient chain explicitly.
-- **No optimizer.** The user is responsible for applying gradients to weights — there's no `SGD` / `Adam` yet (see [Roadmap](/docs/roadmap)).
+- **Optimizer:** `SGD` (with optional momentum) is in `packages/core/src/optim.ts`. No `Adam` yet.
+
+---
+
+## The preferred user-facing API: `compile()` + `grad()`
+
+In day-to-day usage you rarely call `.backward()` directly. The idiomatic pattern is `compile(fn, spec)` + `grad(loss, param)` from `packages/core/src/compile.ts`:
+
+```ts
+const step = await compile(
+  ({ x, y, W, b }) => {
+    W.requiresGrad = true;
+    b.requiresGrad = true;
+    const loss = mseLoss(add(matmul(x, W), b), y);
+    return { loss, dW: grad(loss, W), db: grad(loss, b) };
+  },
+  { x: [4, 2], y: [4, 1], W: [2, 1], b: [1] },
+);
+```
+
+`grad(loss, param)` runs `loss.backward()` once (it is cached per-loss), then returns `param.grad`. The compiled function returns the materialized gradients as `Float32Array`s that you can feed into any optimizer. No `compileGraph`, no `engine.get(id)`, no tensor-ID tracking. See [FAQ: how do I train a model?](/docs/faq).
 
 Continue with [State of the project](/docs/onboarding/state-of-the-project).

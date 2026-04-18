@@ -1,13 +1,7 @@
-// Generic strided MatMul kernel (2-D only: A[M,K] × B[K,N] = Out[M,N]).
-//
-// Inputs A and B may have arbitrary strides and offsets (e.g. a transposed
-// view).  The output is always written contiguously row-major.
-//
-// TensorMeta uniform — same 80-byte layout as all other kernels:
-//   rank, offset, padding×2, shape[0..7] (2×vec4), strides[0..7] (2×vec4)
-//
-// For 2-D tensors: shape[0]=rows, shape[1]=cols
-//                  strides[0]=row_stride, strides[1]=col_stride
+// Batched strided MatMul kernel.
+// A shape: [...batchOut, M, K]   (packed with broadcast-aligned batch strides)
+// B shape: [...batchOut, K, N]   (packed with broadcast-aligned batch strides)
+// Out: contiguous [...batchOut, M, N]
 
 struct TensorMeta {
   rank:    u32,
@@ -18,36 +12,67 @@ struct TensorMeta {
   strides: array<vec4<u32>, 2>,
 };
 
-@group(0) @binding(0) var<storage, read>       a:      array<f32>;
-@group(0) @binding(1) var<storage, read>       b:      array<f32>;
-@group(0) @binding(2) var<storage, read_write> out:    array<f32>;
+struct BatchMeta {
+  batch_rank: u32,
+  M:          u32,
+  K:          u32,
+  N:          u32,
+  batch_out_shape: array<vec4<u32>, 2>,
+};
+
+@group(0) @binding(0) var<storage, read>       a:        array<f32>;
+@group(0) @binding(1) var<storage, read>       b:        array<f32>;
+@group(0) @binding(2) var<storage, read_write> out:      array<f32>;
 @group(0) @binding(3) var<uniform>             u_meta_a: TensorMeta;
 @group(0) @binding(4) var<uniform>             u_meta_b: TensorMeta;
+@group(0) @binding(5) var<uniform>             u_batch:  BatchMeta;
 
-@compute @workgroup_size(8, 8)
+fn a_shape(ax: u32) -> u32 { return u_meta_a.shape[ax / 4u][ax % 4u]; }
+fn a_stride(ax: u32) -> u32 { return u_meta_a.strides[ax / 4u][ax % 4u]; }
+fn b_stride(ax: u32) -> u32 { return u_meta_b.strides[ax / 4u][ax % 4u]; }
+fn batch_shape(ax: u32) -> u32 { return u_batch.batch_out_shape[ax / 4u][ax % 4u]; }
+
+@compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let row = gid.x;
   let col = gid.y;
-
-  let M = u_meta_a.shape[0u][0u];   // A rows
-  let K = u_meta_a.shape[0u][1u];   // A cols = B rows
-  let N = u_meta_b.shape[0u][1u];   // B cols
+  let b_idx = gid.z;
+  let M = u_batch.M;
+  let K = u_batch.K;
+  let N = u_batch.N;
+  let br = u_batch.batch_rank;
 
   if (row >= M || col >= N) { return; }
 
-  let a_row_stride = u_meta_a.strides[0u][0u];
-  let a_col_stride = u_meta_a.strides[0u][1u];
-  let b_row_stride = u_meta_b.strides[0u][0u];
-  let b_col_stride = u_meta_b.strides[0u][1u];
-  let a_off        = u_meta_a.offset;
-  let b_off        = u_meta_b.offset;
+  var batch_total: u32 = 1u;
+  for (var i = 0u; i < br; i++) { batch_total *= batch_shape(i); }
+  if (b_idx >= max(batch_total, 1u)) { return; }
+
+  // Decompose b_idx over batch_out_shape (innermost last)
+  var rem = b_idx;
+  var a_base: u32 = u_meta_a.offset;
+  var b_base: u32 = u_meta_b.offset;
+  for (var d = br; d > 0u; d--) {
+    let ax = d - 1u;
+    let dim = batch_shape(ax);
+    let coord = rem % dim;
+    rem = rem / dim;
+    a_base += coord * a_stride(ax);
+    b_base += coord * b_stride(ax);
+  }
+
+  let a_row_s = a_stride(br);
+  let a_col_s = a_stride(br + 1u);
+  let b_row_s = b_stride(br);
+  let b_col_s = b_stride(br + 1u);
 
   var sum = 0.0f;
   for (var k = 0u; k < K; k++) {
-    let a_idx = a_off + row * a_row_stride + k * a_col_stride;
-    let b_idx = b_off + k   * b_row_stride + col * b_col_stride;
-    sum += a[a_idx] * b[b_idx];
+    let ai = a_base + row * a_row_s + k * a_col_s;
+    let bi = b_base + k * b_row_s + col * b_col_s;
+    sum += a[ai] * b[bi];
   }
 
-  out[row * N + col] = sum;
+  let out_mat = M * N;
+  out[b_idx * out_mat + row * N + col] = sum;
 }

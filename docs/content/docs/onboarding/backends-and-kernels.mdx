@@ -26,26 +26,36 @@ Every backend follows the same shape:
 
 ## Kernel parity matrix
 
-All three backends register exactly the **same 16 kernels**:
+All three backends register exactly the **same 19 kernels**:
 
-| Op           | CPU | WASM | WebGPU | Notes                                                                                                                    |
-| ------------ | --- | ---- | ------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `Add`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
-| `Sub`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
-| `Mul`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
-| `Div`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                                     |
-| `MatMul`     | ✅  | ✅   | ✅     | **2D only.** Batched (rank ≥ 3) not yet implemented in any backend; see [Bugs and gaps](/docs/onboarding/bugs-and-gaps). |
-| `Relu`       | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `ReluGrad`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.                         |
-| `Neg`        | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `Exp`        | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `Log`        | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `Sqrt`       | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `Abs`        | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                                  |
-| `Pow`        | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                                 |
-| `Sigmoid`    | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `Tanh`       | ✅  | ✅   | ✅     | Strided.                                                                                                                 |
-| `Contiguous` | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                                       |
+| Op           | CPU | WASM | WebGPU | Notes                                                                                                           |
+| ------------ | --- | ---- | ------ | --------------------------------------------------------------------------------------------------------------- |
+| `Add`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                            |
+| `Sub`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                            |
+| `Mul`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                            |
+| `Div`        | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                            |
+| `MatMul`     | ✅  | ✅   | ✅     | PyTorch semantics: 1D·1D dot, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast (batch rank ≤ 6 on WebGPU).   |
+| `ReduceSum`  | ✅  | ✅   | ✅     | Strided. Attrs: `axes: number[]`, `keepdim: 0\|1`. One thread / workgroup invocation per output element.        |
+| `ReduceMean` | ✅  | ✅   | ✅     | Same layout as ReduceSum, divides by reduce-axis product.                                                       |
+| `Softmax`    | ✅  | ✅   | ✅     | Numerically stable (max-subtract); one thread per slice. Attr: `axis: number`.                                  |
+| `Relu`       | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `ReluGrad`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.                |
+| `Neg`        | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `Exp`        | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `Log`        | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `Sqrt`       | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `Abs`        | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                         |
+| `Pow`        | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                        |
+| `Sigmoid`    | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `Tanh`       | ✅  | ✅   | ✅     | Strided.                                                                                                        |
+| `Contiguous` | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                              |
+
+Additionally, the engine handles two ops entirely in-process (no backend kernel):
+
+| Op            | Where handled         | Notes                                                                                        |
+| ------------- | --------------------- | -------------------------------------------------------------------------------------------- |
+| `Constant`    | `Engine.evaluate`     | Writes the attached `data` buffer to a freshly-allocated tensor.                             |
+| `Placeholder` | `Engine.evaluate`     | Writes the corresponding `feeds[id]` data; throws if the feed is missing.                    |
 
 **View ops** (`Transpose`, `Reshape`, `View`, `Slice`, `Permute`, `Expand`, `Squeeze`, `Unsqueeze`) are handled inside the engine — they never reach a backend kernel. See [System walkthrough](/docs/onboarding/system-walkthrough).
 
@@ -85,7 +95,7 @@ The pattern is identical for `sub`, `mul`, `div` — only the operator changes.
 
 Unary kernels (`relu`, `exp`, `tanh`, …) are even simpler: one `stridedIdx` per element.
 
-`MatMul` ([linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/linalg/matmul.ts)) is a manual `M × N × K` triple loop using row/col strides directly — it doesn't use the generic `stridedIdx` because it benefits from per-axis stride extraction.
+`MatMul` ([linalg/matmul.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/linalg/matmul.ts)) loops over flat batch indices (using `broadcastStridesOf` to handle broadcast-aligned batch strides of A and B), then runs a manual `M × N × K` triple loop per batch using row/col strides directly.
 
 `Contiguous` ([memory/contiguous.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/memory/contiguous.ts)) is a pure copy from strided source → contiguous destination via `stridedIdx`.
 
@@ -138,11 +148,15 @@ Rust ([rust/src/memory.rs](https://github.com/hongjiaherng/webtensor/blob/main/p
 
 To call a Rust kernel, JS packs metadata into a `Uint32Array`, copies it into WASM memory (`alloc_u32` + write), passes the pointer, and frees afterwards. Layouts (see [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/utils.ts)):
 
-| Op family | Words | Layout                                                                                    |
-| --------- | ----- | ----------------------------------------------------------------------------------------- |
-| Binary    | 28    | `[total, rank, out_shape[8], a_bcast_strides[8], a_offset, b_bcast_strides[8], b_offset]` |
-| Unary     | 19    | `[total, rank, shape[8], strides[8], offset]`                                             |
-| MatMul    | 9     | `[M, K, N, a_row_stride, a_col_stride, b_row_stride, b_col_stride, a_offset, b_offset]`   |
+| Op family          | Words | Layout                                                                                                                                                                            |
+| ------------------ | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Binary             | 28    | `[total, rank, out_shape[8], a_bcast_strides[8], a_offset, b_bcast_strides[8], b_offset]`                                                                                         |
+| Unary              | 19    | `[total, rank, shape[8], strides[8], offset]`                                                                                                                                     |
+| MatMul (batched)   | 32    | `[batch_rank, M, K, N, a_row_stride, a_col_stride, b_row_stride, b_col_stride, a_offset, b_offset, batch_out_shape[6], a_bcast_batch_strides[6], b_bcast_batch_strides[6], pad[4]]` |
+| Reduce (sum/mean)  | 27    | `[in_rank, reduce_rank, offset, in_shape[8], in_strides[8], axes[8]]`                                                                                                             |
+| Softmax            | 19    | `[rank, axis, offset, shape[8], strides[8]]`                                                                                                                                      |
+
+Dtype scaffolding: reduction and softmax Rust kernels are named with an `_f32_` suffix (`reduce_sum_f32_strided`, etc.); the TS wrapper looks the function up via `dtypeSuffix(dtype)` so adding `int32` / `bool` variants later is additive, not a rewrite.
 
 The Rust side reads the same layout (e.g. [ops/unary/relu.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/ops/unary/relu.rs)) using `slice::from_raw_parts(meta_ptr, 19)`.
 
@@ -230,17 +244,21 @@ Access in WGSL: `u_meta.shape[ax / 4u][ax % 4u]`.
 
 ### Bind group convention
 
-| Op family | Bindings (binding indices must be consecutive)   |
-| --------- | ------------------------------------------------ |
-| Unary     | 0: input, 1: output, 2: `u_meta`                 |
-| Binary    | 0: a, 1: b, 2: out, 3: `u_meta_a`, 4: `u_meta_b` |
-| MatMul    | 0: a, 1: b, 2: out, 3: `u_meta_a`, 4: `u_meta_b` |
+| Op family        | Bindings (must be consecutive)                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| Unary            | 0: input, 1: output, 2: `u_meta`                                                                  |
+| Binary           | 0: a, 1: b, 2: out, 3: `u_meta_a`, 4: `u_meta_b`                                                  |
+| MatMul (batched) | 0: a, 1: b, 2: out, 3: `u_meta_a`, 4: `u_meta_b`, 5: `u_batch` (BatchMeta: batch_rank, M, K, N, batch_out_shape) |
+| Reduce           | 0: in, 1: out, 2: `u_meta_a`, 3: `u_reduce` (kept_rank, reduce_rank, kept_total, reduce_total, kept_axes, reduce_axes) |
+| Softmax          | 0: in, 1: out, 2: `u_meta_a`, 3: `u_sm` (axis, slice_count, axis_len, out_strides)                |
+
+Auxiliary uniforms (`u_batch`, `u_reduce`, `u_sm`) are created via `createUniformBuffer(device, data)` in `packages/backend-webgpu/src/kernels/utils.ts` — arbitrary-length uniforms as opposed to the fixed 80-byte `TensorMeta`.
 
 No gaps allowed — WebGPU rejects bind groups with sparse indices.
 
 ### Dispatch sizing
 
-Most unary/binary kernels use `@workgroup_size(64)` and dispatch `ceil(N / 64)` workgroups. MatMul uses `@workgroup_size(8, 8)` for an 8×8 tile.
+Most unary/binary kernels use `@workgroup_size(64)` and dispatch `ceil(N / 64)` workgroups. Reductions and Softmax use `@workgroup_size(64)` with one invocation per output element (reductions) or per slice (softmax). Batched MatMul uses `@workgroup_size(8, 8, 1)` and dispatches `[ceil(M/8), ceil(N/8), batchTotal]` so `gid.z` is the flat batch index.
 
 ### Pipeline cache
 

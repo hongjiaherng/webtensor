@@ -58,7 +58,10 @@ export class Engine {
     }
   }
 
-  async evaluate(graph: Graph): Promise<void> {
+  async evaluate(
+    graph: Graph,
+    feeds?: Record<string, ArrayBufferView>,
+  ): Promise<void> {
     const topoNodes = this.topologicalSort(graph);
 
     const retained = new Set<string>([...graph.outputs, ...graph.inputs, ...graph.initializers]);
@@ -91,6 +94,25 @@ export class Engine {
         const rawData = node.attributes?.data as ArrayBufferView;
         if (!rawData) throw new Error(`Constant node ${node.id} missing 'data' buffer attribute`);
         this.set(outId, rawData, outValue.shape, outValue.dtype);
+        continue;
+      }
+
+      if (node.op === 'Placeholder') {
+        const outId = node.outputs[0];
+        const outValue = graph.values[outId];
+        // Use the explicit feed if supplied; otherwise fall back to embedded
+        // default data (set by `tensor(..., { requiresGrad: true })` and the
+        // other `requiresGrad: true` factories). This lets the same tensor
+        // work eagerly (`evaluate(graph)`) and through `compile(...)`.
+        const feedData =
+          feeds?.[outId] ?? (node.attributes?.data as ArrayBufferView | undefined);
+        if (!feedData) {
+          throw new Error(
+            `Missing feed for placeholder '${outId}' — pass via evaluate(graph, feeds) ` +
+              'or create the tensor with `{ requiresGrad: true }` so its data is embedded.',
+          );
+        }
+        this.set(outId, feedData, outValue.shape, outValue.dtype);
         continue;
       }
 
