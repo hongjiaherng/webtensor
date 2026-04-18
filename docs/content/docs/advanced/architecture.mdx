@@ -27,7 +27,7 @@ The boundary rule exists to keep each package independently testable and replace
 - `ir` can describe computation but must not know about autograd or devices — the same graph must be producible from hand-authored tensors and from an ONNX parser without either knowing about the other.
 - `runtime` can execute graphs but must not contain op math — otherwise adding a backend would require touching the engine.
 - `backends` can run kernels and own memory but must not define user-facing tensor semantics — user code imports from `core`, not from backend packages.
-- `nn` / `optim` can depend on `core` (they compose tensor ops) but not on each other and not on any backend. They stay as optional layers on top — the core tensor library stands alone.
+- `nn` can depend on `core` (it composes tensor ops) but not on any backend. It stays as an optional layer on top — the core tensor library stands alone.
 
 ---
 
@@ -77,7 +77,7 @@ Registry files:
 
 All three backends use the same strided tensor model: every `RuntimeTensor` carries `shape`, `strides`, and `offset` alongside the storage buffer. This enables zero-copy views for Transpose, Reshape, Slice, Unsqueeze, Squeeze, Permute, and Expand — the view just gets new metadata pointing into the same storage.
 
-Kernels are responsible for handling arbitrary strides. CPU and WASM kernels iterate using the `stridedIdx` utility. WebGPU kernels receive a `TensorMeta` uniform buffer (rank, offset, shape, strides packed as two `array<vec4<u32>, 2>`) and decompose the flat index inside the WGSL shader.
+Kernels are responsible for handling arbitrary strides. CPU and WASM kernels iterate using the `stridedIdx` utility. WebGPU kernels receive a `TensorMeta` uniform buffer (rank, offset, shape, strides — 520 bytes / 130 `u32`, flat `array<u32, 64>` for shape and strides so rank scales up to `MAX_RANK = 64`) and decompose the flat index inside the WGSL shader.
 
 Broadcasting is implemented via stride-0: a dimension that is broadcast (size 1 in the input, size > 1 in the output) gets stride 0, so repeated reads return the same element without copying.
 
@@ -89,10 +89,7 @@ Broadcasting is implemented via stride-0: a dimension that is broadcast (size 1 
 
 The optional `feeds: Record<valueName, ArrayBufferView>` supplies data for `Placeholder` nodes. When the engine encounters a `Placeholder`, it allocates an output tensor and writes the matching feed buffer; a missing feed throws. This pattern enables compile-once training loops: the graph is built once, weights and batches are fed fresh per step.
 
-`Engine` can be constructed two ways:
-
-- **Direct:** `new Engine(backend)` — caller creates the backend themselves.
-- **Device dispatch:** `await Engine.create('cpu' | 'wasm' | 'webgpu')` — looks up a registered backend factory and creates the engine. Backends self-register by calling `registerBackend(device, factory)` when their package is imported.
+`Engine` is constructed via the async factory: `await Engine.create('cpu' | 'wasm' | 'webgpu')` looks up a registered backend factory and creates the engine. Backends self-register by calling `registerBackend(device, factory)` when their package is imported — so `import '@webtensor/backend-cpu'` is side-effect only and `Engine.create('cpu')` just works.
 
 ---
 
@@ -104,7 +101,7 @@ The optional `feeds: Record<valueName, ArrayBufferView>` supplies data for `Plac
 type DType = 'float32' | 'int32' | 'bool';
 ```
 
-Only `float32` has full kernel support across all three backends. `int32` and `bool` can be allocated and round-tripped (write → read) but have no op kernels yet.
+Only `float32` has full arithmetic-kernel support across all three backends. `int32` and `bool` can be allocated, round-tripped, and consumed by the comparison ops (which always produce `bool`) and by `Cast`; arithmetic / reduction kernels for `int32` / `bool` are not implemented.
 
 Dtype utilities live in `packages/runtime/src/dtype.ts`:
 
@@ -154,7 +151,7 @@ Tests run in Vitest browser mode (Playwright, Chromium). Do not use `bun test` d
 All three backends ship naive scalar / per-thread implementations that prioritize correctness over raw throughput. This is intentional for early-stage development — kernels are easy to read, easy to verify against the CPU oracle, and easy to swap later when training-loop benchmarks justify optimization.
 
 - **CPU** — Plain TypeScript loops over `TypedArray`s, dispatched via `stridedIdx(flat, rank, shape, strides, offset)`. Synchronous `execute()`.
-- **WASM** — Rust scalar loops compiled with `wasm-bindgen` (no `rayon`, no SIMD intrinsics). Memory uses `Vec` leak/reclaim across the JS/WASM boundary. Matmul is naive O(MNK), 2D-only, no tiling.
+- **WASM** — Rust scalar loops compiled with `wasm-bindgen` (no `rayon`, no SIMD intrinsics). Memory uses `Vec` leak/reclaim across the JS/WASM boundary. Matmul is naive O(MNK) with N-D batched support, no tiling.
 - **WebGPU** — One thread per output element. Workgroup sizes are `@workgroup_size(64)` for elementwise ops and `@workgroup_size(8, 8)` for matmul. No shared-memory tiling — each matmul thread accumulates its M×N output cell via a scalar K-dim loop. Pipeline cache + temp meta buffers GC'd after `device.queue.onSubmittedWorkDone()`.
 
 Optimization (SIMD on WASM, tiled matmul on WebGPU, fused activations) is deferred until the training loop is in place and benchmarks identify hotspots.

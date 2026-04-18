@@ -25,7 +25,7 @@ loop reverse topo (i = N-1 .. 0)
     Each backward returns
     NEW Tensors that themselves
     are graph nodes (Mul, Add,
-    MatMul, Transpose, ReluGrad).
+    MatMul, Transpose, ReluBackward).
     The grad graph is built
     eagerly — not yet executed.
   end note

@@ -18,8 +18,8 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Linear algebra      | `matmul` — PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, N-D batched with broadcast over batch dims         |         |                                                   |
 | Views (zero-copy)   | `transpose`, `reshape`, `view`, `slice`, `unsqueeze`, `squeeze`, `permute`, `expand`, `flatten`                    |         |                                                   |
 | Memory              | `contiguous`, `clone`, `detach`                                                                                    |         |                                                   |
-| Reductions          | `sum`, `mean` (arbitrary `axis`, `keepdim`)                                                                        |         | `max`, `min`, `argmax`, `argmin`                  |
-| Composite           | `softmax` (numerically stable), `concat`, `pad`, `cast`, element-wise compare (`eq`, `ne`, `lt`, `le`, `gt`, `ge`) |         | `log_softmax`, `split`, `where`                   |
+| Reductions          | `sum`, `mean`, `all`, `any` (arbitrary `axis`, `keepdim`)                                                          |         | `max`, `min`, `argmax`, `argmin`                  |
+| Composite           | `softmax` (numerically stable), `concat`, `pad`, `cast`, element-wise compare (`eq`, `ne`, `lt`, `le`, `gt`, `ge`, `isclose`) |         | `log_softmax`, `split`, `where`                   |
 | Indexing            |                                                                                                                    |         | `gather`, `scatter`, advanced indexing            |
 | Graph inputs        | `placeholder(shape, dtype, device)` + `evaluate(graph, feeds)` + high-level `compile()`/`grad()` helpers           |         | Dynamic shape specialization (shape polymorphism) |
 
@@ -43,7 +43,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | ---------------- | ----------------------------------------------------------------- | ------- | ------------------------------------------------------------------- |
 | Type system      | `DType` defined once in `ir`; `bytesPerElement`, `typedArrayCtor` |         |                                                                     |
 | Allocation & I/O | All three backends allocate/read/write `float32`, `int32`, `bool` |         |                                                                     |
-| Op kernels       | `float32` kernels for every registered op                         |         | `int32` and `bool` op kernels (every backend throws on non-float32) |
+| Op kernels       | `float32` kernels for every registered op; compare ops accept any dtype (output is `bool`); `Cast` converts between dtypes |         | `int32` and `bool` kernels for arithmetic / reduction ops |
 | Mixed precision  |                                                                   |         | `float16`, `bfloat16`                                               |
 
 ---
@@ -67,7 +67,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | Compile-once loop                | `compile(fn, spec)` + `grad(loss, param)` (high-level) built on `placeholder()` + `evaluate(graph, feeds)` (low-level)             |         |                                                                 |
 | Eager evaluation                 | `run(t)` function + `Tensor.run()` method                                                                                          |         |                                                                 |
 | Trainable tensor                 | Any factory with `{ requiresGrad: true }` — e.g. `randn([2, 8], { requiresGrad: true })`. No `Float32Array` handling in user code. |         |                                                                 |
-| Comparison                       | `equal(a, b)` / `allclose(a, b, opts)` + `.equals()` / `.allclose()` methods (PyTorch / JAX parity, shape-aware)                   |         | `isclose` elementwise (needs bool kernels)                      |
+| Comparison                       | `equal(a, b)` / `allclose(a, b, opts)` + `.equals()` / `.allclose()` methods — all async, dispatch through backend via `run(all(eq/isclose))`; elementwise `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `isclose` ops return bool tensors |         |                                                                 |
 | Loss functions (`@webtensor/nn`) | `mseLoss`                                                                                                                          |         | `crossEntropy`, `bceLoss`, `logSoftmax`                         |
 | Activations (`@webtensor/nn`)    | `relu`, `sigmoid`, `tanh`, `softmax`                                                                                               |         | `gelu`, `silu`, `leakyRelu`                                     |
 | Optimizers (`@webtensor/nn`)     | `SGD` (optional momentum). Takes `Tensor[]` params + `Tensor[]` grads.                                                             |         | `Adam`, `AdamW`, lr schedulers                                  |
@@ -92,7 +92,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 | Area              | Works                                   | Partial                                                                    | Missing                                      |
 | ----------------- | --------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
-| Build artifacts   | `dist/` exists for all six packages     | Only validated via workspace aliases — never tested in real `node_modules` |                                              |
+| Build artifacts   | `dist/` exists for all seven packages   | Only validated via workspace aliases — never tested in real `node_modules` |                                              |
 | Versioning        |                                         | Version drift: `backend-wasm` is `0.1.0`, others are `0.0.0`               | Lockstep version-bump tooling                |
 | Publish script    | `publish:all` exists                    | Untested; assumes Bun ≥ 1.2.0 with built-in publish                        | Per-package publish, dry-run, npm provenance |
 | Lint / format     | `prettier --write`, `eslint --fix` work | One ESLint error (`scripts/clean.mjs`)                                     |                                              |
@@ -142,4 +142,4 @@ If you want to **harden distribution**:
 3. Add CI that runs `bun run test` in browser mode.
 4. Add an `examples/` quickstart that uses the published packages (not workspace aliases) — that's the only way to validate the published artifacts.
 
-See [Rearchitect notes](/docs/history/rearchitect-notes) for what each of those touches across the codebase.
+See [Rearchitect notes](/docs/history/rearchitect-notes) for the design logs that got us here.

@@ -1,11 +1,12 @@
 @startuml target-architecture
 
 package "React App" #E8F0FF {
-  [User code\n(import { tensor, train } from 'webtensor')] as usercode
+  [User code\n(import from @webtensor/core + @webtensor/nn)] as usercode
 }
 
 package "Authoring" #EEF4FF {
-  [core\nTensor API - autograd - optimizer loop] as core
+  [core\nTensor API - autograd - compile/grad/run] as core
+  [nn\nactivations - losses - optimizers] as nn
 }
 
 package "Import" #FFF0F8 {
@@ -31,6 +32,8 @@ package "Visualization" #F0F4FF {
 }
 
 usercode --> core
+usercode --> nn
+nn --> core
 usercode --> devtools : subscribes to training events
 core --> ir : compiles to
 onnx --> ir : parses to

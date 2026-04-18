@@ -306,7 +306,7 @@ const y = matmul(x, W);
 const graph = compileGraph([y]);
 
 // 3. Run it on a backend, passing feeds keyed by tensor.id.
-const engine = new Engine(await CPUBackend.create());
+const engine = await Engine.create('cpu');
 await engine.evaluate(graph, { [x.id]: xData, [W.id]: wData });
 
 // 4. Read back via tensor.id.
@@ -352,10 +352,10 @@ With these five models in mind, here is how to navigate unfamiliar code:
 | `stridedIdx`, `broadcastStridesOf`           | Strided tensors (#1)         |
 | `views/transpose.ts`, `views/slice.ts`, etc. | Zero-copy views (#2)         |
 | `broadcastShapes` in `core/shape.ts`         | Broadcasting shape (#3)      |
-| `compileGraph` in `core/compiler.ts`         | Compile phase (#4)           |
+| `compileGraph` in `core/compile/trace.ts`    | Compile phase (#4)           |
 | `Engine.evaluate` in `runtime/engine.ts`     | Execute phase (#4)           |
-| `ops.ts` — the backward closures             | Autograd (#5)                |
-| `compile.ts` — `compile()`, `grad()`         | Placeholders & training (#6) |
+| `core/ops/<category>/*.ts` — backward closures | Autograd (#5)              |
+| `core/compile/jit.ts` — `compile()`, `grad()` | Placeholders & training (#6) |
 | `refCounts`, `viewParents` in `engine.ts`    | Memory lifetime (#7)         |
 
 The most common maintainer task is **adding a new op**. The recipe ([Adding an op](/docs/advanced/adding-an-op)) applies all these models: define the forward with a `_ctx` and backward closure, write kernel(s) that handle strides, register in each backend's registry, add tests. Everything else follows from the structure described here.

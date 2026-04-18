@@ -11,14 +11,14 @@ The Reference docs ([architecture](/docs/advanced/architecture), [IR reference](
 
 ## Status snapshot
 
-- **Packages:** `@webtensor/ir`, `@webtensor/runtime`, `@webtensor/core`, `@webtensor/nn` (activations, losses, optimizers), plus three backend packages (CPU / WASM / WebGPU).
-- **Backends:** full kernel parity across all three (19 / 19 ops).
-- **Tests:** ~580 cross-backend tests, browser mode via Playwright / Chromium.
+- **Packages (7):** `@webtensor/ir`, `@webtensor/runtime`, `@webtensor/core`, `@webtensor/nn` (activations, losses, optimizers — `@webtensor/optim` was merged in), plus three backend packages (CPU / WASM / WebGPU).
+- **Backends:** full kernel parity across all three (32 kernels today).
+- **Tests:** 830+ cross-backend tests across 40 files, browser mode via Playwright / Chromium.
 - **What works today:**
-  - **High-level API**: `tensor`, `zeros/ones/rand/randn` (all accept `{ requiresGrad: true }` for trainable tensors), `run()` + `.run()` method, `compile(fn, spec)` + `grad(loss, param)` (JAX-style `@jit`), `.equals()` / `.allclose()` for shape-aware tensor comparison.
-  - **Ops**: broadcast-aware binary ops with correct backward, PyTorch-style `matmul` (1D·1D / 1D·2D / 2D·1D / N-D batched with broadcast), reductions (`sum` / `mean`), `softmax`, full view/memory/unary-math set.
+  - **High-level API**: `tensor`, `zeros/ones/rand/randn` (all accept `{ requiresGrad: true }` for trainable tensors), `run()` + `.run()` method, `compile(fn, spec)` + `grad(loss, param)` (JAX-style `@jit`), `.equals()` / `.allclose()` (both async — dispatch through backend).
+  - **Ops**: broadcast-aware binary ops with correct backward; PyTorch-style `matmul` (1D·1D / 1D·2D / 2D·1D / N-D batched with broadcast); reductions (`sum`, `mean`, `all`, `any`); elementwise compare (`eq`, `ne`, `lt`, `le`, `gt`, `ge`, `isclose`); `concat`, `pad`, `cast`, `softmax`; full view/memory/unary-math set.
   - **Training**: `SGD` (momentum optional), `mseLoss`, and activations (`relu`, `sigmoid`, `tanh`, `softmax`) all live in `@webtensor/nn`. End-to-end XOR MLP trains on all three backends.
-- **What still blocks production:** only `float32` has kernels (`int32` / `bool` allocate but have no kernels); no `cross_entropy` / `bceLoss`, no `Adam`; no `concat` / `gather` / conv ops yet; WebGPU `TensorMeta` capped at rank 8 (matmul caps batch rank at 6); publish path untested.
+- **What still blocks production:** only `float32` has op kernels (`int32` / `bool` allocate + round-trip, and compare ops accept them, but arithmetic kernels are float32-only); no `cross_entropy` / `bceLoss` / `logSoftmax`, no `Adam`, no `gather` / conv ops; publish path untested.
 - **Distribution:** `dist/` exists; publish script exists but versions drift across packages and haven't been validated outside the workspace.
 
 See [State of the project](/docs/onboarding/state-of-the-project) for the full matrix and [Bugs and gaps](/docs/onboarding/bugs-and-gaps) for severity-tagged defects.
@@ -31,10 +31,10 @@ Every user action can be done at two levels. **High-level is the default**; low-
 
 | Task                       | High-level (idiomatic)                                                   | Low-level (escape hatch)                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Evaluate a tensor          | `await run(t)` / `await t.run()`                                         | `compileGraph([t])` → `new Engine(backend)` → `engine.evaluate(graph)` → `engine.get(t.id)`              |
+| Evaluate a tensor          | `await run(t)` / `await t.run()`                                         | `compileGraph([t])` → `await Engine.create(device)` → `engine.evaluate(graph)` → `engine.get(t.id)`      |
 | Declare a trainable weight | `randn([2, 8], { requiresGrad: true })`                                  | `placeholder([2, 8])` + `t.requiresGrad = true` + wire feeds by hand                                     |
 | Train                      | `compile(fn, spec)` + `grad(loss, param)` + `SGD.step([W, b], [dW, db])` | Build graph with `placeholder()`, call `loss.backward()`, read grad IDs, `engine.evaluate(graph, feeds)` |
-| Compare tensors            | `y.equals(tensor([...]))` / `y.allclose(tensor([...]))`                  | Read `y.data`, compare manually                                                                          |
+| Compare tensors            | `await y.equals(tensor([...]))` / `await y.allclose(tensor([...]))`      | `eq` / `isclose` + `all` + `run` yourself                                                                |
 
 ---
 

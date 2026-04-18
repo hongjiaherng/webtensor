@@ -26,29 +26,41 @@ Every backend follows the same shape:
 
 ## Kernel parity matrix
 
-All three backends register exactly the **same 19 kernels**:
+All three backends register the same set of kernels (32 today) — one op-name → kernel map per backend:
 
-| Op             | CPU | WASM | WebGPU | Notes                                                                                                         |
-| -------------- | --- | ---- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| `Add`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `Sub`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `Mul`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `Div`          | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                          |
-| `MatMul`       | ✅  | ✅   | ✅     | PyTorch semantics: 1D·1D dot, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast (batch rank ≤ 6 on WebGPU). |
-| `ReduceSum`    | ✅  | ✅   | ✅     | Strided. Attrs: `axes: number[]`, `keepdim: 0\|1`. One thread / workgroup invocation per output element.      |
-| `ReduceMean`   | ✅  | ✅   | ✅     | Same layout as ReduceSum, divides by reduce-axis product.                                                     |
-| `Softmax`      | ✅  | ✅   | ✅     | Numerically stable (max-subtract); one thread per slice. Attr: `axis: number`.                                |
-| `Relu`         | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `ReluBackward` | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.              |
-| `Neg`          | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Exp`          | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Log`          | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Sqrt`         | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Abs`          | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                       |
-| `Pow`          | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                      |
-| `Sigmoid`      | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Tanh`         | ✅  | ✅   | ✅     | Strided.                                                                                                      |
-| `Contiguous`   | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                            |
+| Op               | CPU | WASM | WebGPU | Notes                                                                                                          |
+| ---------------- | --- | ---- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| `Add`            | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                           |
+| `Sub`            | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                           |
+| `Mul`            | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                           |
+| `Div`            | ✅  | ✅   | ✅     | Strided + broadcast.                                                                                           |
+| `Neg`            | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `Exp`            | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `Log`            | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `Sqrt`           | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `Abs`            | ✅  | ✅   | ✅     | Strided. (Backward not implemented — see autograd doc.)                                                        |
+| `Pow`            | ✅  | ✅   | ✅     | Strided. Attribute: `exponent` (number).                                                                       |
+| `Equal`          | ✅  | ✅   | ✅     | Elementwise compare → `bool` output.                                                                           |
+| `NotEqual`       | ✅  | ✅   | ✅     | Elementwise compare → `bool` output.                                                                           |
+| `Less`           | ✅  | ✅   | ✅     | Elementwise compare → `bool` output.                                                                           |
+| `LessOrEqual`    | ✅  | ✅   | ✅     | Elementwise compare → `bool` output.                                                                           |
+| `Greater`        | ✅  | ✅   | ✅     | Elementwise compare → `bool` output.                                                                           |
+| `GreaterOrEqual` | ✅  | ✅   | ✅     | Elementwise compare → `bool` output.                                                                           |
+| `IsClose`        | ✅  | ✅   | ✅     | Attrs: `rtol`, `atol`, `equalNan`. Elementwise → `bool` output.                                                |
+| `Cast`           | ✅  | ✅   | ✅     | Converts between `float32 / int32 / bool`. Attr: `to: DType`.                                                  |
+| `MatMul`         | ✅  | ✅   | ✅     | PyTorch semantics: 1D·1D dot, 1D·2D, 2D·1D, 2D·2D, and N-D batched with broadcast (batch rank ≤ 62 on WebGPU). |
+| `ReduceSum`      | ✅  | ✅   | ✅     | Strided. Attrs: `axes: number[]`, `keepdim: 0\|1`. One thread / workgroup invocation per output element.       |
+| `ReduceMean`     | ✅  | ✅   | ✅     | Same layout as ReduceSum, divides by reduce-axis product.                                                      |
+| `ReduceAll`      | ✅  | ✅   | ✅     | Bool-input reduction. Attrs: `axes`, `keepdim`.                                                                |
+| `ReduceAny`      | ✅  | ✅   | ✅     | Bool-input reduction. Attrs: `axes`, `keepdim`.                                                                |
+| `Softmax`        | ✅  | ✅   | ✅     | Numerically stable (max-subtract); one thread per slice. Attr: `axis: number`.                                 |
+| `Relu`           | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `ReluBackward`   | ✅  | ✅   | ✅     | Always called on contiguous inputs from autograd; WASM bypasses the meta buffer for this reason.               |
+| `Sigmoid`        | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `Tanh`           | ✅  | ✅   | ✅     | Strided.                                                                                                       |
+| `Concat`         | ✅  | ✅   | ✅     | Attrs: `axis`. Strided-aware, no pre-copy required.                                                            |
+| `Pad`            | ✅  | ✅   | ✅     | Attrs: `pads` (per-axis `[before, after]`), `mode: 'constant'`, `value`.                                       |
+| `Contiguous`     | ✅  | ✅   | ✅     | Memory op — copies a strided source into a contiguous destination.                                             |
 
 Additionally, the engine handles two ops entirely in-process (no backend kernel):
 
@@ -148,17 +160,21 @@ Rust ([rust/src/memory.rs](https://github.com/hongjiaherng/webtensor/blob/main/p
 
 To call a Rust kernel, JS packs metadata into a `Uint32Array`, copies it into WASM memory (`alloc_u32` + write), passes the pointer, and frees afterwards. Layouts (see [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/utils.ts)):
 
-| Op family         | Words | Layout                                                                                                                                                                              |
-| ----------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Binary            | 28    | `[total, rank, out_shape[8], a_bcast_strides[8], a_offset, b_bcast_strides[8], b_offset]`                                                                                           |
-| Unary             | 19    | `[total, rank, shape[8], strides[8], offset]`                                                                                                                                       |
-| MatMul (batched)  | 32    | `[batch_rank, M, K, N, a_row_stride, a_col_stride, b_row_stride, b_col_stride, a_offset, b_offset, batch_out_shape[6], a_bcast_batch_strides[6], b_bcast_batch_strides[6], pad[4]]` |
-| Reduce (sum/mean) | 27    | `[in_rank, reduce_rank, offset, in_shape[8], in_strides[8], axes[8]]`                                                                                                               |
-| Softmax           | 19    | `[rank, axis, offset, shape[8], strides[8]]`                                                                                                                                        |
+All builders use the shared `MAX_RANK = 64` (imported from `@webtensor/ir`). Offsets into each layout are centralized in Rust (`rust/src/ops/mod.rs`) and mirrored in TS (`src/kernels/utils.ts`) — kernels never hardcode offsets.
+
+| Op family         | Words                  | Layout                                                                                                                                     |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unary             | `3 + 2·MAX_RANK` (131) | `[total, rank, offset, shape[MAX_RANK], strides[MAX_RANK]]`                                                                                |
+| Binary            | `4 + 3·MAX_RANK` (196) | `[total, rank, a_offset, b_offset, out_shape[MAX_RANK], a_bcast_strides[MAX_RANK], b_bcast_strides[MAX_RANK]]`                             |
+| Reduce (sum/mean) | `3 + 3·MAX_RANK` (195) | `[in_rank, reduce_rank, offset, in_shape[MAX_RANK], in_strides[MAX_RANK], axes[MAX_RANK]]`                                                 |
+| Softmax           | `3 + 2·MAX_RANK` (131) | `[rank, axis, offset, shape[MAX_RANK], strides[MAX_RANK]]`                                                                                 |
+| Concat            | `5 + 3·MAX_RANK` (197) | `[num_inputs, axis, total, out_rank, in_rank, out_shape[MAX_RANK], in_strides[MAX_RANK], in_offsets[MAX_RANK]]` (+ per-input meta chunks)  |
+| Pad               | `3 + 4·MAX_RANK` (259) | `[rank, total, offset, in_shape[MAX_RANK], in_strides[MAX_RANK], pads_before[MAX_RANK], pads_after[MAX_RANK]]`                             |
+| MatMul (batched)  | `10 + 3·(MAX_RANK - 2)` (196) | `[batch_rank, M, K, N, a_row_stride, a_col_stride, b_row_stride, b_col_stride, a_offset, b_offset, batch_out_shape, a_bcast_batch, b_bcast_batch]` (each batch array sized `MAX_RANK - 2 = 62`) |
 
 Dtype scaffolding: reduction and softmax Rust kernels are named with an `_f32_` suffix (`reduce_sum_f32_strided`, etc.); the TS wrapper looks the function up via `dtypeSuffix(dtype)` so adding `int32` / `bool` variants later is additive, not a rewrite.
 
-The Rust side reads the same layout (e.g. [kernels/activation/relu/forward.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/kernels/activation/relu/forward.rs)) using `slice::from_raw_parts(meta_ptr, 19)`.
+The Rust side reads the same layout (e.g. [kernels/activation/relu/forward.rs](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/kernels/activation/relu/forward.rs)) using `slice::from_raw_parts(meta_ptr, UNARY_META_SIZE)` where the size constants live in `rust/src/ops/mod.rs`.
 
 ### `_raw` pointer convention
 
@@ -210,29 +226,27 @@ interface WebGPUKernel {
 
 ### `TensorMeta` uniform
 
-Defined in [utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — **80 bytes, 20 × u32**:
+Defined in [utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — **520 bytes, 130 × u32** (rank up to `MAX_RANK = 64`):
 
 ```text
-[0]    rank
-[1]    offset
-[2..3] padding
-[4..11]  shape[0..7]   (1-padded)
-[12..19] strides[0..7] (0-padded)
+[0]        rank
+[1]        offset
+[2..65]    shape[0..63]   (1-padded)
+[66..129]  strides[0..63] (0-padded)
 ```
 
-WGSL counterpart:
+WGSL counterpart (emitted by `renderWgsl()` / `injectMeta()` — kernels use the `__TENSOR_META__` placeholder):
 
 ```wgsl
 struct TensorMeta {
   rank:    u32,
   offset:  u32,
-  _p0: u32, _p1: u32,
-  shape:   array<vec4<u32>, 2>,   // 8 slots as 2×vec4
-  strides: array<vec4<u32>, 2>,
+  shape:   array<u32, 64>,
+  strides: array<u32, 64>,
 };
 ```
 
-Access in WGSL: `u_meta.shape[ax / 4u][ax % 4u]`.
+Access in WGSL: `u_meta.shape[ax]` — flat `array<u32, 64>`, not vec4-packed.
 
 `packMeta(tensor, outShape?)` builds the array. When `outShape` is provided (binary ops), it computes broadcast strides via `broadcastStridesOf()`.
 
@@ -252,7 +266,7 @@ Access in WGSL: `u_meta.shape[ax / 4u][ax % 4u]`.
 | Reduce           | 0: in, 1: out, 2: `u_meta_a`, 3: `u_reduce` (kept_rank, reduce_rank, kept_total, reduce_total, kept_axes, reduce_axes) |
 | Softmax          | 0: in, 1: out, 2: `u_meta_a`, 3: `u_sm` (axis, slice_count, axis_len, out_strides)                                     |
 
-Auxiliary uniforms (`u_batch`, `u_reduce`, `u_sm`) are created via `createUniformBuffer(device, data)` in `packages/backend-webgpu/src/kernels/utils.ts` — arbitrary-length uniforms as opposed to the fixed 80-byte `TensorMeta`.
+Auxiliary uniforms (`u_batch`, `u_reduce`, `u_sm`) are created via `createUniformBuffer(device, data)` in `packages/backend-webgpu/src/kernels/utils.ts` — arbitrary-length uniforms as opposed to the fixed 520-byte `TensorMeta`.
 
 No gaps allowed — WebGPU rejects bind groups with sparse indices.
 
@@ -264,9 +278,9 @@ Most elementwise/binary kernels use `@workgroup_size(64)` and dispatch `ceil(N /
 
 [backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/backend.ts) caches compiled pipelines by op name. First call to an op compiles the WGSL; subsequent calls are zero-cost lookup.
 
-### Rank-8 ceiling
+### Rank-64 ceiling
 
-`TensorMeta` only carries 8 shape and 8 stride slots. Any op invoked with rank > 8 will silently corrupt metadata. See [Bugs and gaps](/docs/onboarding/bugs-and-gaps) — this becomes a real issue when batched matmul lands.
+`TensorMeta` carries 64 shape and 64 stride slots (`MAX_RANK = 64`). Ops allocate with `rank > 64` throw at `allocate()` time on every backend — no silent corruption. Batched MatMul caps `batch_rank` at `MAX_RANK - 2 = 62` so the total tensor rank stays within the cap.
 
 ### Performance profile
 
@@ -303,7 +317,7 @@ All backends use `bytesPerElement(dtype)` and `typedArrayCtor(dtype)` from [pack
 The full recipe is in [Adding an op](/docs/advanced/adding-an-op). This is the cliff notes:
 
 1. **CPU:** new file under `kernels/<category>/`, register in `kernels/registry.ts`.
-2. **WASM:** Rust function with `#[wasm_bindgen]` in `rust/src/ops/<category>/`, JS wrapper in `src/kernels/<category>/`, register, **rebuild WASM**.
+2. **WASM:** Rust function with `#[wasm_bindgen]` in `rust/src/kernels/<category>/`, JS wrapper in `src/kernels/<category>/`, register, **rebuild WASM**.
 3. **WebGPU:** `<op>.wgsl` (uniform = `u_meta`!) plus `<op>.ts` implementing `WebGPUKernel`, register.
 4. **Tests:** add to `tests/ops/<category>/<op>.test.ts` + ensure `tests/backends/consistency.test.ts` covers it.
 

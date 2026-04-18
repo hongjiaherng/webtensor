@@ -1,12 +1,12 @@
 ---
 title: 'Package deep-dive'
-description: 'What each of the eight packages owns: key files, public types, what they must NOT depend on.'
+description: 'What each of the seven packages owns: key files, public types, what they must NOT depend on.'
 ---
 
-Webtensor is a Bun workspace with eight packages. See the [package-dependencies diagram](/diagrams/package-dependencies.svg) for the full layout:
+Webtensor is a Bun workspace with seven packages. See the [package-dependencies diagram](/diagrams/package-dependencies.svg) for the full layout:
 
 - Backends never depend on `core`; `core` never depends on a specific backend.
-- `nn` and `optim` depend on `core` but not on each other — they sit on top like `jax.nn` + `optax` or `tfjs-layers`, so inference-only code doesn't pull in training bits.
+- `nn` sits on top of `core` and bundles activations, losses, and optimizers — like `jax.nn` + `optax` rolled into one — so inference-only code doesn't pull in training bits.
 
 ![Package dependencies](/diagrams/package-dependencies.svg)
 
@@ -114,7 +114,7 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 
 ## `packages/nn`
 
-**Role:** neural-network-flavored building blocks on top of `core` — activations and loss functions. Mirrors `jax.nn` / `torch.nn.functional`.
+**Role:** neural-network-flavored building blocks on top of `core` — activations, loss functions, and optimizers. Mirrors `jax.nn` / `torch.nn.functional` plus `optax` / `torch.optim`.
 
 **Key files:**
 
@@ -123,23 +123,11 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 - [src/activations/tanh.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/activations/tanh.ts) — `tanh`
 - [src/activations/softmax.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/activations/softmax.ts) — `softmax`
 - [src/losses/mse.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/losses/mse.ts) — `mseLoss`
+- [src/optim/sgd.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/optim/sgd.ts) — `SGD` (optional momentum) + `Optimizer` interface
 
-**Why separate from `core`:** activations and losses are ML-specific; pure tensor math (the kind NumPy has) lives in `core`. This keeps `core`'s bundle minimal for inference-only users. Matches the JS ecosystem convention (`tfjs-layers` split from `tfjs-core`).
+**Why separate from `core`:** activations, losses, and optimizers are ML-specific; pure tensor math (the kind NumPy has) lives in `core`. This keeps `core`'s bundle minimal for inference-only users. Matches the JS ecosystem convention (`tfjs-layers` split from `tfjs-core`).
 
-**Must not depend on:** any backend. Just `core`.
-
----
-
-## `packages/optim`
-
-**Role:** host-side optimizers (Python-like `.step()` on parameter tensors).
-
-**Key files:**
-
-- [src/optimizer.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/optim/src/optimizer.ts) — `Optimizer` interface
-- [src/sgd.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/optim/src/sgd.ts) — `SGD` (optional momentum)
-
-**Contract:** `step(params: Tensor[], grads: Tensor[])` — mutates each `param.data` in place using the gradient's `.data`. Users never touch raw `Float32Array`s.
+**Optimizer contract:** `step(params: Tensor[], grads: Tensor[])` — mutates each `param.data` in place using the gradient's `.data`. Users never touch raw `Float32Array`s.
 
 **Must not depend on:** any backend. Just `core` + `runtime` (for `TypedArray` type).
 
@@ -174,13 +162,13 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 - [src/env.d.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/env.d.ts) — ambient declaration `declare module '*.wasm' { const base64: string; export default base64; }` so TypeScript matches the bundler's transformation.
 - [build.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/build.ts) — Bun build script with a `wasm-inline` plugin that intercepts `*.wasm` imports and rewrites them to `export default "<base64>";`.
 - [src/kernels/registry.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/registry.ts) — kernel map.
-- [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/utils.ts) — meta-buffer builders (`buildBinaryMetaData` 28 u32, `buildUnaryMetaData` 19 u32, matmul 9 u32).
-- [rust/src/](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/) — Rust source: `memory.rs` (alloc/free), `utils.rs` (`strided_idx`), `ops/` per kernel.
+- [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/src/kernels/utils.ts) — meta-buffer builders sized by `MAX_RANK = 64` (unary `3 + 2·MAX_RANK`, binary `4 + 3·MAX_RANK`, reduce `3 + 3·MAX_RANK`, softmax `3 + 2·MAX_RANK`, concat `5 + 3·MAX_RANK`, pad `3 + 4·MAX_RANK`, matmul `10 + 3·(MAX_RANK − 2)`). Offsets are centralized in `rust/src/ops/mod.rs` and mirrored here — do NOT hardcode per kernel.
+- [rust/src/](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-wasm/rust/src/) — Rust source: `memory.rs` (alloc/free), `utils.rs` (`strided_idx`), `kernels/` per op.
 - `pkg/` — generated by `wasm-pack` at build time. **Not published** (only `dist/` ships); consumed by the build plugin and discarded.
 
 **Build:** `bun run --cwd packages/backend-wasm build` — runs `wasm-pack build rust --target bundler --out-dir ../pkg` → `bun build.ts` (bundles + inlines WASM as base64) → `tsc --emitDeclarationOnly`.
 
-**Rust kernel style:** Naive scalar loops; sole crate dependency is `wasm-bindgen 0.2.89` (no `rayon`, no SIMD libs). Memory uses a `Vec` leak/reclaim handoff to JS — `alloc_f32` does `Vec::with_capacity(len)` + `mem::forget`, `free_f32` does `Vec::from_raw_parts` to drop. Binary/unary kernels are `for i in 0..total { strided_idx; apply; }` loops. `relu_grad_raw` is a special contiguous-only kernel (no meta buffer) since the autograd engine pre-allocates fresh contiguous tensors. Matmul is naive 3-nested O(MNK), 2D only — no tiling, no blocking.
+**Rust kernel style:** Naive scalar loops; sole crate dependency is `wasm-bindgen 0.2.89` (no `rayon`, no SIMD libs). Memory uses a `Vec` leak/reclaim handoff to JS — `alloc_f32` does `Vec::with_capacity(len)` + `mem::forget`, `free_f32` does `Vec::from_raw_parts` to drop. Binary/unary kernels are `for i in 0..total { strided_idx; apply; }` loops. `relu_backward_raw` is a special contiguous-only kernel (no meta buffer) since the autograd engine pre-allocates fresh contiguous tensors. Matmul is naive 3-nested O(MNK) with N-D batched support — no tiling, no blocking.
 
 **Must not depend on:** `core`. May depend on `runtime` (for stride utils and `RuntimeTensor`).
 
@@ -193,7 +181,7 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 **Key files:**
 
 - [src/backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/backend.ts) — `WebGPUBackend` (async `create()`, pipeline cache).
-- [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — `TensorMeta` packing (80-byte / 20-u32 uniform), `packMeta()`, `createMetaBuffer()`, `WebGPUKernel` interface.
+- [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/utils.ts) — `TensorMeta` packing (520-byte / 130-u32 uniform, rank up to `MAX_RANK = 64`), `packMeta()`, `createMetaBuffer()`, `WebGPUKernel` interface.
 - [src/kernels/registry.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/registry.ts) — kernel map.
 - [src/kernels/](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-webgpu/src/kernels/) — one `.wgsl` shader plus `.ts` wrapper per op.
 
@@ -205,10 +193,11 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 
 ## What lives in `tests/`
 
-- [tests/ops/](https://github.com/hongjiaherng/webtensor/blob/main/tests/ops/) — per-op tests, grouped by category (`elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`, `init/`).
+- [tests/ops/](https://github.com/hongjiaherng/webtensor/blob/main/tests/ops/) — per-op tests, grouped by category (`elementwise/`, `reduction/`, `linalg/`, `activation/`, `movement/`, `memory/`).
 - [tests/backends/](https://github.com/hongjiaherng/webtensor/blob/main/tests/backends/) — cross-backend parity (`consistency.test.ts`) and memory/GC tests.
 - [tests/runtime/](https://github.com/hongjiaherng/webtensor/blob/main/tests/runtime/) — dtype round-trip, view ops, engine core.
-- [tests/graph/](https://github.com/hongjiaherng/webtensor/blob/main/tests/graph/) — autograd, simple graph execution.
+- [tests/core/](https://github.com/hongjiaherng/webtensor/blob/main/tests/core/) — core cross-cutting (autograd, compile/jit, placeholder, equality, init).
+- [tests/integration/](https://github.com/hongjiaherng/webtensor/blob/main/tests/integration/) — multi-package flows (simple graph, XOR train loop).
 - [tests/helpers.ts](https://github.com/hongjiaherng/webtensor/blob/main/tests/helpers.ts) — shared helpers (`BACKENDS`, `runUnary`, `runBinary`, `expectClose`, etc.).
 
 Tests run in **browser mode** via Vitest + Playwright + Chromium. Use `bun run test`, **not** `bun test` — the latter bypasses the browser config and WebGPU tests fail. See [Contributor guide](/docs/onboarding/contributor-guide).
@@ -227,13 +216,10 @@ import {
   zeros, // factory functions
   matmul,
   add,
-  relu,
   sum,
-  mean,
-  softmax, // ops
-  mseLoss,
-  SGD, // loss + optimizer
+  mean, // ops
 } from '@webtensor/core';
+import { relu, softmax, mseLoss, SGD } from '@webtensor/nn'; // activations + loss + optimizer
 import '@webtensor/backend-cpu'; // pick one backend (or several)
 import '@webtensor/backend-wasm';
 import '@webtensor/backend-webgpu';

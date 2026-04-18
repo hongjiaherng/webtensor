@@ -3,7 +3,7 @@ title: 'webtensor'
 description: 'A browser-first tensor library with WebGPU acceleration, eager autograd, and a PyTorch/JAX-inspired API in TypeScript.'
 ---
 
-**webtensor** is a multi-backend tensor library built for the browser. Write, train, and visualize models in TypeScript with three backends at full parity: **CPU** (TypeScript), **WASM** (Rust via wasm-pack), and **WebGPU** (WGSL compute shaders). 765 cross-backend tests.
+**webtensor** is a multi-backend tensor library built for the browser. Write, train, and visualize models in TypeScript with three backends at full parity: **CPU** (TypeScript), **WASM** (Rust via wasm-pack), and **WebGPU** (WGSL compute shaders). 830+ cross-backend tests.
 
 > **Status: foundation done.** Broadcast-aware autograd, PyTorch-style `matmul` (incl. N-D batched), reductions, softmax, JAX-style `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
 
@@ -17,8 +17,7 @@ Every user action can be done at two levels. The **high-level** API is what 99% 
 
 ```ts
 import { tensor, randn, add, matmul, compile, grad, run } from '@webtensor/core';
-import { relu, mseLoss } from '@webtensor/nn';
-import { SGD } from '@webtensor/nn';
+import { relu, mseLoss, SGD } from '@webtensor/nn';
 import '@webtensor/backend-webgpu'; // pick one (or several)
 
 // Eager one-shot — `run()` evaluates the tensor graph:
@@ -28,8 +27,8 @@ console.log(y.data); // Float32Array [5, 7, 9]
 // Or chain via the method form:
 const z = await tensor([-1, 2, -3]).abs().run();
 
-// Shape-aware equality:
-expect(y.equals(tensor([5, 7, 9]))).toBe(true);
+// Shape-aware equality (async — dispatches through backend):
+expect(await y.equals(tensor([5, 7, 9]))).toBe(true);
 
 // Training — JAX-style: trace once, call many
 const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
@@ -56,12 +55,12 @@ for (let i = 0; i < 1000; i++) {
 
 ```ts
 import { tensor, add, compileGraph, Engine, placeholder } from '@webtensor/core';
-import { CPUBackend } from '@webtensor/backend-cpu';
+import '@webtensor/backend-cpu'; // side-effect registers the 'cpu' backend
 
 // Explicit graph → engine → read-back: what `run()` does internally.
 const y = add(tensor([1, 2, 3]), tensor([4, 5, 6]));
 const graph = compileGraph([y]);
-const engine = new Engine(await CPUBackend.create());
+const engine = await Engine.create('cpu');
 await engine.evaluate(graph);
 const data = await engine.get(y.id); // Float32Array
 
@@ -85,11 +84,10 @@ The low-level API is stable and documented. It's what an ONNX importer or a cust
 - `@webtensor/ir` — pure data: `Node`, `Value`, `Graph`, `DType`.
 - `@webtensor/runtime` — `Engine`, `Backend` interface, view ops, dtype utilities.
 - `@webtensor/core` — user-facing tensor library: `Tensor`, ops, autograd, `compile` / `grad` / `run`.
-- **`@webtensor/nn`** — activations (`relu`, `sigmoid`, `tanh`, `softmax`) and losses (`mseLoss`, ...).
-- **`@webtensor/nn`** — host-side optimizers (`SGD`; Adam coming soon).
+- **`@webtensor/nn`** — activations (`relu`, `sigmoid`, `tanh`, `softmax`), losses (`mseLoss`), and host-side optimizers (`SGD`; Adam coming).
 - `@webtensor/backend-cpu` / `-wasm` / `-webgpu` — kernel implementations.
 
-Packages split like **JAX + optax + flax** and **tfjs-core + tfjs-layers** — ML-specific building blocks (`nn`, `optim`) sit on top of the tensor core, not inside it. Inference-only users don't pay the training-code bundle cost.
+Packages split like **tfjs-core + tfjs-layers** — ML-specific building blocks (`nn`) sit on top of the tensor core, not inside it. Inference-only users don't pay the training-code bundle cost.
 
 ---
 
