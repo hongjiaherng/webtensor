@@ -9,12 +9,13 @@
     "preview": "bunx serve dist"
   },
   "dependencies": {
-    "@webtensor/backend-cpu": "^0.3.2",
-    "@webtensor/backend-wasm": "^0.3.2",
-    "@webtensor/backend-webgpu": "^0.3.2",
-    "@webtensor/core": "^0.3.2",
-    "@webtensor/ir": "^0.3.2",
-    "@webtensor/runtime": "^0.3.2",
+    "@webtensor/backend-cpu": "^0.3.3",
+    "@webtensor/backend-wasm": "^0.3.3",
+    "@webtensor/backend-webgpu": "^0.3.3",
+    "@webtensor/core": "^0.3.3",
+    "@webtensor/ir": "^0.3.3",
+    "@webtensor/nn": "^0.3.3",
+    "@webtensor/runtime": "^0.3.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },

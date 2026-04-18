@@ -1,21 +1,29 @@
-# bun-react-template
+# webtensor smoke-test
 
-To install dependencies:
+A standalone Bun + React app that imports the **published** `@webtensor/*`
+packages (from npm, not workspace aliases) and runs a small battery of ops on
+all three backends. Use this after a release to verify the `dist/` bundles
+actually work for a real consumer.
+
+## Install
 
 ```bash
 bun install
 ```
 
-To start a development server:
+## Run
 
 ```bash
 bun dev
 ```
 
-To run for production:
+Open the dev URL, click **Run tests**, and confirm all three backends pass.
 
-```bash
-bun start
-```
+## What it exercises
 
-This project was created using `bun init` in bun v1.3.11. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+- Side-effect backend registration (`import '@webtensor/backend-cpu'` etc.).
+- The high-level `run(tensor, { device })` helper.
+- Basic ops: `add`, `mul`, `matmul`, broadcasting, `sum`, `softmax`, `relu`, `eq`.
+- A full training micro-step: `compile(fn, spec)` + `grad(loss, param)` +
+  `mseLoss` + `SGD.step(...)` fitting a 2-parameter linear model on all three
+  backends.
