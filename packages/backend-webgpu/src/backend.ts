@@ -99,25 +99,33 @@ export class WebGPUBackend implements Backend {
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {
     const kernel = this.getKernel(node.op);
     const pipeline = this.getPipeline(node.op, kernel, node, inputs, outputs);
-
-    const { entries, tempBuffers } = kernel.buildBindGroupEntries(
-      this.device,
-      node,
-      inputs,
-      outputs,
-    );
-    const bindGroup = this.device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries,
-    });
-
     const commandEncoder = this.device.createCommandEncoder();
-    const computePass = commandEncoder.beginComputePass();
-    computePass.setPipeline(pipeline);
-    computePass.setBindGroup(0, bindGroup);
-    const [x, y, z] = kernel.getDispatch(node, inputs, outputs);
-    computePass.dispatchWorkgroups(x, y, z);
-    computePass.end();
+
+    let tempBuffers: GPUBuffer[];
+    if (kernel.executeOverride) {
+      // Multi-dispatch op (e.g. Concat) — hand off full encoder control.
+      ({ tempBuffers } = kernel.executeOverride(
+        this.device,
+        commandEncoder,
+        node,
+        inputs,
+        outputs,
+        pipeline,
+      ));
+    } else {
+      const bge = kernel.buildBindGroupEntries(this.device, node, inputs, outputs);
+      tempBuffers = bge.tempBuffers;
+      const bindGroup = this.device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: bge.entries,
+      });
+      const computePass = commandEncoder.beginComputePass();
+      computePass.setPipeline(pipeline);
+      computePass.setBindGroup(0, bindGroup);
+      const [x, y, z] = kernel.getDispatch(node, inputs, outputs);
+      computePass.dispatchWorkgroups(x, y, z);
+      computePass.end();
+    }
     this.device.queue.submit([commandEncoder.finish()]);
 
     // Destroy ephemeral meta buffers once the GPU is done.

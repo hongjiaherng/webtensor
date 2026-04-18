@@ -6,7 +6,7 @@ import { WebGPUBackend } from '@webtensor/backend-webgpu';
 import { WASMBackend } from '@webtensor/backend-wasm';
 
 const backends = [
-  { name: 'CPU', create: async () => new CPUBackend() },
+  { name: 'CPU', create: async () => await CPUBackend.create() },
   { name: 'WebGPU', create: async () => await WebGPUBackend.create() },
   { name: 'WASM', create: async () => await WASMBackend.create() },
 ];

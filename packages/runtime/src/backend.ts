@@ -116,6 +116,14 @@ export function isContiguous(shape: number[], strides: number[], offset: number)
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Device-level compute surface. Implementations are expected to expose an
+ * async factory of the form `static async create(): Promise<Backend>` — see
+ * the `BackendFactory` type in `./engine.ts`. TypeScript interfaces can't
+ * express static methods, but the convention is uniform across all shipped
+ * backends (`CPUBackend.create()`, `WASMBackend.create()`,
+ * `WebGPUBackend.create()`) and is what `registerBackend()` consumes.
+ */
 export interface Backend {
   /**
    * Allocate fresh storage for a tensor of the given shape and dtype.

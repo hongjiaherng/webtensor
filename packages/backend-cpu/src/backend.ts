@@ -4,6 +4,19 @@ import { getShapeSize, computeContiguousStrides } from './kernels/utils';
 import { cpuKernelRegistry } from './kernels/registry';
 
 export class CPUBackend implements Backend {
+  private constructor() {}
+
+  /**
+   * Async factory to match the `Backend` lifecycle convention used by WASM
+   * and WebGPU. CPU has no setup work today, but keeping the shape uniform
+   * lets consumer code stay backend-agnostic (`await Backend.create()` works
+   * everywhere) and leaves room for future async init (SIMD polyfill, etc.)
+   * without a breaking API change.
+   */
+  static async create(): Promise<CPUBackend> {
+    return new CPUBackend();
+  }
+
   allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
     const size = getShapeSize(shape);
     const Ctor = typedArrayCtor(dtype);

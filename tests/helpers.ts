@@ -11,7 +11,7 @@ import { WebGPUBackend } from '@webtensor/backend-webgpu';
  * to `run()` / `compile()` so the same user-level code runs on all three backends.
  */
 export const BACKENDS = [
-  { name: 'CPU', create: async () => new CPUBackend() as Backend },
+  { name: 'CPU', create: async () => (await CPUBackend.create()) as Backend },
   { name: 'WASM', create: async () => (await WASMBackend.create()) as Backend },
   { name: 'WebGPU', create: async () => (await WebGPUBackend.create()) as Backend },
 ];

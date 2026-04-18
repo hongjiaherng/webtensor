@@ -21,7 +21,7 @@ import { Engine } from '@webtensor/runtime';
 import { CPUBackend } from '@webtensor/backend-cpu';
 import { add, tensor, compileGraph } from '@webtensor/core';
 
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 
 const a = tensor([
   [1, 2],

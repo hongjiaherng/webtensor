@@ -155,7 +155,7 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 - [src/kernels/registry.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/registry.ts) — kernel map.
 - [src/kernels/utils.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/utils.ts) — `CPUKernel` type, helpers like `buf()`.
 - [src/kernels/binary/](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/kernels/binary/), `unary/`, `linalg/`, `memory/` — one file per op.
-- [src/index.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/index.ts) — `registerBackend('cpu', async () => new CPUBackend())`.
+- [src/index.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/backend-cpu/src/index.ts) — `registerBackend('cpu', () => CPUBackend.create())`.
 
 `CPUKernel` is `(node, inputs, outputs) => void`. Each kernel pulls the typed array via `buf()`, computes broadcast strides if needed, and iterates with `stridedIdx()`. See [Backends and kernels](/docs/onboarding/backends-and-kernels) for kernel anatomy.
 

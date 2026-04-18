@@ -91,7 +91,7 @@ async function runWith(backend: Backend): Promise<TestResult[]> {
 }
 
 export async function runCpuTests(): Promise<TestResult[]> {
-  return runWith(new CPUBackend());
+  return runWith(await CPUBackend.create());
 }
 
 export async function runWasmTests(): Promise<TestResult[]> {

@@ -4,10 +4,8 @@ import { Engine } from '@webtensor/runtime';
 import { BACKENDS } from '../helpers';
 
 // Pad and slice's backward share the scatter-into-constant kernel.
-// WebGPU deferred — aligns with Phase 5.
-const BACKENDS_CPU_WASM = BACKENDS.filter((b) => b.name !== 'WebGPU');
 
-BACKENDS_CPU_WASM.forEach(({ name, create }) => {
+BACKENDS.forEach(({ name, create }) => {
   describe(`pad (forward) — ${name}`, () => {
     let engine: Engine;
     beforeAll(async () => {

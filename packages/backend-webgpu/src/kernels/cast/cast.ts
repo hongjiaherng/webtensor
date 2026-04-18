@@ -1,26 +1,18 @@
-import { DType } from '@webtensor/ir';
 import source from './cast.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
-
-const WGSL_SCALAR: Record<DType, string> = {
-  float32: 'f32',
-  int32: 'i32',
-  bool: 'u32',
-};
-
-function assertSupported(dtype: DType, side: 'in' | 'out'): void {
-  if (dtype === 'bool') {
-    throw new Error(
-      `WebGPU cast: bool is not supported as the ${side === 'in' ? 'input' : 'output'} dtype. ` +
-        'Cast bool tensors on CPU or WASM first.',
-    );
-  }
-}
+import {
+  WebGPUKernel,
+  packMeta,
+  createMetaBuffer,
+  getShapeSize,
+  injectMeta,
+  WGSL_SCALAR,
+} from '../utils';
 
 /**
- * Cast kernel. Compiles one pipeline per (in_dtype, out_dtype) pair by doing
- * two substitutions (IN_SCALAR, OUT_SCALAR) in the WGSL template. The engine's
- * pipeline cache keys on `Cast:{key}` so each pair is compiled once per backend.
+ * Cast kernel. Compiles one pipeline per (in_dtype, out_dtype) pair by
+ * substituting IN_SCALAR / OUT_SCALAR / CAST_EXPR in the WGSL template. The
+ * engine's pipeline cache keys on `Cast:{key}` so each pair is compiled once
+ * per backend.
  */
 export const castKernel: WebGPUKernel = {
   pipelineKey(_node, inputs, outputs) {
@@ -30,9 +22,10 @@ export const castKernel: WebGPUKernel = {
   createPipeline(device, _node, inputs, outputs) {
     const inDType = inputs[0].dtype;
     const outDType = outputs[0].dtype;
-    assertSupported(inDType, 'in');
-    assertSupported(outDType, 'out');
+    const castExpr =
+      outDType === 'bool' ? `select(0u, 1u, v != ${WGSL_SCALAR[inDType]}(0))` : `OUT_SCALAR(v)`;
     const code = injectMeta(source)
+      .replace(/\bCAST_EXPR\b/g, castExpr)
       .replace(/\bIN_SCALAR\b/g, WGSL_SCALAR[inDType])
       .replace(/\bOUT_SCALAR\b/g, WGSL_SCALAR[outDType]);
     return device.createComputePipeline({

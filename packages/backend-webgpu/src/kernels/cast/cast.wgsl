@@ -1,10 +1,12 @@
-// Strided dtype cast. IN_SCALAR and OUT_SCALAR are substituted at pipeline-build
-// time (f32 / i32). Bool is not supported on WebGPU: bool tensors are stored as
-// 1 B/elem on the host but WGSL has no 1-byte scalar — the host/device layouts
-// don't match. Cast bool tensors on CPU or WASM first.
-//
-// Numeric conversion is `OUT_SCALAR(v)` — WGSL's explicit type conversion,
-// which truncates f32 → i32 toward zero (matches NumPy / PyTorch).
+// Strided dtype cast. IN_SCALAR / OUT_SCALAR / CAST_EXPR are substituted at
+// pipeline-build time. IN_SCALAR and OUT_SCALAR are one of f32 / i32 / u32
+// (bool is stored as u32 on device, see backend.ts). CAST_EXPR is the per-
+// element expression:
+//   - bool out  : select(0u, 1u, v != IN_SCALAR(0))   (truthiness)
+//   - else      : OUT_SCALAR(v)                        (native WGSL coercion —
+//                                                       f32 → i32 truncates
+//                                                       toward zero, matching
+//                                                       NumPy / PyTorch)
 
 __TENSOR_META__
 
@@ -30,5 +32,6 @@ fn strided_idx(flat: u32) -> u32 {
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= arrayLength(&out)) { return; }
-  out[i] = OUT_SCALAR(a[strided_idx(i)]);
+  let v = a[strided_idx(i)];
+  out[i] = CAST_EXPR;
 }

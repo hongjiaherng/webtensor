@@ -3,11 +3,9 @@ import { tensor, cast, run } from '@webtensor/core';
 import { Engine } from '@webtensor/runtime';
 import { BACKENDS } from '../helpers';
 
-// Cast is the cross-dtype conversion op. CPU and WASM handle all 9 (from, to)
-// pairs across float32 / int32 / bool. WebGPU supports only numeric pairs
-// (float32 ↔ int32) — bool storage doesn't round-trip through WGSL.
-
-const BOOL_CAPABLE = BACKENDS.filter((b) => b.name !== 'WebGPU');
+// Cast is the cross-dtype conversion op. All three backends handle all 9
+// (from, to) pairs across float32 / int32 / bool. On WebGPU, bool is stored
+// as u32 on device (backend.ts translates at write/read).
 
 BACKENDS.forEach(({ name, create }) => {
   describe(`cast (numeric ↔ numeric) — ${name}`, () => {
@@ -64,7 +62,7 @@ BACKENDS.forEach(({ name, create }) => {
   });
 });
 
-BOOL_CAPABLE.forEach(({ name, create }) => {
+BACKENDS.forEach(({ name, create }) => {
   describe(`cast (bool round-trips) — ${name}`, () => {
     let engine: Engine;
     beforeAll(async () => {

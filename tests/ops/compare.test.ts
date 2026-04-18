@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { tensor, equal, allclose, add, run, Engine } from '@webtensor/core';
 import { CPUBackend } from '@webtensor/backend-cpu';
 
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 
 describe('equal', () => {
   it('equal shapes + equal values', () => {

@@ -13,7 +13,7 @@ import {
 } from '@webtensor/core';
 import { CPUBackend } from '@webtensor/backend-cpu';
 
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 
 describe('tensor factories', () => {
   it('zeros produces all-zero tensor', async () => {

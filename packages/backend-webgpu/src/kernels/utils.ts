@@ -1,8 +1,6 @@
 import { Node, computeContiguousStrides, DType, MAX_RANK } from '@webtensor/ir';
 import { RuntimeTensor, getShapeSize, broadcastStridesOf } from '@webtensor/runtime';
 
-export { MAX_RANK };
-
 // ---------------------------------------------------------------------------
 // Dtype → WGSL scalar type mapping.
 // WGSL has no generics, so a kernel that supports multiple dtypes is compiled
@@ -10,7 +8,7 @@ export { MAX_RANK };
 // `u32` at pipeline-build time. Bool values are packed as u32 (WebGPU storage
 // buffers don't expose a 1-byte scalar; we use the low bit of u32).
 
-const WGSL_SCALAR: Record<DType, string> = {
+export const WGSL_SCALAR: Record<DType, string> = {
   float32: 'f32',
   int32: 'i32',
   bool: 'u32',
@@ -269,4 +267,22 @@ export interface WebGPUKernel {
     inputs: RuntimeTensor[],
     outputs: RuntimeTensor[],
   ): [number, number, number];
+
+  /**
+   * Optional escape hatch for kernels that need multiple dispatches (e.g.
+   * Concat, which issues one dispatch per input). When present, the backend
+   * skips its standard single-dispatch path and hands the op full control over
+   * the encoder. The override must encode all compute passes it needs and
+   * return any temp buffers for cleanup after submission.
+   *
+   * `buildBindGroupEntries` and `getDispatch` are not called when this is set.
+   */
+  executeOverride?(
+    device: GPUDevice,
+    encoder: GPUCommandEncoder,
+    node: Node,
+    inputs: RuntimeTensor[],
+    outputs: RuntimeTensor[],
+    pipeline: GPUComputePipeline,
+  ): { tempBuffers: GPUBuffer[] };
 }

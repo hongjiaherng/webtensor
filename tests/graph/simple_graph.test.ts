@@ -4,7 +4,7 @@ import { relu } from '@webtensor/nn';
 import { Engine } from '@webtensor/runtime';
 import { CPUBackend } from '@webtensor/backend-cpu';
 
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 
 describe('Graph: relu(a + b)', () => {
   it('zeros negatives after add', async () => {

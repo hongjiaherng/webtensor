@@ -19,6 +19,15 @@ import { reduceMeanKernel } from './reduce/reduceMean';
 import { softmaxKernel } from './activation/softmax';
 import { contiguousKernel } from './memory/contiguous';
 import { castKernel } from './cast/cast';
+import { eqKernel } from './compare/eq';
+import { neKernel } from './compare/ne';
+import { ltKernel } from './compare/lt';
+import { leKernel } from './compare/le';
+import { gtKernel } from './compare/gt';
+import { geKernel } from './compare/ge';
+import { iscloseKernel } from './compare/isclose';
+import { concatKernel } from './join/concat';
+import { padKernel } from './padding/pad';
 
 export type { WebGPUKernel };
 
@@ -43,4 +52,13 @@ export const webgpuKernelRegistry = new Map<string, WebGPUKernel>([
   ['Softmax', softmaxKernel],
   ['Contiguous', contiguousKernel],
   ['Cast', castKernel],
+  ['Equal', eqKernel],
+  ['NotEqual', neKernel],
+  ['Less', ltKernel],
+  ['LessOrEqual', leKernel],
+  ['Greater', gtKernel],
+  ['GreaterOrEqual', geKernel],
+  ['IsClose', iscloseKernel],
+  ['Concat', concatKernel],
+  ['Pad', padKernel],
 ]);

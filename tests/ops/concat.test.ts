@@ -3,11 +3,7 @@ import { tensor, concat, add, mul, run } from '@webtensor/core';
 import { Engine } from '@webtensor/runtime';
 import { BACKENDS } from '../helpers';
 
-// WebGPU concat is deferred — shader layout work pairs with Phase 5's
-// TensorMeta rank>8 redesign.
-const CONCAT_BACKENDS = BACKENDS.filter((b) => b.name !== 'WebGPU');
-
-CONCAT_BACKENDS.forEach(({ name, create }) => {
+BACKENDS.forEach(({ name, create }) => {
   describe(`concat — ${name}`, () => {
     let engine: Engine;
     beforeAll(async () => {

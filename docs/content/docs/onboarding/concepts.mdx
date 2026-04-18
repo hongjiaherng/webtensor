@@ -306,7 +306,7 @@ const y = matmul(x, W);
 const graph = compileGraph([y]);
 
 // 3. Run it on a backend, passing feeds keyed by tensor.id.
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 await engine.evaluate(graph, { [x.id]: xData, [W.id]: wData });
 
 // 4. Read back via tensor.id.

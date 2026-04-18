@@ -61,7 +61,7 @@ import { CPUBackend } from '@webtensor/backend-cpu';
 // Explicit graph → engine → read-back: what `run()` does internally.
 const y = add(tensor([1, 2, 3]), tensor([4, 5, 6]));
 const graph = compileGraph([y]);
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 await engine.evaluate(graph);
 const data = await engine.get(y.id); // Float32Array
 

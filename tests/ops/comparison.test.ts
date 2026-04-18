@@ -3,12 +3,10 @@ import { tensor, eq, ne, lt, le, gt, ge, isclose, run } from '@webtensor/core';
 import { Engine } from '@webtensor/runtime';
 import { BACKENDS } from '../helpers';
 
-// Element-wise comparison ops produce bool tensors. WebGPU bool storage is not
-// yet plumbed (1-byte host vs. 4-byte WGSL scalar), so this phase ships
-// CPU + WASM only. The scalar helpers `equal` / `allclose` live in compare.test.ts.
-const CMP_BACKENDS = BACKENDS.filter((b) => b.name !== 'WebGPU');
+// Element-wise comparison ops produce bool tensors. All three backends ship
+// these ops. The scalar helpers `equal` / `allclose` live in compare.test.ts.
 
-CMP_BACKENDS.forEach(({ name, create }) => {
+BACKENDS.forEach(({ name, create }) => {
   describe(`comparison ops — ${name}`, () => {
     let engine: Engine;
     beforeAll(async () => {

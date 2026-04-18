@@ -17,7 +17,7 @@ import { CPUBackend } from '@webtensor/backend-cpu';
 import { Engine } from '@webtensor/runtime';
 import { add, tensor, compileGraph } from '@webtensor/core';
 
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 
 const a = tensor([
   [1, 2],
@@ -38,7 +38,7 @@ Importing this package also auto-registers the `'cpu'` backend factory, so you c
 ## API
 
 - `CPUBackend` — implements `Backend` from `@webtensor/runtime`
-  - `new CPUBackend()` (no async setup needed)
+  - `await CPUBackend.create()` (matches the async factory convention shared by all backends; CPU has no real async setup)
   - `execute()` is **synchronous** — kernels run immediately on `TypedArray` storage
 
 ## Supported ops

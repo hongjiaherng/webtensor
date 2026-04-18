@@ -30,7 +30,7 @@ const b = tensor([
 ]);
 const c = matmul(add(a, b), a); // builds a graph; nothing runs yet
 
-const engine = new Engine(new CPUBackend());
+const engine = new Engine(await CPUBackend.create());
 await engine.evaluate(compileGraph([c]));
 const out = (await engine.get(c.id)) as Float32Array;
 ```
