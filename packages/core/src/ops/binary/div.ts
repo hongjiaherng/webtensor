@@ -1,14 +1,20 @@
+import { resultDType, isArithmeticDType } from '@webtensor/runtime';
 import { Tensor } from '../../tensor';
 import { broadcastShapes } from '../../shape';
 import { unbroadcastGrad } from '../_unbroadcast';
 import { mul } from './mul';
 import { tensor } from '../../init/tensor';
 
-/** Element-wise `a / b` with broadcasting. */
+/** Element-wise `a / b` with broadcasting. PyTorch-style dtype promotion. */
 export function div(a: Tensor, b: Tensor): Tensor {
+  if (!isArithmeticDType(a.dtype) || !isArithmeticDType(b.dtype)) {
+    throw new Error(
+      `div: dtype ${a.dtype}/${b.dtype} not supported for arithmetic; cast to int32 or float32 first`,
+    );
+  }
   return new Tensor({
     shape: broadcastShapes(a.shape, b.shape),
-    dtype: a.dtype,
+    dtype: resultDType(a.dtype, b.dtype),
     device: a.device,
     requiresGrad: a.requiresGrad || b.requiresGrad,
     ctx: {

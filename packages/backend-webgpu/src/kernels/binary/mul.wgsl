@@ -7,9 +7,9 @@ struct TensorMeta {
   strides: array<vec4<u32>, 2>,
 };
 
-@group(0) @binding(0) var<storage, read>       a:      array<f32>;
-@group(0) @binding(1) var<storage, read>       b:      array<f32>;
-@group(0) @binding(2) var<storage, read_write> out:    array<f32>;
+@group(0) @binding(0) var<storage, read>       a:      array<SCALAR>;
+@group(0) @binding(1) var<storage, read>       b:      array<SCALAR>;
+@group(0) @binding(2) var<storage, read_write> out:    array<SCALAR>;
 @group(0) @binding(3) var<uniform>             u_meta_a: TensorMeta;
 @group(0) @binding(4) var<uniform>             u_meta_b: TensorMeta;
 

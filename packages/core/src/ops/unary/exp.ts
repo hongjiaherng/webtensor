@@ -1,8 +1,11 @@
 import { Tensor } from '../../tensor';
 import { mul } from '../binary/mul';
 
-/** Element-wise `exp(a)`. */
+/** Element-wise `exp(a)`. Float-only — cast int32 → float32 first. */
 export function exp(a: Tensor): Tensor {
+  if (a.dtype !== 'float32') {
+    throw new Error(`exp: requires float32 input, got ${a.dtype}. Cast first.`);
+  }
   return new Tensor({
     shape: a.shape,
     dtype: a.dtype,

@@ -1,11 +1,94 @@
 ---
 title: 'webtensor'
-description: 'A tensor library that runs entirely in the browser — WebGPU acceleration, eager autograd, and a torch-like API in TypeScript.'
+description: 'A browser-first tensor library with WebGPU acceleration, eager autograd, and a PyTorch/JAX-inspired API in TypeScript.'
 ---
 
-**webtensor** is a multi-backend tensor library built for the browser. Train, visualize, and run inference with WebGPU acceleration as a TypeScript library. Backends: CPU (TypeScript), WASM (Rust via wasm-pack), and WebGPU (WGSL compute shaders). All three share full kernel parity across 19 ops.
+**webtensor** is a multi-backend tensor library built for the browser. Write, train, and visualize models in TypeScript with three backends at full parity: **CPU** (TypeScript), **WASM** (Rust via wasm-pack), and **WebGPU** (WGSL compute shaders). ~580 cross-backend tests.
 
-> **Status: active development — foundation done.** Broadcast-aware autograd, PyTorch-style `matmul` (incl. batched), `sum`/`mean`/`softmax`, JAX-style `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
+> **Status: foundation done.** Broadcast-aware autograd, PyTorch-style `matmul` (incl. N-D batched), reductions, softmax, JAX-style `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
+
+---
+
+## Two layers: high-level and low-level API
+
+Every user action can be done at two levels. The **high-level** API is what 99% of users want. The **low-level** primitives are there for custom compilers, ONNX round-tripping, and library internals.
+
+### High-level (idiomatic)
+
+```ts
+import { tensor, randn, add, matmul, compile, grad, run } from '@webtensor/core';
+import { relu, mseLoss } from '@webtensor/nn';
+import { SGD } from '@webtensor/optim';
+import '@webtensor/backend-webgpu';   // pick one (or several)
+
+// Eager one-shot — `run()` evaluates the tensor graph:
+const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
+console.log(y.data);   // Float32Array [5, 7, 9]
+
+// Or chain via the method form:
+const z = await tensor([-1, 2, -3]).abs().run();
+
+// Shape-aware equality:
+expect(y.equals(tensor([5, 7, 9]))).toBe(true);
+
+// Training — JAX-style: trace once, call many
+const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
+const b = randn([8],    { requiresGrad: true });
+
+const step = await compile(
+  ({ x, y }) => {
+    const pred = relu(add(matmul(x, W), b));
+    const loss = mseLoss(pred, y);
+    return { loss, dW: grad(loss, W), db: grad(loss, b) };
+  },
+  { x: [4, 2], y: [4, 8] },
+  { device: 'webgpu' },
+);
+
+const opt = new SGD(0.1);
+for (let i = 0; i < 1000; i++) {
+  const { loss, dW, db } = await step({ x: xBatch, y: yBatch });
+  opt.step([W, b], [dW, db]);
+}
+```
+
+### Low-level (when you need it)
+
+```ts
+import { tensor, add, compileGraph, Engine, placeholder } from '@webtensor/core';
+import { CPUBackend } from '@webtensor/backend-cpu';
+
+// Explicit graph → engine → read-back: what `run()` does internally.
+const y = add(tensor([1, 2, 3]), tensor([4, 5, 6]));
+const graph = compileGraph([y]);
+const engine = new Engine(new CPUBackend());
+await engine.evaluate(graph);
+const data = await engine.get(y.id);   // Float32Array
+
+// Placeholder + feeds: what `compile()` wires up for you.
+const x = placeholder([4, 2]);
+const W = placeholder([2, 8]); W.requiresGrad = true;
+const out = matmul(x, W);
+const graph2 = compileGraph([out]);
+await engine.evaluate(graph2, { [x.id]: xData, [W.id]: wData });
+```
+
+The low-level API is stable and documented. It's what an ONNX importer or a custom JIT would use. Stick with the high-level API unless you're extending the library.
+
+---
+
+## Packages
+
+![Package dependencies](/diagrams/package-dependencies.svg)
+
+- `@webtensor/ir` — pure data: `Node`, `Value`, `Graph`, `DType`.
+- `@webtensor/runtime` — `Engine`, `Backend` interface, view ops, dtype utilities.
+- `@webtensor/core` — user-facing tensor library: `Tensor`, ops, autograd, `compile` / `grad` / `run`.
+- **`@webtensor/nn`** — activations (`relu`, `sigmoid`, `tanh`, `softmax`) and losses (`mseLoss`, ...).
+- **`@webtensor/optim`** — host-side optimizers (`SGD`; Adam coming soon).
+- `@webtensor/backend-cpu` / `-wasm` / `-webgpu` — kernel implementations.
+
+Packages split like **JAX + optax + flax** and **tfjs-core + tfjs-layers** — ML-specific building blocks (`nn`, `optim`) sit on top of the tensor core, not inside it. Inference-only users don't pay the training-code bundle cost.
 
 ---
 
@@ -14,8 +97,8 @@ description: 'A tensor library that runs entirely in the browser — WebGPU acce
 **New to the project?** Work through the onboarding series in order:
 
 - [Start here](/docs/onboarding/start-here) — status snapshot, reading order, what's implemented and what isn't.
-- [System walkthrough](/docs/onboarding/system-walkthrough) — end-to-end traced example: how `add(a, b)` becomes a number.
-- [Package deep-dive](/docs/onboarding/package-deep-dive) — the six packages, their types, and their dependency rules.
+- [Key concepts](/docs/onboarding/concepts) — progressive deep-dive into strides, views, broadcasting, compile/execute, autograd, placeholders.
+- [Package deep-dive](/docs/onboarding/package-deep-dive) — per-package responsibilities and dependency rules.
 
 **Contributing?**
 
@@ -27,19 +110,5 @@ description: 'A tensor library that runs entirely in the browser — WebGPU acce
 
 - [Roadmap](/docs/roadmap) — feature checklist and priority order.
 - [Rearchitect notes](/docs/onboarding/rearchitect-notes) — impact analysis for future changes.
-
----
-
-## Architecture at a glance
-
-```text
-user code  →  @webtensor/core  (Tensor, ops, autograd, compileGraph)
-                    ↓
-           @webtensor/runtime  (Engine, Backend interface, view ops)
-                    ↓
-   backend-cpu | backend-wasm | backend-webgpu
-```
-
-The same `Graph` IR runs on any backend. Backends register themselves at import time; `Engine.create('cpu' | 'wasm' | 'webgpu')` picks one.
 
 See [Architecture](/docs/advanced/architecture) for the full contract and [IR reference](/docs/advanced/ir-reference) for the graph schema.

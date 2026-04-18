@@ -117,9 +117,39 @@ export function isContiguous(shape: number[], strides: number[], offset: number)
 // ---------------------------------------------------------------------------
 
 export interface Backend {
+  /**
+   * Allocate fresh storage for a tensor of the given shape and dtype.
+   * Synchronous — backends are expected to have allocation primitives that
+   * don't require awaiting (ArrayBuffer ctor, GPUBuffer creation, WASM
+   * `alloc_*`).
+   */
   allocate(shape: (number | null)[], dtype: DType): RuntimeTensor;
+
+  /**
+   * Copy tensor data back to a JS TypedArray. This is the only genuinely
+   * async call in the interface — WebGPU must round-trip through a staging
+   * buffer (`mapAsync`), and CPU/WASM resolve immediately.
+   */
   read(tensor: RuntimeTensor): Promise<ArrayBufferView>;
+
+  /**
+   * Write host-side `data` into the tensor's storage. Synchronous — on
+   * WebGPU this is a `queue.writeBuffer` (queued, no await needed).
+   */
   write(tensor: RuntimeTensor, data: ArrayBufferView): void;
-  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void | Promise<void>;
+
+  /**
+   * Run one op. Synchronous — CPU/WASM compute in place; WebGPU submits
+   * commands to the GPU queue (which processes them in order, so subsequent
+   * calls see the right state). Actual GPU work completion is not awaited
+   * here; it's awaited at `read()` time via `mapAsync`.
+   *
+   * `Engine.evaluate` still `await`s this call to yield a microtask tick
+   * between ops — that keeps the UI responsive on large graphs without
+   * adding real async overhead.
+   */
+  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void;
+
+  /** Free the tensor's storage. Synchronous. */
   dispose(tensor: RuntimeTensor): void;
 }

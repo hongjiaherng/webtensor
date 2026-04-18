@@ -3,7 +3,4 @@ pub mod exp;
 pub mod log;
 pub mod neg;
 pub mod pow;
-pub mod relu;
-pub mod sigmoid;
 pub mod sqrt;
-pub mod tanh;

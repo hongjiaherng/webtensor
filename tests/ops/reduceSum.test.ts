@@ -81,20 +81,27 @@ BACKENDS.forEach(({ name, create }) => {
   });
 });
 
-describe('sum — autograd', () => {
-  it('gradient of sum is all-ones', async () => {
-    const a = tensor([[1, 2], [3, 4]], { requiresGrad: true });
-    const y = sum(a);
-    y.backward();
-    const g = await run(a.grad!);
-    expect(g.allclose(tensor([[1, 1], [1, 1]]))).toBe(true);
-  });
+BACKENDS.forEach(({ name, create }) => {
+  describe(`sum — autograd — ${name}`, () => {
+    let engine: Engine;
+    beforeAll(async () => {
+      engine = new Engine(await create());
+    });
 
-  it('gradient of sum axis 0 broadcasts back to input shape', async () => {
-    const a = tensor([[1, 2, 3], [4, 5, 6]], { requiresGrad: true });
-    const y = sum(a, 0);
-    y.backward();
-    const g = await run(a.grad!);
-    expect(g.allclose(tensor([[1, 1, 1], [1, 1, 1]]))).toBe(true);
+    it('gradient of sum is all-ones', async () => {
+      const a = tensor([[1, 2], [3, 4]], { requiresGrad: true });
+      const y = sum(a);
+      y.backward();
+      const g = await run(a.grad!, { engine });
+      expect(g.allclose(tensor([[1, 1], [1, 1]]))).toBe(true);
+    });
+
+    it('gradient of sum axis 0 broadcasts back to input shape', async () => {
+      const a = tensor([[1, 2, 3], [4, 5, 6]], { requiresGrad: true });
+      const y = sum(a, 0);
+      y.backward();
+      const g = await run(a.grad!, { engine });
+      expect(g.allclose(tensor([[1, 1, 1], [1, 1, 1]]))).toBe(true);
+    });
   });
 });

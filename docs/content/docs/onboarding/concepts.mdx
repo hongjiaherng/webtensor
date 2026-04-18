@@ -233,68 +233,87 @@ If a tensor is used multiple times (e.g., `y = a * a`), `a.grad` is built up by 
 
 ---
 
-## 6. Placeholder inputs and `compile()` — compile once, feed many
+## 6. Two-tier API — high-level by default, low-level always available
 
-Everything you've read so far constructs a graph that bakes *data* into the IR as `Constant` nodes. That's fine for one-shot inference, but for training you need to reuse the same graph across many steps with different batches and different weight values. Webtensor splits tensor provenance into two classes:
+Webtensor exposes two layers for every user action. High-level is the default; low-level is the stable escape hatch (also what the high-level helpers call internally).
 
-| Class | Built from | Goes into | When used |
-|------|-----------|-----------|-----------|
-| **Constant** (initializer) | `tensor([1,2,3])`, `zeros`, `ones`, `randn`, ... | `Graph.initializers` — data embedded in graph | Fixed values known at compile time |
-| **Placeholder** (input) | `placeholder(shape, dtype)` | `Graph.inputs` — no data at compile time | Values fed per-evaluation via `evaluate(graph, feeds)` |
+### 6a. Constant vs Placeholder — the graph-level distinction
+
+Every `Tensor` in the graph falls into one of two classes based on where its data comes from:
+
+| Class                     | Built from                                                             | Goes into             | When used                                                   |
+| ------------------------- | ---------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------- |
+| **Constant** (initializer) | `tensor([1,2,3])`, `zeros`, `ones`, `rand`, `randn` (without `requiresGrad`) | `Graph.initializers` | Fixed values known at compile time (e.g. look-up tables)     |
+| **Placeholder** (input)   | `placeholder(shape)` or a factory with `{ requiresGrad: true }`        | `Graph.inputs`        | Values fed fresh per-evaluation (batches, trainable weights) |
 
 This mirrors ONNX exactly: initializers vs. graph inputs.
 
-### Low-level primitive
+### 6b. High-level API — what you write 99% of the time
+
+**Declare trainable weights with `{ requiresGrad: true }` on any factory.** The factory marks them as Placeholders with attached `.data` so `compile()` auto-feeds them each step:
 
 ```ts
-const x = placeholder([4, 2]);                          // graph input
-const W = placeholder([2, 8]); W.requiresGrad = true;   // trainable weight
-const y = matmul(x, W);
-const graph = compileGraph([y]);
+import { compile, grad, add, matmul, randn, zeros, run } from '@webtensor/core';
+import { relu, mseLoss } from '@webtensor/nn';
+import { SGD } from '@webtensor/optim';
 
-await engine.evaluate(graph, {
-  [x.id]: xBatchData,     // Float32Array of length 8
-  [W.id]: wData,          // Float32Array of length 16 (mutated by optimizer)
-});
-const yOut = await engine.get(y.id);
-```
+const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
+const b = zeros([8],    { requiresGrad: true });
 
-This works but leaks tensor IDs (`x.id`, `W.id`) into user code. For day-to-day use, prefer the high-level helpers.
-
-### High-level: `compile(fn, spec)` (JAX's `@jit` in TypeScript)
-
-```ts
-const forward = await compile(
-  ({ x, W, b }) => relu(add(matmul(x, W), b)),
-  { x: [4, 2], W: [2, 8], b: [8] },
-);
-const y = await forward({ x: xData, W: wData, b: bData });
-```
-
-`compile` creates placeholders internally, traces `fn` once, and returns a callable that takes a feed dict keyed by the spec's own field names. You never touch `.id`.
-
-### High-level: `grad(loss, param)` for training
-
-```ts
+// Compile: trace the function once; the returned callable auto-feeds W and b.
 const step = await compile(
-  ({ x, y, W, b }) => {
-    W.requiresGrad = true; b.requiresGrad = true;
-    const loss = mseLoss(add(matmul(x, W), b), y);
+  ({ x, y }) => {
+    const pred = relu(add(matmul(x, W), b));
+    const loss = mseLoss(pred, y);
     return { loss, dW: grad(loss, W), db: grad(loss, b) };
   },
-  { x: [4, 2], y: [4, 1], W: [2, 1], b: [1] },
+  { x: [4, 2], y: [4, 8] },
 );
 
 const opt = new SGD(0.1);
 for (let i = 0; i < 1000; i++) {
-  const { loss, dW, db } = await step({ x, y, W: wArr, b: bArr });
-  opt.step({ W: wArr, b: bArr }, { W: dW, b: db });
+  const { loss, dW, db } = await step({ x: xBatch, y: yBatch });
+  opt.step([W, b], [dW, db]);   // mutates W.data and b.data in place
 }
 ```
 
-`grad(loss, param)` runs `loss.backward()` internally (once per loss, cached) and returns `param.grad` — an unevaluated gradient tensor that compile includes in the graph. The user writes the training loop explicitly: log loss, clip grads, schedule learning rate, whatever — no hidden `trainer.fit()` semantics to debug.
+`grad(loss, param)` runs `loss.backward()` once (cached) and returns `param.grad` — an unevaluated gradient tensor that `compile()` includes in the graph. The loop stays in user space: log, clip, schedule learning rate, switch optimizers — no hidden `trainer.fit()` with hooks to learn.
 
-**Key design choice:** we don't provide a `trainStep` or `Trainer` wrapper. Every loop stays in user space, visible and customizable. This is the same philosophy as JAX core and PyTorch: small primitives over fat abstractions.
+**For one-shot eager use (tests, debugging)**, skip `compile()` entirely and use `run()`:
+
+```ts
+const y = await run(relu(add(matmul(x, W), b)));
+// or the method form:
+const y = await relu(add(matmul(x, W), b)).run();
+```
+
+### 6c. Low-level API — ONNX-style primitives
+
+Everything above is a wrapper around four primitives that stay exported for ONNX importers, custom JITs, and library internals:
+
+```ts
+import { placeholder, compileGraph, Engine } from '@webtensor/core';
+import { CPUBackend } from '@webtensor/backend-cpu';
+
+// 1. Build placeholders by hand — data supplied at runtime via `feeds`.
+const x = placeholder([4, 2]);
+const W = placeholder([2, 8]); W.requiresGrad = true;
+const y = matmul(x, W);
+
+// 2. Compile the Tensor DAG into an IR Graph.
+const graph = compileGraph([y]);
+
+// 3. Run it on a backend, passing feeds keyed by tensor.id.
+const engine = new Engine(new CPUBackend());
+await engine.evaluate(graph, { [x.id]: xData, [W.id]: wData });
+
+// 4. Read back via tensor.id.
+const out = await engine.get(y.id);
+```
+
+This is verbose but every piece is inspectable. When `compile()` doesn't fit your use case (e.g. you're writing an ONNX-to-webtensor translator, or a custom fusion compiler, or a visualization tool), you drop to this layer without leaving the library.
+
+**Key design choice:** we don't provide a `trainStep` / `Trainer` wrapper, and we don't hide the low-level API. Every high-level helper is a small wrapper, and users who outgrow the high-level can drop a level without reading internal source — the JAX / PyTorch philosophy of small primitives over fat abstractions.
 
 ---
 

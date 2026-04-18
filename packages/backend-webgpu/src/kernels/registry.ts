@@ -3,21 +3,22 @@ import { addKernel } from './binary/add';
 import { subKernel } from './binary/sub';
 import { mulKernel } from './binary/mul';
 import { divKernel } from './binary/div';
-import { reluKernel } from './unary/relu';
-import { reluGradKernel } from './unary/reluGrad';
+import { reluKernel } from './activation/relu';
+import { reluGradKernel } from './activation/reluGrad';
 import { negKernel } from './unary/neg';
 import { expKernel } from './unary/exp';
 import { logKernel } from './unary/log';
 import { sqrtKernel } from './unary/sqrt';
 import { absKernel } from './unary/abs';
 import { powKernel } from './unary/pow';
-import { sigmoidKernel } from './unary/sigmoid';
-import { tanhKernel } from './unary/tanh';
+import { sigmoidKernel } from './activation/sigmoid';
+import { tanhKernel } from './activation/tanh';
 import { matmulKernel } from './linalg/matmul';
 import { reduceSumKernel } from './reduce/reduceSum';
 import { reduceMeanKernel } from './reduce/reduceMean';
 import { softmaxKernel } from './activation/softmax';
 import { contiguousKernel } from './memory/contiguous';
+import { castKernel } from './cast/cast';
 
 export type { WebGPUKernel };
 
@@ -41,4 +42,5 @@ export const webgpuKernelRegistry = new Map<string, WebGPUKernel>([
   ['ReduceMean', reduceMeanKernel],
   ['Softmax', softmaxKernel],
   ['Contiguous', contiguousKernel],
+  ['Cast', castKernel],
 ]);

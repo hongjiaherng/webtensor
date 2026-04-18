@@ -168,9 +168,13 @@ export class Engine {
           });
           viewParents.set(outId, srcId);
         } else {
-          // Non-contiguous: execute a Contiguous copy then reshape
+          // Non-contiguous: execute a Contiguous copy then reshape. Awaited so
+          // it yields a microtask tick like every other execute() call — keeps
+          // UI responsiveness uniform across the whole graph.
           const contiguousTensor = this.backend.allocate(src.shape, src.dtype);
-          this.backend.execute(
+
+          // NOTE: Keeping await to yield a microtask tick here, so that if the graph has many reshape/view ops in a row,
+          await this.backend.execute(
             {
               id: `${node.id}_auto_contig`,
               op: 'Contiguous',
@@ -205,6 +209,7 @@ export class Engine {
         outputs.push(t);
       }
 
+      // NOTE: Keeping await to yield a microtask tick here, so that if the graph has many reshape/view ops in a row,
       await this.backend.execute(node, inputs, outputs);
 
       for (const inId of node.inputs) {

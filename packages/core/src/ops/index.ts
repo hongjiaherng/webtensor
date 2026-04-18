@@ -35,5 +35,21 @@ export { contiguous } from './memory/contiguous';
 export { clone } from './memory/clone';
 export { detach } from './memory/detach';
 
+// Cast (dtype conversion)
+export { cast } from './cast/cast';
+
+// Join
+export { concat } from './join/concat';
+
+// Element-wise comparison (returns bool tensors)
+export { eq } from './compare/eq';
+export { ne } from './compare/ne';
+export { lt } from './compare/lt';
+export { le } from './compare/le';
+export { gt } from './compare/gt';
+export { ge } from './compare/ge';
+export { isclose } from './compare/isclose';
+export type { IsCloseOptions } from './compare/isclose';
+
 // Graph inputs
 export { placeholder } from './placeholder';

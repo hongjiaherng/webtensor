@@ -62,17 +62,20 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 
 ## Training infrastructure
 
-| Area                  | Works                                                                                          | Partial | Missing                                                         |
-| --------------------- | ---------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------- |
-| Eager autograd        | Yes, with broadcast-aware backward                                                             |         |                                                                 |
-| Compile-once loop     | `compile(fn, spec)` + `grad(loss, param)` + `placeholder()` + `evaluate(graph, feeds)`         |         |                                                                 |
-| Loss functions        | `mseLoss`                                                                                      |         | `crossEntropy`, `bceLoss`, `logSoftmax`                         |
-| Optimizers            | `SGD` (host-side, with optional momentum)                                                      |         | `Adam`, `AdamW`, lr schedulers                                  |
-| Parameter helper      | `makeParam(data, shape)` wraps a `Float32Array` with its shape                                 |         |                                                                 |
-| Dataloader / batching |                                                                                                |         | No streaming, no batch sampling                                 |
-| Train/eval mode       |                                                                                                |         | No `train()` / `eval()` toggle (matters for dropout, batchnorm) |
-| Checkpointing         |                                                                                                |         | No serialization format for trained weights                     |
-| End-to-end training   | XOR MLP converges to loss < 0.05 in ≤ 500 steps (`tests/graph/train_loop.test.ts`)             |         |                                                                 |
+| Area                  | Works                                                                                                                          | Partial | Missing                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- | --------------------------------------------------------------- |
+| Eager autograd        | Yes, with broadcast-aware backward                                                                                             |         |                                                                 |
+| Compile-once loop     | `compile(fn, spec)` + `grad(loss, param)` (high-level) built on `placeholder()` + `evaluate(graph, feeds)` (low-level)         |         |                                                                 |
+| Eager evaluation      | `run(t)` function + `Tensor.run()` method                                                                                      |         |                                                                 |
+| Trainable tensor      | Any factory with `{ requiresGrad: true }` — e.g. `randn([2, 8], { requiresGrad: true })`. No `Float32Array` handling in user code. |         |                                                                 |
+| Comparison            | `equal(a, b)` / `allclose(a, b, opts)` + `.equals()` / `.allclose()` methods (PyTorch / JAX parity, shape-aware)               |         | `isclose` elementwise (needs bool kernels)                      |
+| Loss functions (`@webtensor/nn`) | `mseLoss`                                                                                                         |         | `crossEntropy`, `bceLoss`, `logSoftmax`                         |
+| Activations (`@webtensor/nn`)    | `relu`, `sigmoid`, `tanh`, `softmax`                                                                              |         | `gelu`, `silu`, `leakyRelu`                                      |
+| Optimizers (`@webtensor/optim`)  | `SGD` (optional momentum). Takes `Tensor[]` params + `Tensor[]` grads.                                            |         | `Adam`, `AdamW`, lr schedulers                                  |
+| Dataloader / batching |                                                                                                                                |         | No streaming, no batch sampling                                 |
+| Train/eval mode       |                                                                                                                                |         | No `train()` / `eval()` toggle (matters for dropout, batchnorm) |
+| Checkpointing         |                                                                                                                                |         | No serialization format for trained weights                     |
+| End-to-end training   | XOR MLP convergence verified on all 3 backends (`tests/graph/train_loop.test.ts`)                                              |         |                                                                 |
 
 ---
 

@@ -101,12 +101,19 @@ BACKENDS.forEach(({ name, create }) => {
   });
 });
 
-describe('softmax — autograd', () => {
-  it('grad of softmax(x) · 1 is zero everywhere (saturated)', async () => {
-    const a = tensor([[1, 2, 3], [4, 5, 6]], { requiresGrad: true });
-    const loss = sum(softmax(a, -1));
-    loss.backward();
-    const g = await run(a.grad!);
-    expect(g.allclose(tensor([[0, 0, 0], [0, 0, 0]]), { atol: 1e-5 })).toBe(true);
+BACKENDS.forEach(({ name, create }) => {
+  describe(`softmax — autograd — ${name}`, () => {
+    let engine: Engine;
+    beforeAll(async () => {
+      engine = new Engine(await create());
+    });
+
+    it('grad of softmax(x) · 1 is zero everywhere (saturated)', async () => {
+      const a = tensor([[1, 2, 3], [4, 5, 6]], { requiresGrad: true });
+      const loss = sum(softmax(a, -1));
+      loss.backward();
+      const g = await run(a.grad!, { engine });
+      expect(g.allclose(tensor([[0, 0, 0], [0, 0, 0]]), { atol: 1e-5 })).toBe(true);
+    });
   });
 });

@@ -1,9 +1,12 @@
 ---
 title: 'Package deep-dive'
-description: 'What each of the six packages owns: key files, public types, what they must NOT depend on.'
+description: 'What each of the eight packages owns: key files, public types, what they must NOT depend on.'
 ---
 
-Webtensor is a Bun workspace with six packages. The dependency graph is strictly layered: `backend-* → runtime → ir`, and `core → runtime → ir`. Backends never depend on `core`; `core` never depends on a specific backend.
+Webtensor is a Bun workspace with eight packages. See the [package-dependencies diagram](/diagrams/package-dependencies.svg) for the full layout:
+
+- Backends never depend on `core`; `core` never depends on a specific backend.
+- `nn` and `optim` depend on `core` but not on each other — they sit on top like `jax.nn` + `optax` or `tfjs-layers`, so inference-only code doesn't pull in training bits.
 
 ![Package dependencies](/diagrams/package-dependencies.svg)
 
@@ -106,6 +109,39 @@ That's it — five methods. `dispose()` must be a no-op when `tensor.isView` is 
 `Engine.create(device)` is async and looks up the backend from `backendRegistry`. Backends register themselves at module load time — that's why `import '@webtensor/backend-cpu'` is imported only for its side effect.
 
 **Must not depend on:** `core`. The runtime can compute on a `Graph` without knowing how it was built. This separation is what enables future ONNX import — drop in a `Graph` from any source, evaluate it.
+
+---
+
+## `packages/nn`
+
+**Role:** neural-network-flavored building blocks on top of `core` — activations and loss functions. Mirrors `jax.nn` / `torch.nn.functional`.
+
+**Key files:**
+
+- [src/activations/relu.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/activations/relu.ts) — `relu`
+- [src/activations/sigmoid.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/activations/sigmoid.ts) — `sigmoid`
+- [src/activations/tanh.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/activations/tanh.ts) — `tanh`
+- [src/activations/softmax.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/activations/softmax.ts) — `softmax`
+- [src/losses/mse.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/nn/src/losses/mse.ts) — `mseLoss`
+
+**Why separate from `core`:** activations and losses are ML-specific; pure tensor math (the kind NumPy has) lives in `core`. This keeps `core`'s bundle minimal for inference-only users. Matches the JS ecosystem convention (`tfjs-layers` split from `tfjs-core`).
+
+**Must not depend on:** any backend. Just `core`.
+
+---
+
+## `packages/optim`
+
+**Role:** host-side optimizers (Python-like `.step()` on parameter tensors).
+
+**Key files:**
+
+- [src/optimizer.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/optim/src/optimizer.ts) — `Optimizer` interface
+- [src/sgd.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/optim/src/sgd.ts) — `SGD` (optional momentum)
+
+**Contract:** `step(params: Tensor[], grads: Tensor[])` — mutates each `param.data` in place using the gradient's `.data`. Users never touch raw `Float32Array`s.
+
+**Must not depend on:** any backend. Just `core` + `runtime` (for `TypedArray` type).
 
 ---
 

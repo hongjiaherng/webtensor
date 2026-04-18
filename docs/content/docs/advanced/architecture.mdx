@@ -27,6 +27,18 @@ The boundary rule exists to keep each package independently testable and replace
 - `ir` can describe computation but must not know about autograd or devices — the same graph must be producible from hand-authored tensors and from an ONNX parser without either knowing about the other.
 - `runtime` can execute graphs but must not contain op math — otherwise adding a backend would require touching the engine.
 - `backends` can run kernels and own memory but must not define user-facing tensor semantics — user code imports from `core`, not from backend packages.
+- `nn` / `optim` can depend on `core` (they compose tensor ops) but not on each other and not on any backend. They stay as optional layers on top — the core tensor library stands alone.
+
+---
+
+## Two-tier API
+
+`@webtensor/core` deliberately exposes two layers:
+
+- **High-level** — what 99% of users import. `tensor`, `zeros/ones/rand/randn`, `run()`, `compile(fn, spec)`, `grad(loss, param)`, `.equals()` / `.allclose()`. The training code pattern looks like JAX's `@jit` + `optax`.
+- **Low-level** — stable, documented escape hatch. `placeholder()`, `compileGraph()`, `Engine`, `registerBackend`, raw `Backend` / `RuntimeTensor`. Used by the high-level API internally; also by ONNX importers, custom JITs, or anyone extending the library.
+
+The rule: **every high-level helper is a small wrapper around the low-level primitives, and both remain exported.** If a user outgrows `compile()`, they can drop a level without re-learning the system or switching libraries. This is what keeps us from becoming a "magic" framework (HuggingFace / Lightning style) where escape hatches lead to reading internal source code.
 
 ---
 

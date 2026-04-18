@@ -55,12 +55,19 @@ BACKENDS.forEach(({ name, create }) => {
   });
 });
 
-describe('mean — autograd', () => {
-  it('gradient of mean over all axes is 1/N everywhere', async () => {
-    const a = tensor([[1, 2], [3, 4]], { requiresGrad: true });
-    const y = mean(a);
-    y.backward();
-    const g = await run(a.grad!);
-    expect(g.allclose(tensor([[0.25, 0.25], [0.25, 0.25]]))).toBe(true);
+BACKENDS.forEach(({ name, create }) => {
+  describe(`mean — autograd — ${name}`, () => {
+    let engine: Engine;
+    beforeAll(async () => {
+      engine = new Engine(await create());
+    });
+
+    it('gradient of mean over all axes is 1/N everywhere', async () => {
+      const a = tensor([[1, 2], [3, 4]], { requiresGrad: true });
+      const y = mean(a);
+      y.backward();
+      const g = await run(a.grad!, { engine });
+      expect(g.allclose(tensor([[0.25, 0.25], [0.25, 0.25]]))).toBe(true);
+    });
   });
 });

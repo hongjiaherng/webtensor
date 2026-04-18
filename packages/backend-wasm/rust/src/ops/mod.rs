@@ -1,5 +1,8 @@
 pub mod activation;
 pub mod binary;
+pub mod cast;
+pub mod compare;
+pub mod join;
 pub mod linalg;
 pub mod reduce;
 pub mod unary;

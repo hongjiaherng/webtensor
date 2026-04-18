@@ -24,12 +24,20 @@ export class WASMBackend implements Backend {
   }
 
   allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
-    if (dtype !== 'float32') {
-      throw new Error('WASMBackend currently supports float32 tensors only');
-    }
     const size = getShapeSize(shape);
-    const ptr = this.module.alloc_f32(size);
     const byteLength = size * bytesPerElement(dtype);
+    let ptr: number;
+    switch (dtype) {
+      case 'float32':
+        ptr = this.module.alloc_f32(size);
+        break;
+      case 'int32':
+        ptr = this.module.alloc_i32(size);
+        break;
+      case 'bool':
+        ptr = this.module.alloc_u8(size);
+        break;
+    }
     return {
       storage: {
         buffer: { ptr, elements: size, byteLength },
@@ -71,7 +79,17 @@ export class WASMBackend implements Backend {
     if (tensor.isView) return;
     if (isWasmTensorHandle(tensor.storage.buffer)) {
       const handle = tensor.storage.buffer;
-      this.module.free_f32(handle.ptr, handle.elements);
+      switch (tensor.dtype) {
+        case 'float32':
+          this.module.free_f32(handle.ptr, handle.elements);
+          break;
+        case 'int32':
+          this.module.free_i32(handle.ptr, handle.elements);
+          break;
+        case 'bool':
+          this.module.free_u8(handle.ptr, handle.elements);
+          break;
+      }
     }
     tensor.storage.buffer = null;
   }

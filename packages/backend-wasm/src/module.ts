@@ -14,12 +14,20 @@ export interface WebtensorWasmModule {
   readonly memory: WebAssembly.Memory;
   readonly alloc_f32: (len: number) => number;
   readonly free_f32: (ptr: number, len: number) => void;
+  readonly alloc_i32: (len: number) => number;
+  readonly free_i32: (ptr: number, len: number) => void;
+  readonly alloc_u8: (len: number) => number;
+  readonly free_u8: (ptr: number, len: number) => void;
   readonly alloc_u32: (len: number) => number;
   readonly free_u32: (ptr: number, len: number) => void;
-  readonly add_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
-  readonly sub_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
-  readonly mul_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
-  readonly div_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly add_f32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly add_i32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly sub_f32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly sub_i32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly mul_f32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly mul_i32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly div_f32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly div_i32_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
   readonly relu_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
   readonly relu_grad_raw: (gradPtr: number, aPtr: number, outPtr: number, len: number) => void;
   readonly matmul_strided: (aPtr: number, bPtr: number, outPtr: number, metaPtr: number) => void;
@@ -34,6 +42,39 @@ export interface WebtensorWasmModule {
   readonly pow_strided: (aPtr: number, outPtr: number, metaPtr: number, exponent: number) => void;
   readonly sigmoid_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
   readonly tanh_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_f32_i32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_f32_u8_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_i32_f32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_i32_u8_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_u8_f32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_u8_i32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_f32_f32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_i32_i32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly cast_u8_u8_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly eq_f32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly eq_i32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly ne_f32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly ne_i32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly lt_f32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly lt_i32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly le_f32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly le_i32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly gt_f32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly gt_i32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly ge_f32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly ge_i32_strided: (a: number, b: number, out: number, meta: number) => void;
+  readonly isclose_f32_strided: (
+    a: number,
+    b: number,
+    out: number,
+    meta: number,
+    rtol: number,
+    atol: number,
+    equalNan: number,
+  ) => void;
+  readonly concat_f32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly concat_i32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly concat_u8_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
 }
 
 type WasmExports = WebAssembly.Exports & {
@@ -42,12 +83,20 @@ type WasmExports = WebAssembly.Exports & {
   __wbindgen_start: () => void;
   alloc_f32: (len: number) => number;
   free_f32: (ptr: number, len: number) => void;
+  alloc_i32: (len: number) => number;
+  free_i32: (ptr: number, len: number) => void;
+  alloc_u8: (len: number) => number;
+  free_u8: (ptr: number, len: number) => void;
   alloc_u32: (len: number) => number;
   free_u32: (ptr: number, len: number) => void;
-  add_strided: (a: number, b: number, c: number, d: number) => void;
-  sub_strided: (a: number, b: number, c: number, d: number) => void;
-  mul_strided: (a: number, b: number, c: number, d: number) => void;
-  div_strided: (a: number, b: number, c: number, d: number) => void;
+  add_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  add_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  sub_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  sub_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  mul_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  mul_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  div_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  div_i32_strided: (a: number, b: number, c: number, d: number) => void;
   relu_strided: (a: number, b: number, c: number) => void;
   relu_grad_raw: (a: number, b: number, c: number, d: number) => void;
   matmul_strided: (a: number, b: number, c: number, d: number) => void;
@@ -62,6 +111,36 @@ type WasmExports = WebAssembly.Exports & {
   pow_strided: (a: number, b: number, c: number, d: number) => void;
   sigmoid_strided: (a: number, b: number, c: number) => void;
   tanh_strided: (a: number, b: number, c: number) => void;
+  cast_f32_i32_strided: (a: number, b: number, c: number) => void;
+  cast_f32_u8_strided: (a: number, b: number, c: number) => void;
+  cast_i32_f32_strided: (a: number, b: number, c: number) => void;
+  cast_i32_u8_strided: (a: number, b: number, c: number) => void;
+  cast_u8_f32_strided: (a: number, b: number, c: number) => void;
+  cast_u8_i32_strided: (a: number, b: number, c: number) => void;
+  cast_f32_f32_strided: (a: number, b: number, c: number) => void;
+  cast_i32_i32_strided: (a: number, b: number, c: number) => void;
+  cast_u8_u8_strided: (a: number, b: number, c: number) => void;
+  eq_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  eq_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  ne_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  ne_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  lt_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  lt_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  le_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  le_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  gt_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  gt_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  ge_f32_strided: (a: number, b: number, c: number, d: number) => void;
+  ge_i32_strided: (a: number, b: number, c: number, d: number) => void;
+  isclose_f32_strided: (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    rtol: number,
+    atol: number,
+    eqnan: number,
+  ) => void;
 };
 
 let cachedModule: WebtensorWasmModule | null = null;
@@ -86,12 +165,20 @@ export async function loadWasmModule(): Promise<WebtensorWasmModule> {
     memory: x.memory,
     alloc_f32: (len) => x.alloc_f32(len) >>> 0,
     free_f32: (ptr, len) => x.free_f32(ptr, len),
+    alloc_i32: (len) => x.alloc_i32(len) >>> 0,
+    free_i32: (ptr, len) => x.free_i32(ptr, len),
+    alloc_u8: (len) => x.alloc_u8(len) >>> 0,
+    free_u8: (ptr, len) => x.free_u8(ptr, len),
     alloc_u32: (len) => x.alloc_u32(len) >>> 0,
     free_u32: (ptr, len) => x.free_u32(ptr, len),
-    add_strided: (a, b, c, d) => x.add_strided(a, b, c, d),
-    sub_strided: (a, b, c, d) => x.sub_strided(a, b, c, d),
-    mul_strided: (a, b, c, d) => x.mul_strided(a, b, c, d),
-    div_strided: (a, b, c, d) => x.div_strided(a, b, c, d),
+    add_f32_strided: (a, b, c, d) => x.add_f32_strided(a, b, c, d),
+    add_i32_strided: (a, b, c, d) => x.add_i32_strided(a, b, c, d),
+    sub_f32_strided: (a, b, c, d) => x.sub_f32_strided(a, b, c, d),
+    sub_i32_strided: (a, b, c, d) => x.sub_i32_strided(a, b, c, d),
+    mul_f32_strided: (a, b, c, d) => x.mul_f32_strided(a, b, c, d),
+    mul_i32_strided: (a, b, c, d) => x.mul_i32_strided(a, b, c, d),
+    div_f32_strided: (a, b, c, d) => x.div_f32_strided(a, b, c, d),
+    div_i32_strided: (a, b, c, d) => x.div_i32_strided(a, b, c, d),
     relu_strided: (a, b, c) => x.relu_strided(a, b, c),
     relu_grad_raw: (a, b, c, d) => x.relu_grad_raw(a, b, c, d),
     matmul_strided: (a, b, c, d) => x.matmul_strided(a, b, c, d),
@@ -106,6 +193,28 @@ export async function loadWasmModule(): Promise<WebtensorWasmModule> {
     pow_strided: (a, b, c, d) => x.pow_strided(a, b, c, d),
     sigmoid_strided: (a, b, c) => x.sigmoid_strided(a, b, c),
     tanh_strided: (a, b, c) => x.tanh_strided(a, b, c),
+    cast_f32_i32_strided: (a, b, c) => x.cast_f32_i32_strided(a, b, c),
+    cast_f32_u8_strided: (a, b, c) => x.cast_f32_u8_strided(a, b, c),
+    cast_i32_f32_strided: (a, b, c) => x.cast_i32_f32_strided(a, b, c),
+    cast_i32_u8_strided: (a, b, c) => x.cast_i32_u8_strided(a, b, c),
+    cast_u8_f32_strided: (a, b, c) => x.cast_u8_f32_strided(a, b, c),
+    cast_u8_i32_strided: (a, b, c) => x.cast_u8_i32_strided(a, b, c),
+    cast_f32_f32_strided: (a, b, c) => x.cast_f32_f32_strided(a, b, c),
+    cast_i32_i32_strided: (a, b, c) => x.cast_i32_i32_strided(a, b, c),
+    cast_u8_u8_strided: (a, b, c) => x.cast_u8_u8_strided(a, b, c),
+    eq_f32_strided: (a, b, c, d) => x.eq_f32_strided(a, b, c, d),
+    eq_i32_strided: (a, b, c, d) => x.eq_i32_strided(a, b, c, d),
+    ne_f32_strided: (a, b, c, d) => x.ne_f32_strided(a, b, c, d),
+    ne_i32_strided: (a, b, c, d) => x.ne_i32_strided(a, b, c, d),
+    lt_f32_strided: (a, b, c, d) => x.lt_f32_strided(a, b, c, d),
+    lt_i32_strided: (a, b, c, d) => x.lt_i32_strided(a, b, c, d),
+    le_f32_strided: (a, b, c, d) => x.le_f32_strided(a, b, c, d),
+    le_i32_strided: (a, b, c, d) => x.le_i32_strided(a, b, c, d),
+    gt_f32_strided: (a, b, c, d) => x.gt_f32_strided(a, b, c, d),
+    gt_i32_strided: (a, b, c, d) => x.gt_i32_strided(a, b, c, d),
+    ge_f32_strided: (a, b, c, d) => x.ge_f32_strided(a, b, c, d),
+    ge_i32_strided: (a, b, c, d) => x.ge_i32_strided(a, b, c, d),
+    isclose_f32_strided: (a, b, c, d, rt, at, en) => x.isclose_f32_strided(a, b, c, d, rt, at, en),
   };
 
   return cachedModule;

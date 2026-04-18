@@ -9,15 +9,18 @@ skinparam ArrowColor #555
 
 rectangle "**ir**\npure types — no runtime" as ir #FFF8EE
 
-rectangle "**runtime**\nEngine, Backend interface, view ops" as runtime #EEFFF0
+rectangle "**runtime**\nEngine, Backend interface,\nview ops, dtype utils" as runtime #EEFFF0
 
-rectangle "**core**\nuser-facing API\n(Tensor, ops, autograd, compileGraph)" as core #EEF4FF
+rectangle "**core**\ntensor library\n(Tensor, ops, autograd,\ncompile/grad/run)" as core #EEF4FF
+
+rectangle "**nn**\nactivations, losses\n(relu, softmax, mseLoss, ...)" as nn #F5EEFF
+rectangle "**optim**\nhost-side optimizers\n(SGD, ...)" as optim #F5EEFF
 
 rectangle "**backend-cpu**\nTypeScript kernels" as cpu #FFF0F0
 rectangle "**backend-wasm**\nRust via wasm-bindgen" as wasm #FFF0F0
 rectangle "**backend-webgpu**\nWGSL compute shaders" as webgpu #FFF0F0
 
-rectangle "**user code**\nimports core +\nside-effect imports a backend" as user #F5F5F5
+rectangle "**user code**\ncore + (nn / optim)\n+ a backend import" as user #F5F5F5
 
 ir <-- runtime
 ir <-- core
@@ -26,7 +29,13 @@ runtime <|.. cpu : implements Backend
 runtime <|.. wasm : implements Backend
 runtime <|.. webgpu : implements Backend
 
+core <-- nn
+core <-- optim
+runtime <-- optim
+
 core <-- user
+nn <-- user
+optim <-- user
 cpu <-- user : side-effect register
 wasm <-- user : side-effect register
 webgpu <-- user : side-effect register
@@ -34,7 +43,12 @@ webgpu <-- user : side-effect register
 note right of core
   core is unaware of backends —
   the user picks one and imports
-  for the side-effect register
+  for the side-effect register.
+
+  nn + optim sit on top of core,
+  mirroring jax.nn + optax and
+  tfjs-layers. Inference-only
+  users don't pull them in.
 end note
 
 @enduml

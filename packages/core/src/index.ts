@@ -28,9 +28,10 @@ export * from './ops';
 export { compile, grad } from './compile';
 export { run } from './run';
 
-// Comparison (PyTorch / JAX parity: torch.equal, torch.allclose)
-export { equal, allclose } from './compare';
-export type { AllcloseOptions } from './compare';
+// Scalar equality helpers (PyTorch / JAX parity: torch.equal, torch.allclose).
+// For element-wise comparison returning a bool tensor, see ops/compare (eq, lt, gt, ...).
+export { equal, allclose } from './equality';
+export type { AllcloseOptions } from './equality';
 
 // ---------------------------------------------------------------------------
 // Advanced / low-level — exported for custom compilers, ONNX integration,

@@ -90,47 +90,61 @@ The practical consequence: if Vitest runs multiple test files in the same proces
 
 `Tensor.backward()` constructs the gradient computation graph using the same op functions as the forward pass — it calls `mul(grad, b)`, `add(input.grad, g)`, etc. Those return new `Tensor` nodes, not numbers.
 
-You must compile and evaluate the gradient graph to get values:
+This is deliberate: the forward graph and the backward graph are the same kind of object — both can be combined into a single `compile([loss, ...grads])` call, so the engine sees the whole computation at once and can share work across forward + backward passes. It also means gradients themselves are differentiable (higher-order gradients fall out in principle).
+
+**Everyday usage is a one-liner** via the high-level API:
 
 ```ts
-loss.backward();                                     // builds gradient graph
-const gradGraph = compileGraph([w.grad]);            // traces it into IR
-await engine.evaluate(gradGraph);                    // executes on backend
-const values = await engine.get(w.grad.id);         // reads result
+const dW = grad(loss, W);                // unevaluated gradient Tensor
+// Inside a compile(), the returned gradient is evaluated along with the loss.
 ```
 
-This design means you can combine forward and backward into one `compileGraph([loss, w.grad])` call. The engine sees the full graph and can potentially eliminate shared work. It also means gradients themselves are differentiable — in principle you can compute second-order gradients by calling `.backward()` on a gradient tensor.
+**Low-level form** (what `grad()` does internally):
+
+```ts
+loss.backward();                                   // builds gradient graph
+const gradGraph = compileGraph([W.grad]);          // traces to IR
+await engine.evaluate(gradGraph);                  // executes on backend
+const values = await engine.get(W.grad.id);        // reads result
+```
 
 ---
 
 ### How do I train a model?
 
-Use `compile()` + `grad()` from `@webtensor/core`. Write a plain function, declare the shape of each input, and `compile` traces it into a callable:
+Declare trainable weights with `{ requiresGrad: true }` on any factory. `compile()` traces a function, auto-feeds every param, and returns a callable. Users never touch `Float32Array`s:
 
 ```ts
-import {
-  compile, grad, mseLoss, matmul, add, relu, randn, SGD,
-} from '@webtensor/core';
-import '@webtensor/backend-cpu';
+import { compile, grad, matmul, add, randn, zeros } from '@webtensor/core';
+import { relu, mseLoss } from '@webtensor/nn';
+import { SGD } from '@webtensor/optim';
+import '@webtensor/backend-webgpu';
+
+// Params — plain Tensors with requiresGrad. compile() auto-feeds them.
+const W1 = randn([784, 128], { requiresGrad: true, std: 1 / Math.sqrt(784) });
+const b1 = zeros([128],      { requiresGrad: true });
+const W2 = randn([128, 10],  { requiresGrad: true, std: 1 / Math.sqrt(128) });
+const b2 = zeros([10],       { requiresGrad: true });
 
 const step = await compile(
-  ({ x, y, W, b }) => {
-    W.requiresGrad = true; b.requiresGrad = true;
-    const loss = mseLoss(add(matmul(x, W), b), y);
-    return { loss, dW: grad(loss, W), db: grad(loss, b) };
+  ({ x, y }) => {
+    const h = relu(add(matmul(x, W1), b1));
+    const loss = mseLoss(add(matmul(h, W2), b2), y);
+    return {
+      loss,
+      dW1: grad(loss, W1), db1: grad(loss, b1),
+      dW2: grad(loss, W2), db2: grad(loss, b2),
+    };
   },
-  { x: [32, 784], y: [32, 10], W: [784, 10], b: [10] },
+  { x: [32, 784], y: [32, 10] },
+  { device: 'webgpu' },
 );
 
-// Weights live outside the graph as Float32Arrays you own.
-const W = new Float32Array(784 * 10); /* init randomly */
-const b = new Float32Array(10);
-const opt = new SGD(0.01);
-
+const opt = new SGD(0.01, 0.9);   // lr, momentum
 for (let i = 0; i < 1000; i++) {
-  const { loss, dW, db } = await step({ x: xBatch, y: yBatch, W, b });
-  opt.step({ W, b }, { W: dW, b: db });
-  if (i % 100 === 0) console.log(`step ${i} loss ${loss[0]}`);
+  const { loss, dW1, db1, dW2, db2 } = await step({ x: xBatch, y: yBatch });
+  opt.step([W1, b1, W2, b2], [dW1, db1, dW2, db2]);
+  if (i % 100 === 0) console.log(`step ${i} loss ${loss.data![0]}`);
 }
 ```
 
@@ -138,9 +152,28 @@ The training loop stays in user space. You can log any intermediate, clip gradie
 
 ---
 
+### How do I compare tensors in tests?
+
+`.equals()` is strict (shape + exact values), `.allclose()` is numeric (shape + tolerances matching PyTorch / JAX):
+
+```ts
+import { tensor, run, add } from '@webtensor/core';
+
+const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
+expect(y.equals(tensor([5, 7, 9]))).toBe(true);              // strict
+expect(y.allclose(tensor([5, 7, 9]))).toBe(true);            // with tolerance
+expect(y.allclose(expected, { rtol: 1e-5, atol: 1e-8 }));    // PyTorch default
+```
+
+Both are shape-aware — a bug that returns `[5, 7, 9]` with shape `[1, 3]` instead of `[3]` fails, unlike a raw `Array.from(y.data).toEqual([5, 7, 9])` comparison.
+
+Also exported as module-level functions `equal(a, b)` and `allclose(a, b, opts)` (matching `torch.equal` / `jnp.array_equal` / `jnp.allclose`).
+
+---
+
 ### What is `placeholder()` and when should I use it?
 
-`placeholder(shape, dtype, device)` is the low-level primitive underneath `compile()`. It creates a `Tensor` whose data is supplied at `engine.evaluate(graph, feeds)` time rather than baked into the graph as a `Constant`. In modern frameworks it corresponds to:
+`placeholder(shape, dtype, device)` is the **low-level primitive** underneath `compile()`. It creates a `Tensor` whose data is supplied at `engine.evaluate(graph, feeds)` time rather than baked into the graph as a `Constant`. In modern frameworks it corresponds to:
 
 - **TensorFlow 1.x**: `tf.placeholder` (exactly — where the name comes from).
 - **TensorFlow 2.x**: traced `@tf.function` arguments.
@@ -148,6 +181,25 @@ The training loop stays in user space. You can log any intermediate, clip gradie
 - **PyTorch**: doesn't have one — PyTorch is eager-only, so every tensor is both structure and value.
 
 For day-to-day use, prefer `compile(fn, spec)` — it creates placeholders under the hood and keeps the user code tensor-ID-free. Reach for raw `placeholder()` + `compileGraph` + `evaluate(feeds)` only when you need something `compile()` can't express — e.g. custom graph stitching, ONNX export, or writing your own compiler.
+
+---
+
+### When should I use `run()` vs `compile()`?
+
+- **`run(t)` / `await t.run()`** — one-shot eager evaluation. Traces + executes + reads back on every call. Right for: tests, simple inference, debugging, exploration.
+- **`compile(fn, spec)`** — trace once, call many times. Right for: training loops, batched inference, anything inside a hot path.
+
+```ts
+// Eager — build graph every call (slower but simpler):
+const y = await run(relu(add(matmul(x, W), b)));
+
+// Compiled — trace once, feed data (faster):
+const forward = await compile(
+  ({ x }) => relu(add(matmul(x, W), b)),
+  { x: [4, 2] },
+);
+for (...) { const y = await forward({ x: batch }); }
+```
 
 ---
 

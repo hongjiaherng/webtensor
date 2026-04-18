@@ -1,5 +1,23 @@
-import { Node, computeContiguousStrides } from '@webtensor/ir';
+import { Node, computeContiguousStrides, DType } from '@webtensor/ir';
 import { RuntimeTensor, getShapeSize, broadcastStridesOf } from '@webtensor/runtime';
+
+// ---------------------------------------------------------------------------
+// Dtype → WGSL scalar type mapping.
+// WGSL has no generics, so a kernel that supports multiple dtypes is compiled
+// from a template: every `SCALAR` placeholder is replaced with `f32`/`i32`/
+// `u32` at pipeline-build time. Bool values are packed as u32 (WebGPU storage
+// buffers don't expose a 1-byte scalar; we use the low bit of u32).
+
+const WGSL_SCALAR: Record<DType, string> = {
+  float32: 'f32',
+  int32: 'i32',
+  bool: 'u32',
+};
+
+/** Substitute the `SCALAR` placeholder in a WGSL template with the dtype. */
+export function renderWgsl(template: string, dtype: DType): string {
+  return template.replace(/\bSCALAR\b/g, WGSL_SCALAR[dtype]);
+}
 
 export { computeContiguousStrides, getShapeSize, broadcastStridesOf };
 
@@ -206,13 +224,31 @@ export function packSoftmaxMeta(
  * shader and returns them in `tempBuffers` for cleanup after submission.
  */
 export interface WebGPUKernel {
-  createPipeline(device: GPUDevice): GPUComputePipeline;
+  /**
+   * Build the compute pipeline. May vary per (node, inputs, outputs) — e.g.
+   * dtype-aware kernels compile a different shader per dtype. The engine
+   * caches pipelines by `${op}:${pipelineKey(...)}` if `pipelineKey` is set.
+   */
+  createPipeline(
+    device: GPUDevice,
+    node: Node,
+    inputs: RuntimeTensor[],
+    outputs: RuntimeTensor[],
+  ): GPUComputePipeline;
+
+  /**
+   * Optional cache key distinguishing pipelines for this op. Return a short
+   * string (e.g. dtype). Omit for ops that have a single pipeline.
+   */
+  pipelineKey?(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): string;
+
   buildBindGroupEntries(
     device: GPUDevice,
     node: Node,
     inputs: RuntimeTensor[],
     outputs: RuntimeTensor[],
   ): { entries: GPUBindGroupEntry[]; tempBuffers: GPUBuffer[] };
+
   getDispatch(
     node: Node,
     inputs: RuntimeTensor[],

@@ -3,20 +3,30 @@ import { addKernel } from './binary/add';
 import { subKernel } from './binary/sub';
 import { mulKernel } from './binary/mul';
 import { divKernel } from './binary/div';
-import { reluKernel, reluGradKernel } from './unary/relu';
+import { reluKernel } from './activation/relu';
+import { reluGradKernel } from './activation/reluGrad';
 import { negKernel } from './unary/neg';
 import { expKernel } from './unary/exp';
 import { logKernel } from './unary/log';
 import { sqrtKernel } from './unary/sqrt';
 import { absKernel } from './unary/abs';
 import { powKernel } from './unary/pow';
-import { sigmoidKernel } from './unary/sigmoid';
-import { tanhKernel } from './unary/tanh';
+import { sigmoidKernel } from './activation/sigmoid';
+import { tanhKernel } from './activation/tanh';
 import { matmulKernel } from './linalg/matmul';
 import { reduceSumKernel } from './reduce/reduceSum';
 import { reduceMeanKernel } from './reduce/reduceMean';
 import { softmaxKernel } from './activation/softmax';
 import { contiguousKernel } from './memory/contiguous';
+import { castKernel } from './cast/cast';
+import { eqKernel } from './compare/eq';
+import { neKernel } from './compare/ne';
+import { ltKernel } from './compare/lt';
+import { leKernel } from './compare/le';
+import { gtKernel } from './compare/gt';
+import { geKernel } from './compare/ge';
+import { iscloseKernel } from './compare/isclose';
+import { concatKernel } from './join/concat';
 
 export type { CPUKernel };
 
@@ -40,4 +50,13 @@ export const cpuKernelRegistry = new Map<string, CPUKernel>([
   ['ReduceMean', reduceMeanKernel],
   ['Softmax', softmaxKernel],
   ['Contiguous', contiguousKernel],
+  ['Cast', castKernel],
+  ['Equal', eqKernel],
+  ['NotEqual', neKernel],
+  ['Less', ltKernel],
+  ['LessOrEqual', leKernel],
+  ['Greater', gtKernel],
+  ['GreaterOrEqual', geKernel],
+  ['IsClose', iscloseKernel],
+  ['Concat', concatKernel],
 ]);

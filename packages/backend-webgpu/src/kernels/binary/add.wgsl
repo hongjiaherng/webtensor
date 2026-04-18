@@ -1,18 +1,8 @@
-// Generic strided Add kernel.
+// Generic strided Add kernel. SCALAR is substituted at pipeline-build time
+// (f32 / i32 / u32) by renderWgsl() in ../utils.ts.
 //
 // Inputs A and B may have arbitrary strides and offsets (including broadcast
 // dimensions where stride == 0).  The output is always written contiguously.
-//
-// TensorMeta uniform layout (80 bytes):
-//   [u32  0] rank
-//   [u32  1] offset (element offset into the buffer)
-//   [u32  2] padding
-//   [u32  3] padding
-//   [u32  4..11] shape[0..7]   — packed as 2 × vec4<u32>
-//   [u32 12..19] strides[0..7] — packed as 2 × vec4<u32>
-//
-// For binary ops the shape stored in each meta is the *output* shape.
-// Broadcast dimensions carry stride == 0 so the same element is reused.
 
 struct TensorMeta {
   rank:    u32,
@@ -23,9 +13,9 @@ struct TensorMeta {
   strides: array<vec4<u32>, 2>,
 };
 
-@group(0) @binding(0) var<storage, read>       a:      array<f32>;
-@group(0) @binding(1) var<storage, read>       b:      array<f32>;
-@group(0) @binding(2) var<storage, read_write> out:    array<f32>;
+@group(0) @binding(0) var<storage, read>       a:        array<SCALAR>;
+@group(0) @binding(1) var<storage, read>       b:        array<SCALAR>;
+@group(0) @binding(2) var<storage, read_write> out:      array<SCALAR>;
 @group(0) @binding(3) var<uniform>             u_meta_a: TensorMeta;
 @group(0) @binding(4) var<uniform>             u_meta_b: TensorMeta;
 

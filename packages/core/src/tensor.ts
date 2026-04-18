@@ -27,10 +27,19 @@ import {
   detach,
   sum,
   mean,
+  cast,
+  eq,
+  ne,
+  lt,
+  le,
+  gt,
+  ge,
+  isclose,
 } from './ops';
+import type { IsCloseOptions } from './ops/compare/isclose';
 import { computeContiguousStrides } from '@webtensor/ir';
 import { shapeSize } from './shape';
-import { equal, allclose, AllcloseOptions } from './compare';
+import { equal, allclose, AllcloseOptions } from './equality';
 import { run, RunOptions } from './run';
 
 let tensorIdCounter = 0;
@@ -243,6 +252,33 @@ export class Tensor {
   }
   zeroGrad(): void {
     this.grad = undefined;
+  }
+  cast(dtype: DType): Tensor {
+    return cast(this, dtype);
+  }
+  to(dtype: DType): Tensor {
+    return cast(this, dtype);
+  }
+  eq(other: Tensor): Tensor {
+    return eq(this, other);
+  }
+  ne(other: Tensor): Tensor {
+    return ne(this, other);
+  }
+  lt(other: Tensor): Tensor {
+    return lt(this, other);
+  }
+  le(other: Tensor): Tensor {
+    return le(this, other);
+  }
+  gt(other: Tensor): Tensor {
+    return gt(this, other);
+  }
+  ge(other: Tensor): Tensor {
+    return ge(this, other);
+  }
+  isclose(other: Tensor, opts?: IsCloseOptions): Tensor {
+    return isclose(this, other, opts);
   }
 
   /**

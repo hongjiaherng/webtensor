@@ -24,13 +24,10 @@ export class WebGPUBackend implements Backend {
   }
 
   allocate(shape: (number | null)[], dtype: DType): RuntimeTensor {
-    if (dtype !== 'float32') {
-      throw new Error(
-        `WebGPUBackend: unsupported dtype '${dtype}' — only float32 is currently implemented`,
-      );
-    }
     const size = getShapeSize(shape);
-    const byteSize = size * bytesPerElement(dtype);
+    // WebGPU storage buffers must be a multiple of 4 bytes — round up for bool (1 B/elem).
+    const rawByteLength = size * bytesPerElement(dtype);
+    const byteSize = Math.max(4, Math.ceil(rawByteLength / 4) * 4);
 
     const gpuBuffer = this.device.createBuffer({
       size: byteSize,
@@ -79,7 +76,7 @@ export class WebGPUBackend implements Backend {
 
   execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {
     const kernel = this.getKernel(node.op);
-    const pipeline = this.getPipeline(node.op, kernel);
+    const pipeline = this.getPipeline(node.op, kernel, node, inputs, outputs);
 
     const { entries, tempBuffers } = kernel.buildBindGroupEntries(
       this.device,
@@ -130,10 +127,23 @@ export class WebGPUBackend implements Backend {
     return kernel;
   }
 
-  private getPipeline(op: string, kernel: WebGPUKernel): GPUComputePipeline {
-    if (this.pipelineCache.has(op)) return this.pipelineCache.get(op)!;
-    const pipeline = kernel.createPipeline(this.device);
-    this.pipelineCache.set(op, pipeline);
+  private getPipeline(
+    op: string,
+    kernel: WebGPUKernel,
+    node: Node,
+    inputs: RuntimeTensor[],
+    outputs: RuntimeTensor[],
+  ): GPUComputePipeline {
+    // Kernels that vary by dtype (or any other build-time attribute) expose
+    // a `pipelineKey`. The cache keys on op + key so multiple dtype variants
+    // coexist per backend instance.
+    const key = kernel.pipelineKey
+      ? `${op}:${kernel.pipelineKey(node, inputs, outputs)}`
+      : op;
+    const cached = this.pipelineCache.get(key);
+    if (cached) return cached;
+    const pipeline = kernel.createPipeline(this.device, node, inputs, outputs);
+    this.pipelineCache.set(key, pipeline);
     return pipeline;
   }
 }
