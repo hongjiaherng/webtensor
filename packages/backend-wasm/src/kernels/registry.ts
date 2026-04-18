@@ -27,6 +27,7 @@ import { gtKernel } from './compare/gt';
 import { geKernel } from './compare/ge';
 import { iscloseKernel } from './compare/isclose';
 import { concatKernel } from './join/concat';
+import { padKernel } from './padding/pad';
 
 export type { WASMKernel };
 
@@ -59,4 +60,5 @@ export const wasmKernelRegistry = new Map<string, WASMKernel>([
   ['GreaterOrEqual', geKernel],
   ['IsClose', iscloseKernel],
   ['Concat', concatKernel],
+  ['Pad', padKernel],
 ]);

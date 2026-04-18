@@ -21,6 +21,8 @@ pub use ops::compare::compare::*;
 
 pub use ops::join::concat::*;
 
+pub use ops::padding::pad::*;
+
 pub use ops::linalg::matmul::*;
 
 pub use ops::reduce::reduce_mean::*;

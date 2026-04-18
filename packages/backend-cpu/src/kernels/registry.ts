@@ -27,6 +27,7 @@ import { gtKernel } from './compare/gt';
 import { geKernel } from './compare/ge';
 import { iscloseKernel } from './compare/isclose';
 import { concatKernel } from './join/concat';
+import { padKernel } from './padding/pad';
 
 export type { CPUKernel };
 
@@ -59,4 +60,5 @@ export const cpuKernelRegistry = new Map<string, CPUKernel>([
   ['GreaterOrEqual', geKernel],
   ['IsClose', iscloseKernel],
   ['Concat', concatKernel],
+  ['Pad', padKernel],
 ]);

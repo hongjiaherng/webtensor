@@ -1,10 +1,10 @@
 import { Tensor } from '../../tensor';
+import { pad } from '../padding/pad';
 
 /**
  * Slice each dim to `[starts[i], ends[i])`. Zero-copy view.
  *
- * NOTE: backward is not implemented (would require a `Pad`/`Scatter` op to
- * place the gradient into zeros at the slice region).
+ * Backward: scatter the gradient back into a zero tensor at the sliced region.
  */
 export function slice(a: Tensor, starts: number[], ends: number[]): Tensor {
   if (starts.length !== a.shape.length || ends.length !== a.shape.length) {
@@ -17,6 +17,8 @@ export function slice(a: Tensor, starts: number[], ends: number[]): Tensor {
     }
   }
   const outShape = starts.map((s, i) => ends[i] - s);
+  const parentShape = a.shape.map((d) => d as number);
+  const rank = parentShape.length;
 
   return new Tensor({
     shape: outShape,
@@ -27,6 +29,15 @@ export function slice(a: Tensor, starts: number[], ends: number[]): Tensor {
       op: 'Slice',
       inputs: [a],
       attributes: { starts, ends },
+      // grad of slice = pad(grad_out, before=starts, after=parentShape-ends).
+      backward: (grad) => {
+        const pads: number[] = new Array(2 * rank);
+        for (let d = 0; d < rank; d++) {
+          pads[d] = starts[d];
+          pads[rank + d] = parentShape[d] - ends[d];
+        }
+        return [pad(grad, pads, 0)];
+      },
     },
   });
 }

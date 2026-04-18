@@ -75,6 +75,24 @@ export interface WebtensorWasmModule {
   readonly concat_f32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
   readonly concat_i32_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
   readonly concat_u8_strided: (aPtr: number, outPtr: number, metaPtr: number) => void;
+  readonly pad_f32_strided: (
+    srcPtr: number,
+    outPtr: number,
+    metaPtr: number,
+    value: number,
+  ) => void;
+  readonly pad_i32_strided: (
+    srcPtr: number,
+    outPtr: number,
+    metaPtr: number,
+    value: number,
+  ) => void;
+  readonly pad_u8_strided: (
+    srcPtr: number,
+    outPtr: number,
+    metaPtr: number,
+    value: number,
+  ) => void;
 }
 
 type WasmExports = WebAssembly.Exports & {
@@ -144,6 +162,9 @@ type WasmExports = WebAssembly.Exports & {
   concat_f32_strided: (a: number, b: number, c: number) => void;
   concat_i32_strided: (a: number, b: number, c: number) => void;
   concat_u8_strided: (a: number, b: number, c: number) => void;
+  pad_f32_strided: (a: number, b: number, c: number, v: number) => void;
+  pad_i32_strided: (a: number, b: number, c: number, v: number) => void;
+  pad_u8_strided: (a: number, b: number, c: number, v: number) => void;
 };
 
 let cachedModule: WebtensorWasmModule | null = null;
@@ -221,6 +242,9 @@ export async function loadWasmModule(): Promise<WebtensorWasmModule> {
     concat_f32_strided: (a, b, c) => x.concat_f32_strided(a, b, c),
     concat_i32_strided: (a, b, c) => x.concat_i32_strided(a, b, c),
     concat_u8_strided: (a, b, c) => x.concat_u8_strided(a, b, c),
+    pad_f32_strided: (a, b, c, v) => x.pad_f32_strided(a, b, c, v),
+    pad_i32_strided: (a, b, c, v) => x.pad_i32_strided(a, b, c, v),
+    pad_u8_strided: (a, b, c, v) => x.pad_u8_strided(a, b, c, v),
   };
 
   return cachedModule;

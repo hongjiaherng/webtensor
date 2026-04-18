@@ -41,6 +41,9 @@ export { cast } from './cast/cast';
 // Join
 export { concat } from './join/concat';
 
+// Padding
+export { pad } from './padding/pad';
+
 // Element-wise comparison (returns bool tensors)
 export { eq } from './compare/eq';
 export { ne } from './compare/ne';

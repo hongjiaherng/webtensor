@@ -4,5 +4,6 @@ pub mod cast;
 pub mod compare;
 pub mod join;
 pub mod linalg;
+pub mod padding;
 pub mod reduce;
 pub mod unary;
