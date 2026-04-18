@@ -2,6 +2,7 @@
   "title": "Onboarding",
   "pages": [
     "start-here",
+    "concepts",
     "system-walkthrough",
     "package-deep-dive",
     "backends-and-kernels",

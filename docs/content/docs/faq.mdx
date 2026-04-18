@@ -1,0 +1,253 @@
+---
+title: 'FAQ'
+description: 'Answers to the questions every new contributor and user asks — from browser vs. Node.js support, to ONNX plans, to how the core abstractions work.'
+---
+
+---
+
+## Design and architecture
+
+### Why does webtensor use a compile-then-execute model?
+
+The eager phase (`tensor()`, `add()`, `matmul()`, etc.) constructs a **graph of operations** in memory but performs no actual computation. Calling `compileGraph(outputs)` traces that graph into a serializable `Graph` IR. `Engine.evaluate(graph)` then executes it on a backend.
+
+This two-phase design gives you several things pure eager execution cannot:
+
+- **Backend-agnostic execution.** The engine receives a `Graph` — it doesn't know or care whether it came from webtensor ops, an ONNX parser, or anything else.
+- **ONNX interop.** An ONNX importer can produce the same `Graph` structure. The engine evaluates it unchanged (see [ONNX question below](#what-is-the-onnx-importexport-plan)).
+- **Optimization opportunity.** A future optimization pass (constant folding, kernel fusion) can transform the `Graph` before it reaches the engine — without changing the eager API.
+- **Combine forward and backward.** You can `compileGraph([loss, w.grad, x.grad, ...])` so the engine evaluates both in one pass and can eliminate shared subexpressions.
+
+The compile step is cheap — it's just a DFS to collect nodes and values. The evaluation step is where all the work happens.
+
+---
+
+### Why are there three backends? When should I use each?
+
+| Backend | Storage | Execution | When to use |
+|---------|---------|-----------|-------------|
+| **CPU** | TypeScript `TypedArray` | Synchronous, single-threaded | Development, debugging, any environment, correctness oracle |
+| **WASM** | Rust pointer into linear memory | Synchronous, Rust speed | Medium-sized workloads where CPU is too slow; zero extra bundler config |
+| **WebGPU** | `GPUBuffer` on the GPU | Asynchronous, massively parallel | Large tensors, production inference, training |
+
+For day-to-day development, use **CPU** — it's the simplest to debug and the reference for numerical correctness. Switch to **WebGPU** when performance matters. The API is identical across all three.
+
+---
+
+### What is the strided tensor model?
+
+Every `RuntimeTensor` stores data in a flat 1-D buffer (`Float32Array`, `GPUBuffer`, etc.) plus three pieces of metadata: `shape`, `strides`, and `offset`.
+
+```
+tensor of shape [3, 4]:
+  shape   = [3, 4]
+  strides = [4, 1]   ← skip 4 elements for a new row, 1 for a new column
+  offset  = 0
+```
+
+To read element `[row, col]`: `index = offset + row * strides[0] + col * strides[1]`.
+
+**Why it matters:** When you call `transpose()`, only `strides` changes — no data is copied. `slice()` just adjusts `offset` and shrinks `shape`. `expand()` sets stride to `0` on broadcast dimensions so all reads in that dimension land on the same element. Operations that look expensive are often metadata-only.
+
+The function `stridedIdx(shape, strides, offset, flatIdx)` is the workhorse used by every CPU and WASM kernel to convert a flat loop index into the correct buffer address.
+
+---
+
+### What is the difference between `reshape()` and `view()`?
+
+Both produce a tensor with a new shape over the same data — no allocation if the input is contiguous.
+
+- **`view(shape)`** is strict: throws immediately if the tensor is not contiguous. If you call `transpose()` first, you must call `.contiguous()` before `.view()`.
+- **`reshape(shape)`** is lenient: if the tensor is not contiguous, it silently inserts a `Contiguous` copy first, then reshapes. Always succeeds.
+
+Use `view` when you want to be explicit about memory layout. Use `reshape` when you just need the shape and don't want to think about layout. This mirrors PyTorch's semantics exactly.
+
+---
+
+### How does broadcasting work — is data copied?
+
+No data is copied for broadcast dimensions. The trick is **stride-0**.
+
+When `add(a, b)` is called with `a.shape = [3, 1]` and `b.shape = [1, 4]`, the output shape is `[3, 4]`. When the kernel runs, `broadcastStridesOf` returns `b.strides[0] = 0` because `b`'s first dimension is size 1. Every iteration over that dimension reads the same memory address — the broadcast is free.
+
+The same mechanism drives `expand()`: it sets stride to `0` on the expanded dimension and increases `shape`. No allocation.
+
+The catch is in **autograd**: the gradient for a broadcast dimension must be summed back to the original shape (called "unbroadcast"). That reduction requires a `sum` op, which isn't implemented yet. Until it is, binary op gradients are silently wrong when shapes differ.
+
+---
+
+### Why are tensor IDs globally incrementing?
+
+`Tensor.id` (e.g. `"t_42"`) comes from a module-level counter in `tensor.ts`. IDs are stable references — `engine.get(tensor.id)` reads back that specific tensor's result after evaluation.
+
+The practical consequence: if Vitest runs multiple test files in the same process, tensor IDs from file A collide with file B when graphs are built at `describe`-body scope. Always build graphs inside `beforeAll` to isolate each test suite's ID namespace.
+
+---
+
+## Autograd
+
+### Why does `backward()` produce an unevaluated graph instead of numbers?
+
+`Tensor.backward()` constructs the gradient computation graph using the same op functions as the forward pass — it calls `mul(grad, b)`, `add(input.grad, g)`, etc. Those return new `Tensor` nodes, not numbers.
+
+You must compile and evaluate the gradient graph to get values:
+
+```ts
+loss.backward();                                     // builds gradient graph
+const gradGraph = compileGraph([w.grad]);            // traces it into IR
+await engine.evaluate(gradGraph);                    // executes on backend
+const values = await engine.get(w.grad.id);         // reads result
+```
+
+This design means you can combine forward and backward into one `compileGraph([loss, w.grad])` call. The engine sees the full graph and can potentially eliminate shared work. It also means gradients themselves are differentiable — in principle you can compute second-order gradients by calling `.backward()` on a gradient tensor.
+
+---
+
+### Why are some backward closures silently wrong?
+
+Binary ops (`add`, `sub`, `mul`, `div`) don't implement gradient unbroadcasting yet. When `a.shape = [3]` and `b.shape = [1]`, the forward output is `[3]`. The backward for `b` should be `sum(grad, axis=0)` to reduce it back to `[1]`. Without a `sum` op, the backward just returns `grad` at shape `[3]` — wrong shape, wrong values.
+
+This is documented in [Autograd](/docs/onboarding/autograd) and tracked in [Bugs and gaps](/docs/onboarding/bugs-and-gaps). Fixing it requires implementing `sum`/`mean` first (the highest-priority roadmap item).
+
+---
+
+## Runtime and environment
+
+### Can this library run on the server (Node.js or Bun)?
+
+**Partially.** The answer depends on which backend you use:
+
+| Backend | Node.js / Bun | Notes |
+|---------|---------------|-------|
+| **CPU** | ✅ Yes | Pure TypeScript — works anywhere JS runs |
+| **WASM** | ✅ Yes | WebAssembly is supported by Node.js ≥ 12 and Bun natively |
+| **WebGPU** | ❌ Not currently | Uses `navigator.gpu`, which is browser-only |
+
+For **CPU and WASM training on the server**, webtensor works today. Import the packages, `Engine.create('cpu')` or `Engine.create('wasm')`, and evaluate graphs normally.
+
+For **GPU-accelerated training on the server**, the WebGPU backend would need to be adapted. The browser `navigator.gpu` call would have to be replaced with a Node.js WebGPU adapter (e.g. [`webgpu-node`](https://github.com/nicowillis/webgpu-node) or Google's [`dawn`](https://dawn.googlesource.com/dawn) bindings). This is technically feasible — the rest of the backend code is not browser-specific — but it is not on the current roadmap.
+
+The test suite runs in **browser mode** (Vitest + Playwright + Chromium) because WebGPU is only stable in browsers. CPU and WASM tests could run in Node.js, but keeping all three backends in the same runner (Playwright) ensures cross-backend consistency is verified in one place.
+
+---
+
+### Is webtensor a browser-only library?
+
+By philosophy, yes — the target runtime is the browser and the GPU backend is WebGPU (the browser's GPU API). But:
+
+- `@webtensor/ir`, `@webtensor/core`, `@webtensor/runtime`, and `@webtensor/backend-cpu` have no browser dependencies at all.
+- `@webtensor/backend-wasm` has no browser dependencies.
+- `@webtensor/backend-webgpu` uses `navigator.gpu` — browser only as written today.
+
+A CUDA or Metal native backend would be a separate package (e.g. `@webtensor/backend-native`) and is not planned.
+
+---
+
+## ONNX
+
+### What is the ONNX import/export plan?
+
+ONNX is the open standard for neural network model exchange. The webtensor IR was designed to be ONNX-aligned from the start:
+
+- `Node.op` strings map directly to ONNX op names (`"Add"`, `"MatMul"`, `"Relu"`, …).
+- `Value` carries `shape`, `dtype`, and optional `data` — the same information as an ONNX tensor.
+- `Graph.initializers` matches ONNX's concept of stored weights.
+- The engine evaluates any `Graph` regardless of where it came from.
+
+The plan is a future `@webtensor/onnx` package with two directions:
+
+**Import (`.onnx` → webtensor):**
+1. Parse the protobuf binary into an ONNX model.
+2. Walk nodes and values, mapping ONNX op names to webtensor IR node `op` strings.
+3. Produce a `Graph` object.
+4. Pass it to `engine.evaluate()` — works without any changes to `runtime`.
+
+**Export (webtensor → `.onnx`):**
+1. Call `compileGraph(outputs)` — you already have a `Graph`.
+2. Write the `Graph` nodes and values into an ONNX protobuf using a writer library.
+3. Embed initializer data from `Graph.initializers`.
+
+**Current blockers** (not started yet):
+- The `@webtensor/onnx` package does not exist.
+- Many ONNX ops (softmax, concat, reduce, gather, etc.) are not yet implemented in webtensor.
+- A protobuf serialization library (e.g. `protobufjs`) is needed.
+- Attribute name mapping needs to be defined (ONNX uses different attribute names than webtensor in some ops).
+
+Once reductions (`sum`, `mean`) land and more ops are added, ONNX import becomes the next logical infrastructure step.
+
+---
+
+### Can trained webtensor models be saved and reloaded?
+
+Not yet. There is no serialization format for trained weights. The options being considered are:
+
+- **ONNX export** — saves the graph structure and weight values in a portable format.
+- **JSON checkpoint** — serialize `Graph.initializers` with weight values as a flat JSON blob.
+- **Custom binary** — smallest and fastest but not interoperable.
+
+None of these exist today. See [State of the project](/docs/onboarding/state-of-the-project) for the full training infrastructure gap list.
+
+---
+
+## Testing
+
+### Why must I use `bun run test` and not `bun test`?
+
+`bun test` is Bun's built-in test runner — it runs tests in a Node.js-like environment. `bun run test` runs the project's `test` script, which invokes **Vitest in browser mode** via Playwright and Chromium.
+
+WebGPU is only available in browsers. Bypassing the browser mode means all WebGPU tests silently skip or fail. The vitest config also handles `.wgsl` file loading and WASM inline-encoding — both of which require the custom Vite plugin that Vitest uses, not Bun's built-in runner.
+
+---
+
+### Why do tests use `beforeAll` for graph construction?
+
+Tensor IDs come from a module-level counter. If graph-construction code runs at `describe`-body scope (top level of the test file), it executes during module load — before any test runs. When Vitest collects all test files in the same process, IDs from different files can collide, causing `engine.get(id)` to read the wrong tensor.
+
+Building graphs inside `beforeAll` delays construction until the test suite actually runs, which is after all modules have been loaded. Each test file then gets IDs that are consistent within that suite.
+
+---
+
+## Performance
+
+### When does WebGPU beat CPU/WASM?
+
+The GPU has a high **startup cost** (device initialization, pipeline compilation on first use) but near-linear throughput scaling. The crossover point depends on tensor size.
+
+Rough rule of thumb:
+- Small tensors (< ~10,000 elements): CPU is often faster because GPU dispatch overhead dominates.
+- Large tensors (> ~100,000 elements): WebGPU wins by orders of magnitude.
+- First op on WebGPU: the pipeline compilation adds latency; subsequent calls to the same op are cached.
+
+For benchmarks, webtensor does not yet have a benchmark suite.
+
+---
+
+### Why is there no `float16` or `bfloat16`?
+
+The dtype infrastructure (`DType`, `bytesPerElement`, `typedArrayCtor`) is designed to be extended. But adding a dtype requires new kernels in all three backends — and the current priority is breadth of ops (`sum`, batched matmul, etc.) over depth of dtype coverage. `float16` is likely to come alongside WebGPU-specific optimizations once the op set is more complete.
+
+---
+
+## Common pitfalls
+
+### The WGSL `meta` keyword trap
+
+`meta` is a reserved keyword in WGSL (WebGPU Shading Language). If you name a uniform `meta`, the pipeline compiles without error but produces **all-zero output** — a silent failure. Always name uniforms `u_meta`, `u_meta_a`, `u_meta_b`. This has already caused one debugging session and is documented prominently in [.claude/CLAUDE.md](https://github.com/hongjiaherng/webtensor/blob/main/.claude/CLAUDE.md) and [Backends and kernels](/docs/onboarding/backends-and-kernels).
+
+---
+
+### WebGPU temp buffers must survive until `onSubmittedWorkDone`
+
+Meta uniform buffers allocated during `buildBindGroupEntries` must not be destroyed until the GPU has finished the dispatch. The engine destroys them after `device.queue.onSubmittedWorkDone()` resolves. Destroying them earlier (e.g., immediately after `dispatchWorkgroups`) causes GPU-side use-after-free — the shader reads garbage or zeros.
+
+---
+
+### `backend.dispose()` must be a no-op for views
+
+If `tensor.isView` is true, the backend does not own the storage — the parent tensor does. `dispose()` on a view must do nothing. If you implement a new backend and forget this, you will get double-free crashes when the engine's refcount logic disposes the view first, then the parent.
+
+---
+
+### WASM module is a global singleton
+
+`loadWasmModule()` caches the instantiated WASM module in a closure. All `WASMBackend` instances share the same module. This means creating multiple engines all share the same Rust memory — concurrent execution across multiple engines is not safe and untested. For now, use one engine at a time.

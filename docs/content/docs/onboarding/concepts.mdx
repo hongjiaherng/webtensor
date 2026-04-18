@@ -1,0 +1,276 @@
+---
+title: 'Key concepts'
+description: 'A progressive deep-dive into the five core ideas you need to internalize to read, modify, and maintain webtensor with confidence.'
+---
+
+The existing reference docs describe *what* each piece does. This page explains *why* it works the way it does, and builds the five mental models you need in the right order. Read these once, slowly — each section is a dependency for the next.
+
+---
+
+## 1. Strided tensors — the foundation of everything
+
+Before anything else, understand how tensors are stored.
+
+### Memory is always flat
+
+A tensor's data lives in a single contiguous 1-D array in memory — a `Float32Array` on CPU, a `GPUBuffer` on WebGPU, a raw pointer in WASM. The *logical* shape (rows, columns, depth, …) is separate from the storage.
+
+```
+shape   = [3, 4]          // 3 rows, 4 columns
+storage = [a, b, c, d, e, f, g, h, i, j, k, l]
+                           // 12 floats, row-major
+```
+
+### Strides map logical indices to memory
+
+A `RuntimeTensor` ([runtime/src/backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/runtime/src/backend.ts)) carries:
+
+```ts
+{
+  storage,       // the flat buffer
+  shape: [3, 4],
+  strides: [4, 1],   // to advance one row: skip 4 elements; one column: skip 1
+  offset: 0,     // where in the buffer this tensor starts
+}
+```
+
+To find element `[row, col]`: `ptr = offset + row * strides[0] + col * strides[1]`.
+
+The function `stridedIdx(shape, strides, offset, flatIdx)` (exported from `@webtensor/runtime`) handles the general case: it decomposes a flat iteration index into per-axis coordinates and dots them with strides.
+
+**Why does this matter?** Because it means every kernel — CPU, WASM, WebGPU — is written to walk memory via strides. Once kernels respect strides, operations like transpose can become **zero-copy**: just swap the strides.
+
+### Visualising strides after a transpose
+
+```
+original              after transpose([3,4] → [4,3])
+shape   = [3, 4]      shape   = [4, 3]
+strides = [4, 1]      strides = [1, 4]   ← swapped
+offset  = 0           offset  = 0
+storage = same buffer ← no allocation, no copy
+```
+
+Element `[i, j]` in the transposed view reads `offset + i * 1 + j * 4` in the original buffer — exactly the transposed element. **No new buffer was created.**
+
+This is the single most important insight in the codebase. Everything else — view ops, broadcasting, slicing — is a variation of this idea.
+
+---
+
+## 2. Zero-copy view operations
+
+A **view op** changes shape, strides, or offset without touching storage. Every view op in webtensor is just a metadata transformation.
+
+### The view registry
+
+The engine ([runtime/src/engine.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/runtime/src/engine.ts)) keeps a `viewRegistry` — a `Map<string, ViewFn>`. When a node's `op` is in that registry, the engine calls the `ViewFn` instead of dispatching to a backend kernel:
+
+```ts
+type ViewFn = (node: Node, src: RuntimeTensor) => RuntimeTensor;
+```
+
+The returned `RuntimeTensor` shares `storage` with `src` and sets `isView: true` so `backend.dispose()` is a no-op for it (the parent owns the memory).
+
+### What each view op actually does
+
+| Op | What changes |
+|----|------|
+| `Transpose` | Swap last two elements of `shape` and `strides` |
+| `Permute` | Reorder both `shape` and `strides` by an axis array |
+| `Slice` | Increment `offset` by `start * stride[dim]`, shrink `shape[dim]` |
+| `Expand` | Set `strides[dim] = 0` for any broadcast dimension (size grows, no data) |
+| `Unsqueeze` | Insert a size-1 dim and a stride at position `dim` |
+| `Squeeze` | Remove size-1 dims from both `shape` and `strides` |
+
+None of these touch `storage`. They're all just arithmetic on three numbers: `shape`, `strides`, `offset`.
+
+### The contiguity special case
+
+A tensor is **contiguous** if its strides are exactly the C-order (row-major) values for its shape and offset is 0. After a transpose, it is not.
+
+`Reshape` checks contiguity:
+- **Contiguous input** → keep same storage, just remap shape and strides. Zero-copy.
+- **Non-contiguous input** → the engine inserts a `Contiguous` copy first, then reshapes the result.
+
+`View` (the strict version) throws on non-contiguous input — the caller must call `.contiguous()` explicitly. `Reshape` handles it automatically.
+
+---
+
+## 3. Broadcasting via stride-0
+
+Broadcasting is the same trick as view ops: set stride to zero on the broadcast dimension.
+
+### Compile time: shape inference
+
+When you write `add(a, b)` with `a.shape = [3, 1]` and `b.shape = [1, 4]`, `broadcastShapes` computes the output shape `[3, 4]` at graph-build time (no allocation yet).
+
+### Kernel time: stride-0
+
+`broadcastStridesOf(outShape, inShape, inStrides)` (from `@webtensor/runtime`) returns a strides array where any dimension that was size-1 in the input gets stride `0`.
+
+```
+a.shape = [3, 1], a.strides = [1, 1]
+outShape = [3, 4]
+broadcastStridesOf(outShape, [3,1], [1,1]) → [1, 0]
+                                               ^  ^
+                                               |  stride-0: reads same element for all 4 cols
+                                               normal stride for rows
+```
+
+Every CPU/WASM/WebGPU kernel calls `broadcastStridesOf` and then accesses inputs via `stridedIdx` with those broadcast strides. When `stride[dim] = 0`, every iteration of that dimension reads the same memory address — the broadcast is free.
+
+**No data is duplicated. No expand copy is needed for forward computation.** (Backward is a different story — gradient accumulation requires `sum` over those axes, which is not yet implemented.)
+
+---
+
+## 4. The computation graph: why compile-then-execute?
+
+Most tensor libraries are either *purely eager* (compute immediately, no graph) or *purely lazy* (build a graph, then run it). Webtensor does both in sequence.
+
+### Phase 1 — Eager graph construction (no compute)
+
+When you call `add(a, b)`, nothing is computed. A new `Tensor` is returned with a `_ctx` (op context) that captures the op name, the input tensors, and a backward closure:
+
+```ts
+// Inside ops.ts — add():
+return new Tensor({
+  shape: broadcastShapes(a.shape, b.shape),
+  _ctx: {
+    op: 'Add',
+    inputs: [a, b],
+    backward: (grad) => [grad, grad],   // backward is just a TypeScript function
+  },
+});
+```
+
+The `_ctx.inputs` form a DAG. The entire computation `c = (a + b) * 2` is described as cross-references between Tensor objects in memory. Nothing has been dispatched to any backend.
+
+### Phase 2 — Compile (Tensor DAG → serializable IR)
+
+`compileGraph(outputs)` walks the `_ctx.inputs` recursively from each output:
+
+- Each visited `Tensor` becomes a `Value` (name, shape, dtype).
+- Each `_ctx` becomes a `Node` (op string, input/output Value names).
+- Tensors with `op: 'Constant'` have their `data` embedded in the graph as **initializers**.
+
+The result is a `Graph` (from `@webtensor/ir`) — a plain data object with no TypeScript closures. It is serializable (JSON or protobuf), portable, and backend-agnostic.
+
+**This separation is what will enable ONNX.** An ONNX parser can build the same `Graph` structure. The engine just receives a `Graph` — it doesn't care how it was built.
+
+### Phase 3 — Execute (IR → numbers)
+
+`Engine.evaluate(graph)` does a topological sort, then walks nodes in order and picks one of four paths:
+
+```
+Constant    → backend.write() the embedded data
+view op     → ViewFn metadata transform (zero-copy)
+Reshape     → contiguity check → zero-copy or copy
+everything else → backend.allocate() + backend.execute()
+```
+
+After every kernel, `decrementRef()` tracks which intermediate tensors can be disposed. The engine and backend never know about closures, `Tensor._ctx`, or any `core` package concept.
+
+### Why this matters for maintenance
+
+The `core/runtime/backend-*` split means:
+
+- You can change the eager API (`core`) without touching the execution engine.
+- You can add a new backend (`backend-*`) without changing how graphs are built.
+- You can import a graph from ONNX and evaluate it — no `core` needed.
+- The `runtime` has zero knowledge of `core`. This boundary is load-bearing.
+
+---
+
+## 5. Autograd: backward builds more graph
+
+Webtensor uses **eager, dynamic autograd**. Calling `.backward()` does not compute gradients. It builds a gradient computation graph using the same mechanism as the forward pass — more `Tensor` objects with `_ctx`.
+
+### The tape is `_ctx.backward`
+
+Every op in `ops.ts` captures a backward closure:
+
+```ts
+// mul():
+backward: (grad) => [
+  mul(grad, b),   // gradient for a = grad * b
+  mul(grad, a),   // gradient for b = grad * a
+],
+```
+
+The closure closes over `a` and `b` (the forward inputs). When you call `.backward()`, the closure is invoked with the output gradient and returns new `Tensor` nodes — which themselves have `_ctx`, and so on recursively.
+
+### The two-graph picture
+
+After `loss.backward()`, you have **two DAGs** connected at the leaf tensors:
+
+```
+Forward graph:            Backward graph (built by backward()):
+ x ──→ matmul ──→ loss    loss.grad=1 ──→ matmulGrad ──→ w.grad
+ w ──→           |                 ──→             ──→ x.grad
+                 ↓
+           loss.backward()
+           builds the backward graph
+           but does NOT evaluate it
+```
+
+To get numbers out of `w.grad`, you must compile and evaluate the backward graph:
+
+```ts
+loss.backward();
+const bothGraphs = compileGraph([loss, w.grad, x.grad]);
+await engine.evaluate(bothGraphs);
+const wGrad = await engine.get(w.grad.id);
+```
+
+You can combine forward and backward into one `compileGraph` call, which gives the engine full visibility to eliminate common subexpressions.
+
+### Why some backward closures return wrong shapes
+
+The Add backward returns `[grad, grad]` — both shaped like the output. If the inputs had different shapes (broadcasting), the gradient for the smaller input should be summed over the broadcast dimensions (the "unbroadcast" reduction). This requires a `sum` op, which isn't implemented yet.
+
+This is the current single largest functional gap. **Any model trained with broadcasting will produce silently wrong gradients** until `sum`/`mean` are added and applied in every binary op's backward closure.
+
+### Gradient accumulation
+
+If a tensor is used multiple times (e.g., `y = a * a`), `a.grad` is built up by `add(a.grad, g)` on each use. Those `add()` calls produce more graph nodes, so the backward graph can get large. This is correct but not optimized — there's no fusion pass.
+
+---
+
+## 6. Reference counting and memory lifetime
+
+The engine manages tensor memory without a garbage collector. Here is how:
+
+### ref counts come from the IR
+
+`compileGraph` fills in `value.consumers[]` for every node. The engine builds a `refCounts` map: `value.name → consumers.length`.
+
+A `retained` set marks values that must survive: outputs, inputs, and initializers.
+
+### Decrement after every kernel
+
+After `backend.execute(node, ...)`, each input's refcount is decremented. When refcount hits zero **and** the value is not retained, `backend.dispose(tensor)` is called.
+
+### View parent cascade
+
+If tensor `B` is a view of tensor `A`, the engine tracks this in `viewParents`. Disposing `B` also decrements `A`'s refcount. A chain `A → transpose → slice` frees the slice first, then the transpose, then `A` if nothing else holds it.
+
+### Why `dispose` must be a no-op for views
+
+`isView: true` signals to the backend that it does not own the storage. `backend.dispose()` for a view must do nothing — the parent will dispose the storage when its own refcount hits zero. All three backends implement this correctly.
+
+---
+
+## Putting it together: reading the codebase
+
+With these five models in mind, here is how to navigate unfamiliar code:
+
+| If you're reading… | The relevant model |
+|----|-----|
+| `stridedIdx`, `broadcastStridesOf` | Strided tensors (#1) |
+| `views/transpose.ts`, `views/slice.ts`, etc. | Zero-copy views (#2) |
+| `broadcastShapes` in `core/shape.ts` | Broadcasting shape (#3) |
+| `compileGraph` in `core/compiler.ts` | Compile phase (#4) |
+| `Engine.evaluate` in `runtime/engine.ts` | Execute phase (#4) |
+| `ops.ts` — the backward closures | Autograd (#5) |
+| `refCounts`, `viewParents` in `engine.ts` | Memory lifetime (#6) |
+
+The most common maintainer task is **adding a new op**. The recipe ([Adding an op](/docs/advanced/adding-an-op)) applies all these models: define the forward with a `_ctx` and backward closure, write kernel(s) that handle strides, register in each backend's registry, add tests. Everything else follows from the structure described here.
