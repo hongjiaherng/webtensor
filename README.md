@@ -63,20 +63,25 @@ Tests use [Vitest](https://vitest.dev/). Browser/WebGPU tests run via Playwright
 
 All ops run on CPU, WASM (Rust), and WebGPU with cross-backend parity tests.
 
-| Category         | Ops                                                                           |
-| ---------------- | ----------------------------------------------------------------------------- |
-| Binary           | add, sub, mul, div                                                            |
-| Linalg           | matmul (2D)                                                                   |
-| Unary math       | neg, exp, log, sqrt, abs, pow                                                 |
-| Activations      | relu, sigmoid, tanh                                                           |
-| View (zero-copy) | transpose, reshape, view, slice, unsqueeze, squeeze, permute, expand, flatten |
-| Memory           | contiguous, clone, detach                                                     |
+| Category         | Ops                                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Binary           | add, sub, mul, div                                                                                                 |
+| Compare          | eq, ne, lt, le, gt, ge, isclose                                                                                    |
+| Linalg           | matmul — 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, N-D batched with broadcast                                              |
+| Unary math       | neg, exp, log, sqrt, abs, pow                                                                                      |
+| Activations      | relu, sigmoid, tanh, softmax                                                                                       |
+| Reductions       | sum, mean, all, any (arbitrary axes, keepdim)                                                                      |
+| Movement         | transpose, reshape, view, slice, unsqueeze, squeeze, permute, expand, flatten, concat, pad                         |
+| Memory           | contiguous, clone, detach                                                                                          |
+| Cast             | cast (float32 ↔ int32 ↔ bool)                                                                                      |
 
-**Autograd:** backward through add, sub, mul, div, matmul, transpose, relu, sigmoid, tanh, reshape, contiguous, neg, exp, log, sqrt, abs, pow.
+**Autograd:** backward through all differentiable ops above (compares, isclose, cast, and bool-producing ops break the gradient chain by design).
 
-**Dtype system:** `float32 | int32 | bool` — all three can be allocated and round-tripped across all backends. Op kernels currently run on `float32` only.
+**Training:** `SGD` (with optional momentum), `mseLoss`, all activations in `@webtensor/nn`. End-to-end XOR MLP trains on all three backends. `compile(fn, spec)` + `grad(loss, param)` cache the traced graph for repeat calls.
 
-**Not yet implemented:** softmax, concat, reduce (sum/mean), batched matmul (rank >= 3), loss functions, optimizers, training loop.
+**Dtype system:** `float32 | int32 | bool` — all three can be allocated and round-tripped. Binary arithmetic supports `float32` and `int32` across all backends; unary / reductions / matmul on `int32` are CPU-only for now.
+
+**Not yet implemented:** `cross_entropy`, `bceLoss`, `logSoftmax`, `Adam`, `gather` / `scatter`, conv ops.
 
 ---
 
@@ -107,7 +112,7 @@ See the full [contributor guide](docs/content/docs/onboarding/contributor-guide.
 
 **Quick start for adding a new op:**
 
-1. Define the op in [packages/core/src/ops.ts](packages/core/src/ops.ts) with backward closure.
+1. Define the op in [packages/core/src/ops/](packages/core/src/ops/) under the matching category (elementwise / reduction / linalg / activation / movement / memory) with a backward closure.
 2. Implement kernels in CPU, WASM, and WebGPU backends.
 3. Register in each backend's kernel registry.
 4. Add tests to [tests/ops/](tests/ops/).
