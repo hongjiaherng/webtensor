@@ -19,7 +19,18 @@ export function Provider({ children }: { children: ReactNode }) {
             : input instanceof URL
               ? input.toString()
               : (input as Request).url;
-        if (url.startsWith('/api/')) return orig(basePath + url, init);
+        // Absolute in-app paths (e.g. `/api/search`, `/llms.mdx/...`) need
+        // basePath prefixed — raw fetch() doesn't do it like next/link does.
+        // Skip protocol-relative (`//`), already-prefixed URLs, and absolute
+        // URLs with a scheme (handled above via URL/Request branch).
+        if (
+          typeof input === 'string' &&
+          url.startsWith('/') &&
+          !url.startsWith('//') &&
+          !url.startsWith(basePath + '/')
+        ) {
+          return orig(basePath + url, init);
+        }
         return orig(input, init);
       },
       { preconnect: (orig as { preconnect?: (url: string) => void }).preconnect?.bind(orig) },
