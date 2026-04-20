@@ -69,6 +69,7 @@
       "version": "0.3.3",
       "dependencies": {
         "@webtensor/core": "workspace:^",
+        "@webtensor/ir": "workspace:^",
         "@webtensor/runtime": "workspace:^",
       },
     },

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@webtensor/core": "workspace:^",
+    "@webtensor/ir": "workspace:^",
     "@webtensor/runtime": "workspace:^"
   }
 }
