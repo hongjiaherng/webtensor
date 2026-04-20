@@ -7,6 +7,7 @@ import {
   packReduceMeta,
   getShapeSize,
   injectMeta,
+  dispatch1D,
 } from '../utils';
 
 function computeReduceDims(node: { attributes?: Record<string, unknown> }, inShape: number[]) {
@@ -52,6 +53,6 @@ export const allKernel: WebGPUKernel = {
   },
 
   getDispatch(_node, _inputs, outputs) {
-    return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+    return dispatch1D(getShapeSize(outputs[0].shape));
   },
 };

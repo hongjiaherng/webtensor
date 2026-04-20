@@ -1,5 +1,12 @@
 import source from './log.wgsl';
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, injectMeta } from '../utils';
+import {
+  WebGPUKernel,
+  packMeta,
+  createMetaBuffer,
+  getShapeSize,
+  injectMeta,
+  dispatch1D,
+} from '../utils';
 
 export const logKernel: WebGPUKernel = {
   createPipeline(device) {
@@ -26,6 +33,6 @@ export const logKernel: WebGPUKernel = {
   },
 
   getDispatch(_node, _inputs, outputs) {
-    return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+    return dispatch1D(getShapeSize(outputs[0].shape));
   },
 };

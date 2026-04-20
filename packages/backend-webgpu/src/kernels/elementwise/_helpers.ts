@@ -1,4 +1,11 @@
-import { WebGPUKernel, packMeta, createMetaBuffer, getShapeSize, renderWgsl } from '../utils';
+import {
+  WebGPUKernel,
+  packMeta,
+  createMetaBuffer,
+  getShapeSize,
+  renderWgsl,
+  dispatch1D,
+} from '../utils';
 
 /**
  * Shared binary bind-group layout (a, b, out, meta_a, meta_b) and dispatch
@@ -43,7 +50,7 @@ export function binaryKernel(opLabel: string, source: string): WebGPUKernel {
     },
 
     getDispatch(_node, _inputs, outputs) {
-      return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+      return dispatch1D(getShapeSize(outputs[0].shape));
     },
   };
 }
@@ -92,7 +99,7 @@ export function compareKernel(opLabel: string, source: string, pred: string): We
     },
 
     getDispatch(_node, _inputs, outputs) {
-      return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+      return dispatch1D(getShapeSize(outputs[0].shape));
     },
   };
 }

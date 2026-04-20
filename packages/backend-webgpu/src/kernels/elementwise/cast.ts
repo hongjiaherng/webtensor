@@ -6,6 +6,7 @@ import {
   getShapeSize,
   injectMeta,
   WGSL_SCALAR,
+  dispatch1D,
 } from '../utils';
 
 /**
@@ -54,6 +55,6 @@ export const castKernel: WebGPUKernel = {
   },
 
   getDispatch(_node, _inputs, outputs) {
-    return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+    return dispatch1D(getShapeSize(outputs[0].shape));
   },
 };

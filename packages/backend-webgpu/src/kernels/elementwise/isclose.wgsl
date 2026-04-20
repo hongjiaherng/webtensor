@@ -55,8 +55,9 @@ fn is_inf_f32(v: f32) -> bool {
 }
 
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
+fn main(@builtin(global_invocation_id) gid: vec3<u32>,
+        @builtin(num_workgroups) ng: vec3<u32>) {
+  let i = gid.y * ng.x * 64u + gid.x;
   if (i >= arrayLength(&out)) { return; }
   let av = a[strided_idx_a(i)];
   let bv = b[strided_idx_b(i)];

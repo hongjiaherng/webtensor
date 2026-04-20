@@ -7,6 +7,7 @@ import {
   packReduceMeta,
   getShapeSize,
   injectMeta,
+  dispatch1D,
 } from '../utils';
 
 export const reduceMeanKernel: WebGPUKernel = {
@@ -47,6 +48,6 @@ export const reduceMeanKernel: WebGPUKernel = {
   },
 
   getDispatch(_node, _inputs, outputs) {
-    return [Math.ceil(getShapeSize(outputs[0].shape) / 64), 1, 1];
+    return dispatch1D(getShapeSize(outputs[0].shape));
   },
 };

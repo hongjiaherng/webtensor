@@ -1,0 +1,50 @@
+---
+title: 'WebGPU performance levers'
+description: 'Deferred optimizations for the WebGPU backend, ranked by expected payoff. Revisit during a benchmarking pass.'
+---
+
+The current WebGPU dispatch (2-D workgroup split, `@workgroup_size(64)`, scalar `strided_idx`) is **correct** for all shapes within WebGPU limits. It is not the fastest possible. The levers below are pure performance work — do not apply them speculatively. Revisit only when a concrete benchmark identifies a bottleneck kernel.
+
+Items 1 and 2 together give roughly 80% of the upside with 20% of the code churn. Items 3–5 are heavier and should wait until profiling points at a specific kernel.
+
+---
+
+## 1. Bump workgroup size: 64 → 128 or 256
+
+64 is a safe floor (AMD wavefront). Memory-bound elementwise and reduction kernels are typically faster at **128 or 256** on NVIDIA/Intel — better occupancy, fewer launch overheads.
+
+Side benefit: the 1-D dispatch ceiling rises from ~4.19M elements to ~16.7M at 256, so the 2-D split in `dispatch1D()` rarely activates in practice.
+
+Change locations: `WORKGROUP_SIZE_1D` in `packages/backend-webgpu/src/kernels/utils.ts` **and** the `@workgroup_size(...)` attribute + the `* 64u` constant inside each shader's flat-index recovery. Keep TS and WGSL in sync.
+
+## 2. Contiguous fast path
+
+Every kernel currently pays `strided_idx` (per-axis `% / stride_of` loop) even when the tensor is already contiguous — the common case after `reshape`, `contiguous`, or fresh allocation.
+
+Dispatch a packed shader variant when `is_contiguous(meta)` so the inner loop becomes `out[i] = f(a[i])`. Big win on elementwise and reductions where the strided loop dominates the kernel.
+
+Implementation sketch: detect contiguity at execute-time (TS side), select one of two cached pipelines per op (contiguous vs strided), share the bind-group layout.
+
+## 3. Vectorized loads (`vec4<f32>`)
+
+On the contiguous path, read `vec4<f32>` at a time — 4× memory throughput on bandwidth-bound ops (add, mul, relu, etc.). Needs a `size % 4 == 0` fast path plus a scalar tail.
+
+Only worth it after #2 lands, since the strided path cannot vectorize cleanly.
+
+## 4. Grid-stride loops
+
+Each thread handles `k` elements in a strided loop instead of exactly one. Reduces total workgroups, amortizes launch overhead for huge tensors, eliminates the 2-D index reconstruction entirely.
+
+Common pattern in CUDA/ROCm; translates directly to WGSL.
+
+## 5. Tile reductions in shared memory
+
+`sum` / `mean` / `all` / `any` currently do one thread per output element with a serial `reduce_total` loop. Tree-reduction in `var<workgroup>` (shared memory) is 10–50× faster for large reduce axes.
+
+Requires picking a tile size, handling the non-power-of-two tail, and a second pass when `reduce_total` exceeds one workgroup.
+
+---
+
+## What to do first
+
+Don't. Wait until a benchmark is in place and a kernel is observably slow. Then start with #1 (trivial) and #2 (moderate), measure, and decide whether #3–5 are worth the complexity.

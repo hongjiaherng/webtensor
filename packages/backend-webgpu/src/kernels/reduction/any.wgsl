@@ -22,8 +22,9 @@ fn kept_axis(i: u32) -> u32 { return u_reduce.kept_axes[i]; }
 fn reduce_axis(i: u32) -> u32 { return u_reduce.reduce_axes[i]; }
 
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let out_idx = gid.x;
+fn main(@builtin(global_invocation_id) gid: vec3<u32>,
+        @builtin(num_workgroups) ng: vec3<u32>) {
+  let out_idx = gid.y * ng.x * 64u + gid.x;
   if (out_idx >= u_reduce.kept_total) { return; }
 
   var coord: array<u32, 64>;

@@ -42,6 +42,29 @@ export function renderWgsl(template: string, dtype: DType): string {
 export { computeContiguousStrides, getShapeSize, broadcastStridesOf };
 
 // ---------------------------------------------------------------------------
+// 1-D dispatch helper.
+//
+// WebGPU caps each dispatch dimension at `maxComputeWorkgroupsPerDimension`
+// (65,535 by default). For 1-thread-per-output kernels with workgroup_size(64)
+// that's ~4.19M elements in a single-axis dispatch — easily exceeded by a
+// 2048² fp32 matrix. We spread the workgroups across X and Y.
+//
+// Shader-side contract: every kernel dispatched with `dispatch1D()` must
+// declare a `num_workgroups` builtin and recover the flat index as
+//   let i = gid.y * ng.x * WORKGROUP_SIZE_1D + gid.x;
+// See e.g. add.wgsl for the canonical form.
+export const WORKGROUP_SIZE_1D = 64;
+const MAX_WORKGROUPS_PER_DIM = 65535;
+
+export function dispatch1D(size: number): [number, number, number] {
+  const totalGroups = Math.max(1, Math.ceil(size / WORKGROUP_SIZE_1D));
+  if (totalGroups <= MAX_WORKGROUPS_PER_DIM) return [totalGroups, 1, 1];
+  const y = Math.ceil(totalGroups / MAX_WORKGROUPS_PER_DIM);
+  const x = Math.ceil(totalGroups / y);
+  return [x, y, 1];
+}
+
+// ---------------------------------------------------------------------------
 // TensorMeta uniform buffer
 //
 // WGSL struct layout (8 + 4*MAX_RANK*2 bytes, 2 + MAX_RANK*2 u32):

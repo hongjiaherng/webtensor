@@ -7,6 +7,7 @@ import {
   packSoftmaxMeta,
   computeContiguousStrides,
   injectMeta,
+  dispatch1D,
 } from '../utils';
 
 export const softmaxKernel: WebGPUKernel = {
@@ -51,6 +52,6 @@ export const softmaxKernel: WebGPUKernel = {
     const axisLen = inShape[axis];
     const total = inShape.reduce((acc, d) => acc * d, 1);
     const sliceCount = axisLen === 0 ? 0 : total / axisLen;
-    return [Math.ceil(Math.max(sliceCount, 1) / 64), 1, 1];
+    return dispatch1D(Math.max(sliceCount, 1));
   },
 };

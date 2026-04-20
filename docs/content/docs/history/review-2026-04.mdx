@@ -1,0 +1,58 @@
+---
+title: 'Repo review — 2026-04'
+description: 'Full-repo audit: critical bugs, architecture smells, testing gaps, docs drift. Snapshot at HEAD f31680f.'
+---
+
+Audit covering correctness, architecture, type safety, testing, build/distribution, and docs consistency. Snapshot taken at `f31680f` (2026-04-20). Items marked **FIXED** have landed since this review was written; everything else is still open.
+
+---
+
+## Critical
+
+### 1. `squeeze` doesn't normalize negative dims — **FIXED**
+
+`packages/core/src/ops/movement/squeeze.ts:32` stored the raw user-facing `dim` (possibly negative) in `attributes.dim`, but `packages/runtime/src/kernels/movement/squeeze.ts:16` compared `i === dim` literally. `matmul(1D, 1D)` calls `squeeze(out, -2)` / `squeeze(out, -1)` (`matmul.ts:58-59`), so the runtime view kept the original `[1,1]` shape instead of `[]`. Tests passed because the backing buffer is a scalar anyway; any downstream op consuming the view would see wrong metadata. Fix: normalize before storing (mirror `unsqueeze.ts:22`).
+
+### 2. WebGPU 1D dispatch exceeds `maxComputeWorkgroupsPerDimension` — **FIXED**
+
+Every `getDispatch` in elementwise / activation / reduction / memory / movement returned `[ceil(size/64), 1, 1]`. WebGPU's default limit is 65,535 per dim ⇒ any tensor with >4,194,240 elements (a single 2048² fp32 matrix) would fail `dispatchWorkgroups`. Fix: `dispatch1D(size)` in `utils.ts` splits total workgroups across X/Y when exceeding the cap; each `@workgroup_size(64)` shader now declares `@builtin(num_workgroups)` and recovers the flat index as `gid.y * ng.x * 64u + gid.x`. `matmul.wgsl` (2-D `@workgroup_size(8,8,1)`) is unchanged.
+
+---
+
+## High
+
+- **`Backend.execute` declared `void` but `await`ed.** `packages/runtime/src/backend.ts:159`, `packages/runtime/src/engine.ts:173,209`. `await backend.execute(...)` is `await undefined`. CLAUDE.md claims WebGPU returns `device.queue.onSubmittedWorkDone()` — it doesn't. Reconcile docs or return a real promise.
+- **`MAX_RANK` single-source-of-truth violated in WGSL aux structs.** `softmax.wgsl:11,28`, `sum.wgsl:12-13,31`, `mean.wgsl`, `all.wgsl`, `any.wgsl`, `matmul.wgsl:13`, `pad.wgsl:11` all hardcode `array<u32, 64>`. Lifting `MAX_RANK` in `packages/ir/src/types.ts:9` silently desyncs the WGSL side from the TS packers. Extend `injectMeta()` with a `__MAX_RANK__` placeholder.
+- **Rust `MAX_RANK` duplicated.** `packages/backend-wasm/rust/src/kernels/mod.rs:11` hardcoded `64`, independent of `packages/ir/src/types.ts:9`. CLAUDE.md additionally points to `rust/src/ops/mod.rs`, which doesn't exist — the file is `rust/src/kernels/mod.rs`.
+- **WebGPU temp-buffer cleanup races with dispose.** `packages/backend-webgpu/src/backend.ts:134-146` queues destroys on `onSubmittedWorkDone().then(...)`; safe today, but orphan promise chains leak on mid-submit throws.
+
+## Medium
+
+- `reduceOutputShape` returns `[1]` for full-reduce + `keepdim=false` (`packages/core/src/shape.ts:102`); PyTorch returns rank-0. Downstream `expand(g, a.shape)` works by accident.
+- `permute` does not validate `axes` is a permutation — duplicates / OOB silently produce garbage.
+- `copyBuffer` reinterprets bytes across dtypes with no guard (`packages/runtime/src/dtype.ts:29-37`).
+- `reshape.backward` uses `a.shape as number[]` which casts away null placeholder dims.
+- `matmul(1D, 1D)` backward rode on the squeeze bug; `sumToShape` recovered shape by accident. (Tighter now that #1 is fixed.)
+
+## Low / Docs
+
+- **README stale.** `README.md:79` lists softmax, concat, reduce sum/mean, batched matmul, losses, optimizers as "not yet implemented" — all shipped. `README.md:110` points at `packages/core/src/ops.ts` which is a directory, not a file.
+- `vite-plugin-wasm` remains in root `devDependencies` but is unused after the base64 migration.
+- `@webtensor/core` and `@webtensor/nn` don't declare `@webtensor/ir` as a direct dep; works via hoist, breaks on isolated publish.
+- `publish:all` has no version-bump step or `--dry-run`.
+
+## Testing gaps
+
+- No dedicated tests for `any` (only `all`), `clone`, `detach`, `flatten`, `permute`, `expand`.
+- `tests/backends/consistency.test.ts` lacks 1D·1D / 1D·2D / 2D·1D matmul parity — would have surfaced #1 immediately.
+- No large-dispatch test (>4M elements) — would surface #2.
+- No WASM memory-grow stress test (views over WASM memory could stale after kernel alloc).
+- No bool-dtype kernel tests beyond the cast round-trip.
+
+---
+
+## Top three actions
+
+1. **Squeeze normalization** ✓
+2. **WebGPU 2-D dispatch** ✓
+3. **`MAX_RANK` placeholder in WGSL**

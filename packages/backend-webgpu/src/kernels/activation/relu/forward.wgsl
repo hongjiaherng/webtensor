@@ -22,8 +22,9 @@ fn strided_idx(flat: u32) -> u32 {
 }
 
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
+fn main(@builtin(global_invocation_id) gid: vec3<u32>,
+        @builtin(num_workgroups) ng: vec3<u32>) {
+  let i = gid.y * ng.x * 64u + gid.x;
   if (i >= arrayLength(&out)) { return; }
   out[i] = max(0.0, a[strided_idx(i)]);
 }

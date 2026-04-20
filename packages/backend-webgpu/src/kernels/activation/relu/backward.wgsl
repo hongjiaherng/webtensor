@@ -25,8 +25,9 @@ fn strided_idx(m: TensorMeta, flat: u32) -> u32 {
 }
 
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
+fn main(@builtin(global_invocation_id) gid: vec3<u32>,
+        @builtin(num_workgroups) ng: vec3<u32>) {
+  let i = gid.y * ng.x * 64u + gid.x;
   if (i >= arrayLength(&out)) { return; }
   let g = grad_in[strided_idx(u_meta_grad, i)];
   let a = a_in[strided_idx(u_meta_a, i)];

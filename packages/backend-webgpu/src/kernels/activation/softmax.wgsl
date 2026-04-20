@@ -21,8 +21,9 @@ fn stride_of(ax: u32) -> u32 { return u_meta_a.strides[ax]; }
 fn out_stride_of(ax: u32) -> u32 { return u_sm.out_strides[ax]; }
 
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let s = gid.x;
+fn main(@builtin(global_invocation_id) gid: vec3<u32>,
+        @builtin(num_workgroups) ng: vec3<u32>) {
+  let s = gid.y * ng.x * 64u + gid.x;
   if (s >= u_sm.slice_count) { return; }
 
   var coord: array<u32, 64>;

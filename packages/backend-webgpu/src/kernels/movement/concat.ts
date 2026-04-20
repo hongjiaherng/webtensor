@@ -6,6 +6,7 @@ import {
   createUniformBuffer,
   getShapeSize,
   renderWgsl,
+  dispatch1D,
 } from '../utils';
 
 /**
@@ -68,7 +69,7 @@ export const concatKernel: WebGPUKernel = {
       const pass = encoder.beginComputePass();
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, bindGroup);
-      pass.dispatchWorkgroups(Math.ceil(getShapeSize(input.shape) / 64), 1, 1);
+      pass.dispatchWorkgroups(...dispatch1D(getShapeSize(input.shape)));
       pass.end();
 
       axisStart += (input.shape as number[])[axis];

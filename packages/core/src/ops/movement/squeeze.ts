@@ -29,7 +29,7 @@ export function squeeze(a: Tensor, dim?: number): Tensor {
     ctx: {
       op: 'Squeeze',
       inputs: [a],
-      attributes: dim !== undefined ? { dim } : undefined,
+      attributes: dim !== undefined ? { dim: dim < 0 ? a.shape.length + dim : dim } : undefined,
       backward: (grad) => [reshape(grad, a.shape as number[])],
     },
   });
