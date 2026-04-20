@@ -131,7 +131,7 @@ Because WebGPU returns a Promise from `execute()`. Always `await engine.evaluate
 
 ### Reshape vs View
 
-`reshape()` auto-copies if the source is non-contiguous (PyTorch semantics). `view()` is strict — throws if non-contiguous. When in doubt, use `reshape()`.
+`reshape()` auto-copies if the source is non-contiguous. `view()` is strict — throws if non-contiguous. When in doubt, use `reshape()`.
 
 ### Rebuild WASM after touching Rust
 

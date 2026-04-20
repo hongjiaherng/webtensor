@@ -6,8 +6,7 @@ import { isArithmeticDType } from '@webtensor/runtime';
  * Factory for element-wise comparison ops (eq / ne / lt / le / gt / ge).
  *
  * All comparisons produce a `bool` output with the broadcast shape of the
- * inputs. They are not differentiable — PyTorch and JAX also return
- * non-differentiable bool tensors.
+ * inputs. They are not differentiable (bool output).
  *
  * Inputs must be the same arithmetic dtype (float32 or int32). Cross-dtype
  * comparisons require an explicit `cast()` — this keeps kernel variants

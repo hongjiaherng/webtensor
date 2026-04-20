@@ -4,7 +4,7 @@ pub mod linalg;
 pub mod movement;
 pub mod reduction;
 
-/// Maximum tensor rank supported by every WASM kernel. PyTorch-aligned.
+/// Maximum tensor rank supported by every WASM kernel.
 /// All meta layouts size their fixed shape/strides/axis arrays to this bound;
 /// bumping it widens every meta buffer and requires a matching TS side update
 /// in `@webtensor/ir` and `packages/backend-wasm/src/kernels/utils.ts`.

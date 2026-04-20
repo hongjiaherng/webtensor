@@ -3,7 +3,7 @@ import { Tensor } from '../../tensor';
 import { broadcastShapes } from '../../shape';
 import { sumToShape } from '../../autograd/sumToShape';
 
-/** Element-wise `a * b` with broadcasting. PyTorch-style dtype promotion. */
+/** Element-wise `a * b` with broadcasting and dtype promotion. */
 export function mul(a: Tensor, b: Tensor): Tensor {
   if (!isArithmeticDType(a.dtype) || !isArithmeticDType(b.dtype)) {
     throw new Error(

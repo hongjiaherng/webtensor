@@ -149,7 +149,7 @@ export class Tensor {
     }
   }
 
-  // --- Accessor Methods (PyTorch API parity) ---
+  // --- Accessor Methods ---
 
   dim(): number {
     return this.shape.length;

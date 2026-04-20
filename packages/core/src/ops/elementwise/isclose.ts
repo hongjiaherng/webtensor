@@ -17,7 +17,7 @@ export interface IsCloseOptions {
  * Element-wise `|a - b| <= atol + rtol * |b|`, broadcasting.
  *
  * Float32-only. For exact equality on integers or bool, use `eq`. Returns a
- * non-differentiable bool tensor — matches PyTorch's `torch.isclose`.
+ * non-differentiable bool tensor.
  */
 export function isclose(a: Tensor, b: Tensor, opts: IsCloseOptions = {}): Tensor {
   if (a.dtype !== 'float32' || b.dtype !== 'float32') {

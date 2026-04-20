@@ -9,8 +9,8 @@ import { Node, DType } from '@webtensor/ir';
  *   @webtensor/backend-wasm   → WasmTensorHandle ({ ptr, elements, byteLength })
  *   @webtensor/backend-webgpu → GPUBuffer
  *
- * Storage is separate from RuntimeTensor to mirror the PyTorch Storage/Tensor
- * split — the foundation for zero-copy stride-based views.
+ * Storage is separate from RuntimeTensor — the foundation for zero-copy
+ * stride-based views.
  */
 export interface RuntimeStorage {
   buffer: unknown;
@@ -19,7 +19,7 @@ export interface RuntimeStorage {
 
 /**
  * A tensor as seen by the execution engine. Carries shape, dtype, strides and
- * an offset into the underlying storage (same model as PyTorch's Tensor/Storage).
+ * an offset into the underlying storage.
  *
  * All backends allocate with C-order strides and offset=0, but kernels must
  * handle arbitrary strides and offsets so that future zero-copy views (e.g.

@@ -2,8 +2,7 @@ import { DType } from '@webtensor/ir';
 import { Tensor } from '../../tensor';
 
 /**
- * Element-wise dtype conversion. Matches NumPy `.astype` / PyTorch `.to(dtype)`
- * semantics:
+ * Element-wise dtype conversion:
  *   - float32 → int32:   truncates toward zero.
  *   - float32 → bool:    `x != 0.0` → true.
  *   - int32   → bool:    `x != 0`   → true.

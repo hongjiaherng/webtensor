@@ -9,7 +9,7 @@ import { BACKENDS } from '../helpers';
 // accept int32 via dtype-polymorphic buffers / SCALAR template substitution).
 // Unary / matmul / reductions: int32 currently lives on CPU only — WASM and
 // WebGPU int32 kernels for those ops are not yet implemented.
-// Mixed-dtype ops (e.g. add(float32, int32)) follow PyTorch promotion rules
+// Mixed-dtype ops (e.g. add(float32, int32)) promote to the wider dtype
 // and are validated on CPU where both dtypes are first-class.
 
 const ARITH_BACKENDS = BACKENDS;
@@ -131,7 +131,7 @@ CPU_ONLY.forEach(({ name, create }) => {
     });
 
     it('mean on int32 (currently stays int32)', async () => {
-      // TODO: follow PyTorch and promote mean(int) → float.
+      // TODO: promote mean(int) → float.
       const a = tensor([2, 4, 6], { dtype: 'int32' });
       const y = await run(mean(a), { engine });
       expect(y.dtype).toBe('int32');

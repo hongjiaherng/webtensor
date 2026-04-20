@@ -60,7 +60,7 @@ Both produce a tensor with a new shape over the same data — no allocation if t
 - **`view(shape)`** is strict: throws immediately if the tensor is not contiguous. If you call `transpose()` first, you must call `.contiguous()` before `.view()`.
 - **`reshape(shape)`** is lenient: if the tensor is not contiguous, it silently inserts a `Contiguous` copy first, then reshapes. Always succeeds.
 
-Use `view` when you want to be explicit about memory layout. Use `reshape` when you just need the shape and don't want to think about layout. This mirrors PyTorch's semantics exactly.
+Use `view` when you want to be explicit about memory layout. Use `reshape` when you just need the shape and don't want to think about layout.
 
 ---
 
@@ -156,7 +156,7 @@ The training loop stays in user space. You can log any intermediate, clip gradie
 
 ### How do I compare tensors in tests?
 
-`.equals()` is strict (shape + exact values), `.allclose()` is numeric (shape + tolerances matching PyTorch / JAX):
+`.equals()` is strict (shape + exact values), `.allclose()` is numeric (shape + tolerances):
 
 ```ts
 import { tensor, run, add } from '@webtensor/core';
@@ -164,12 +164,12 @@ import { tensor, run, add } from '@webtensor/core';
 const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
 expect(y.equals(tensor([5, 7, 9]))).toBe(true); // strict
 expect(y.allclose(tensor([5, 7, 9]))).toBe(true); // with tolerance
-expect(y.allclose(expected, { rtol: 1e-5, atol: 1e-8 })); // PyTorch default
+expect(y.allclose(expected, { rtol: 1e-5, atol: 1e-8 })); // default tolerances
 ```
 
 Both are shape-aware — a bug that returns `[5, 7, 9]` with shape `[1, 3]` instead of `[3]` fails, unlike a raw `Array.from(y.data).toEqual([5, 7, 9])` comparison.
 
-Also exported as module-level functions `equal(a, b)` and `allclose(a, b, opts)` (matching `torch.equal` / `jnp.array_equal` / `jnp.allclose`).
+Also exported as module-level functions `equal(a, b)` and `allclose(a, b, opts)`.
 
 ---
 

@@ -152,7 +152,7 @@ export class Engine {
           continue;
         }
 
-        // Reshape: auto-copy if non-contiguous (PyTorch semantics)
+        // Reshape: auto-copy if non-contiguous
         if (isContiguous(src.shape as number[], src.strides, src.offset)) {
           this.registry.set(outId, {
             storage: src.storage,

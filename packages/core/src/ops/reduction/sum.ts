@@ -7,8 +7,8 @@ import { contiguous } from '../memory/contiguous';
 /**
  * Sum over `axis` (or all axes if undefined). IR op: `ReduceSum`.
  *
- * `axis` matches NumPy/JAX convention — accepts a single int, an array, or
- * undefined (reduce-all). Negative indices count from the end.
+ * `axis` accepts a single int, an array, or undefined (reduce-all).
+ * Negative indices count from the end.
  */
 export function sum(a: Tensor, axis?: number | number[], keepdim = false): Tensor {
   const normalizedAxes = normalizeAxes(axis, a.shape.length);

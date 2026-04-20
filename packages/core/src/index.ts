@@ -31,7 +31,7 @@ export { grad } from './autograd';
 export { compile } from './compile';
 export { run } from './run';
 
-// Scalar equality helpers (PyTorch / JAX parity: torch.equal, torch.allclose).
+// Scalar equality helpers — resolve to a single bool.
 // For element-wise comparison returning a bool tensor, see ops/elementwise (eq, lt, gt, ...).
 export { equal, allclose } from './equality';
 export type { AllcloseOptions } from './equality';

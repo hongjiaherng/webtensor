@@ -6,7 +6,7 @@ import { unsqueeze } from '../movement/unsqueeze';
 import { squeeze } from '../movement/squeeze';
 
 /**
- * PyTorch-style `matmul`:
+ * `matmul`:
  *   - 1D·1D → scalar (dot product)
  *   - 1D·2D → prepend 1 to a, compute, drop prepended dim
  *   - 2D·1D → append 1 to b, compute, drop appended dim

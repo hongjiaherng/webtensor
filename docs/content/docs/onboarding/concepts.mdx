@@ -315,7 +315,7 @@ const out = await engine.get(y.id);
 
 This is verbose but every piece is inspectable. When `compile()` doesn't fit your use case (e.g. you're writing an ONNX-to-webtensor translator, or a custom fusion compiler, or a visualization tool), you drop to this layer without leaving the library.
 
-**Key design choice:** we don't provide a `trainStep` / `Trainer` wrapper, and we don't hide the low-level API. Every high-level helper is a small wrapper, and users who outgrow the high-level can drop a level without reading internal source — the JAX / PyTorch philosophy of small primitives over fat abstractions.
+**Key design choice:** we don't provide a `trainStep` / `Trainer` wrapper, and we don't hide the low-level API. Every high-level helper is a small wrapper, and users who outgrow the high-level can drop a level without reading internal source — small primitives over fat abstractions.
 
 ---
 

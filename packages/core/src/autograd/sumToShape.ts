@@ -6,7 +6,7 @@ import { reshape } from '../ops/movement/reshape';
 /**
  * Reduce a gradient tensor back to `targetShape` by summing over axes that
  * were broadcast during the forward pass. Used by binary-op backward closures
- * and by `Expand` backward. Equivalent to PyTorch's internal `sum_to`.
+ * and by `Expand` backward.
  */
 export function sumToShape(grad: Tensor, targetShape: (number | null)[]): Tensor {
   const gradShape = grad.shape;

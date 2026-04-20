@@ -5,8 +5,7 @@
 //   - bool out  : select(0u, 1u, v != IN_SCALAR(0))   (truthiness)
 //   - else      : OUT_SCALAR(v)                        (native WGSL coercion —
 //                                                       f32 → i32 truncates
-//                                                       toward zero, matching
-//                                                       NumPy / PyTorch)
+//                                                       toward zero)
 
 __TENSOR_META__
 

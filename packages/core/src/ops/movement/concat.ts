@@ -16,7 +16,7 @@ export function concat(tensors: Tensor[], axis: number = 0): Tensor {
   const first = tensors[0];
   const rank = first.shape.length;
 
-  // Normalize axis: allow negative indices (PyTorch / NumPy parity).
+  // Normalize axis: allow negative indices.
   const ax = axis < 0 ? axis + rank : axis;
   if (ax < 0 || ax >= rank) {
     throw new Error(`concat: axis ${axis} out of range for rank ${rank}`);

@@ -51,9 +51,7 @@ export function copyBuffer(dst: TypedArray, src: ArrayBufferView): void {
 
 // ---------------------------------------------------------------------------
 // Dtype promotion — used at graph-build time by core ops.
-//
-// Matches PyTorch's `torch.promote_types` / NumPy's `np.promote_types` behavior:
-// "wider" of the two dtypes wins. bool < int32 < float32.
+// "Wider" of the two dtypes wins: bool < int32 < float32.
 
 const DTYPE_RANK: Record<DType, number> = {
   bool: 0,
@@ -73,7 +71,7 @@ export function resultDType(a: DType, b: DType): DType {
 
 /**
  * True iff a dtype supports arithmetic ops (add/sub/mul/div/matmul).
- * `bool` does not — PyTorch rejects `add(bool, bool)` and we follow.
+ * `bool` does not — `add(bool, bool)` is rejected; cast first.
  */
 export function isArithmeticDType(d: DType): boolean {
   return d === 'float32' || d === 'int32';

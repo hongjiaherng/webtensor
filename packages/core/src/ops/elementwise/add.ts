@@ -3,7 +3,7 @@ import { broadcastShapes } from '../../shape';
 import { sumToShape } from '../../autograd/sumToShape';
 import { resultDType, isArithmeticDType } from '@webtensor/runtime';
 
-/** Element-wise `a + b` with broadcasting. PyTorch-style dtype promotion. */
+/** Element-wise `a + b` with broadcasting and dtype promotion. */
 export function add(a: Tensor, b: Tensor): Tensor {
   if (!isArithmeticDType(a.dtype) || !isArithmeticDType(b.dtype)) {
     throw new Error(

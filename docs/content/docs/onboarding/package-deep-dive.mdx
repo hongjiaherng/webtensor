@@ -211,7 +211,7 @@ For end users, the entry point is `@webtensor/core`. A typical training app impo
 ```ts
 import {
   compile,
-  grad, // high-level: JAX-style jit + differentiation
+  grad, // high-level: trace-compile + differentiation
   randn,
   zeros, // factory functions
   matmul,

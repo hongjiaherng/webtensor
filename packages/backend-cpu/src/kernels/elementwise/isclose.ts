@@ -4,8 +4,8 @@ import { CPUKernel, broadcastStridesOf, stridedIdx, buf } from '../utils';
  * Element-wise `isclose`. Float32-only. Formula:
  *   `|a - b| <= atol + rtol * |b|`
  *
- * Matches NumPy / PyTorch / JAX semantics — NaN values only compare equal
- * when `equalNan === true`; ±∞ only compares equal to the same signed infinity.
+ * NaN values only compare equal when `equalNan === true`; ±∞ only compares
+ * equal to the same signed infinity.
  * WASM (Rust) and WebGPU (WGSL) re-implement the same predicate — keep them
  * in sync with this kernel.
  */

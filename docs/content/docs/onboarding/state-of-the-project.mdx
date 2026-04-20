@@ -15,7 +15,7 @@ Honest audit. Three columns: **Works** (production-quality), **Partial** (usable
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------- |
 | Element-wise binary | `add`, `sub`, `mul`, `div` with broadcasting                                                                       |         |                                                   |
 | Element-wise unary  | `neg`, `exp`, `log`, `sqrt`, `abs`, `pow`, `sigmoid`, `tanh`, `relu`                                               |         |                                                   |
-| Linear algebra      | `matmul` — PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, N-D batched with broadcast over batch dims         |         |                                                   |
+| Linear algebra      | `matmul` — 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, N-D batched with broadcast over batch dims                            |         |                                                   |
 | Views (zero-copy)   | `transpose`, `reshape`, `view`, `slice`, `unsqueeze`, `squeeze`, `permute`, `expand`, `flatten`                    |         |                                                   |
 | Memory              | `contiguous`, `clone`, `detach`                                                                                    |         |                                                   |
 | Reductions          | `sum`, `mean`, `all`, `any` (arbitrary `axis`, `keepdim`)                                                          |         | `max`, `min`, `argmax`, `argmin`                  |

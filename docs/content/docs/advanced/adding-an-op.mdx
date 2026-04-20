@@ -19,9 +19,9 @@ In [`/roadmap`](/docs/roadmap), add a row to the **Ops** table (or relevant sect
 
 Naming conventions to follow:
 
-- **Function name:** user-facing, in camelCase, matching NumPy / PyTorch / JAX where possible — `sum`, `mean`, `matmul`, `softmax`. Not `reduceSum` or `doMatrixMultiply`.
+- **Function name:** user-facing, in camelCase, using the common convention — `sum`, `mean`, `matmul`, `softmax`. Not `reduceSum` or `doMatrixMultiply`.
 - **IR op name (`ctx.op`):** ONNX-aligned PascalCase — `ReduceSum`, `ReduceMean`, `Softmax`, `MatMul`. This is the string the kernel registries key on, and it must match the ONNX operator name so an ONNX importer can emit nodes without a translation layer.
-- **Parameter names:** `axis` (not `axes`), `keepdim` (not `keep_dims`), `dim` for single-axis ops — matching PyTorch/NumPy.
+- **Parameter names:** `axis` (not `axes`), `keepdim` (not `keep_dims`), `dim` for single-axis ops.
 
 Add a function that constructs the IR node. Mirror the existing pattern:
 

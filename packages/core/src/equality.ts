@@ -18,7 +18,7 @@ function shapesEqual(a: Tensor, b: Tensor): boolean {
 }
 
 export interface AllcloseOptions {
-  /** Relative tolerance. Default: 1e-5 (PyTorch / JAX default). */
+  /** Relative tolerance. Default: 1e-5. */
   rtol?: number;
   /** Absolute tolerance. Default: 1e-8. */
   atol?: number;
@@ -28,8 +28,7 @@ export interface AllcloseOptions {
 
 /**
  * Strict element-wise equality. Resolves to `true` iff the two tensors have
- * the same shape AND every element is exactly equal. Mirrors `torch.equal`
- * and `jnp.array_equal`.
+ * the same shape AND every element is exactly equal.
  *
  * Implemented as `all(eq(a, b))` — comparison runs on the active backend and
  * only the final scalar bool is pulled back to JS.
@@ -50,7 +49,6 @@ export async function equal(a: Tensor, b: Tensor, opts: RunOptions = {}): Promis
  * Numeric closeness check. Resolves to `true` iff the two tensors have the
  * same shape AND every pair of elements satisfies
  *   `|a - b| <= atol + rtol * |b|`
- * (matching the NumPy / PyTorch / JAX formula).
  *
  * Defaults: `rtol = 1e-5`, `atol = 1e-8`, `equalNan = false`.
  */

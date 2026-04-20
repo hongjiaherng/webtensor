@@ -32,7 +32,7 @@ export type RuntimeKernel = (node: Node, src: RuntimeTensor) => RuntimeTensor;
  *
  * Note: `Reshape` and `View` are *not* in this registry even though they are
  * view-like — they need special handling in `Engine` because `Reshape` may
- * auto-copy on non-contiguous input (PyTorch semantics) and `View` must
+ * auto-copy on non-contiguous input and `View` must
  * verify contiguity.
  */
 export const runtimeKernelRegistry = new Map<string, RuntimeKernel>([

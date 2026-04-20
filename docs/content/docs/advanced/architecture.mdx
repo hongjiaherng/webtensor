@@ -35,7 +35,7 @@ The boundary rule exists to keep each package independently testable and replace
 
 `@webtensor/core` deliberately exposes two layers:
 
-- **High-level** — what 99% of users import. `tensor`, `zeros/ones/rand/randn`, `run()`, `compile(fn, spec)`, `grad(loss, param)`, `.equals()` / `.allclose()`. The training code pattern looks like JAX's `@jit` + `optax`.
+- **High-level** — what 99% of users import. `tensor`, `zeros/ones/rand/randn`, `run()`, `compile(fn, spec)`, `grad(loss, param)`, `.equals()` / `.allclose()`. Trace-once-call-many training pattern.
 - **Low-level** — stable, documented escape hatch. `placeholder()`, `compileGraph()`, `Engine`, `registerBackend`, raw `Backend` / `RuntimeTensor`. Used by the high-level API internally; also by ONNX importers, custom JITs, or anyone extending the library.
 
 The rule: **every high-level helper is a small wrapper around the low-level primitives, and both remain exported.** If a user outgrows `compile()`, they can drop a level without re-learning the system or switching libraries. This is what keeps us from becoming a "magic" framework (HuggingFace / Lightning style) where escape hatches lead to reading internal source code.
@@ -53,7 +53,7 @@ Kernel         = implementation of one IR op for one backend
 
 `Engine` plans execution order and calls kernels. It must not understand MatMul dimensions, WGSL workgroup geometry, or WASM pointer arithmetic. When `Engine.execute()` receives a node, it allocates outputs from the backend and delegates everything else. If `Engine` is growing op-specific logic, that logic belongs in the backend.
 
-View ops (Transpose, Reshape, Slice, Unsqueeze, Squeeze, Permute, Expand) are a special case: they are handled entirely inside `Engine` by computing new shape/strides/offset metadata without any backend call or allocation. Reshape auto-copies non-contiguous tensors to match PyTorch semantics; the strict alternative `view()` throws on non-contiguous input instead.
+View ops (Transpose, Reshape, Slice, Unsqueeze, Squeeze, Permute, Expand) are a special case: they are handled entirely inside `Engine` by computing new shape/strides/offset metadata without any backend call or allocation. Reshape auto-copies non-contiguous tensors; the strict alternative `view()` throws on non-contiguous input instead.
 
 ---
 

@@ -99,14 +99,14 @@ export function reduceOutputShape(
       out.push(inputShape[i] as number);
     }
   }
-  return out; // full reduce + keepdim=false → rank-0 ([]); PyTorch semantics.
+  return out; // full reduce + keepdim=false → rank-0 ([]).
 }
 
 /**
  * Resolve a reshape target shape that may contain a single inference placeholder
- * (`null` or any negative integer, matching PyTorch's `-1`) by dividing the input
- * size by the product of the other dims. Throws if more than one placeholder is
- * present, the input size is unknown, or the target size is incompatible.
+ * (`null` or any negative integer, e.g. `-1`) by dividing the input size by the
+ * product of the other dims. Throws if more than one placeholder is present,
+ * the input size is unknown, or the target size is incompatible.
  */
 export function resolveShapeInference(
   inputShape: (number | null)[],

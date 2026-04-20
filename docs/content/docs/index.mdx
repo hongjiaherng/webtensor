@@ -1,11 +1,11 @@
 ---
 title: 'webtensor'
-description: 'A browser-first tensor library with WebGPU acceleration, eager autograd, and a PyTorch/JAX-inspired API in TypeScript.'
+description: 'A browser-first tensor library with WebGPU acceleration, eager autograd, and a familiar TypeScript API.'
 ---
 
 **webtensor** is a multi-backend tensor library built for the browser. Write, train, and visualize models in TypeScript with three backends at full parity: **CPU** (TypeScript), **WASM** (Rust via wasm-pack), and **WebGPU** (WGSL compute shaders). 830+ cross-backend tests.
 
-> **Status: foundation done.** Broadcast-aware autograd, PyTorch-style `matmul` (incl. N-D batched), reductions, softmax, JAX-style `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
+> **Status: foundation done.** Broadcast-aware autograd, `matmul` (incl. N-D batched), reductions, softmax, `compile()` + `grad()`, host-side `SGD`, end-to-end XOR MLP trains on all three backends. See [Start here](/docs/onboarding/start-here) for the full status matrix.
 
 ---
 
@@ -30,7 +30,7 @@ const z = await tensor([-1, 2, -3]).abs().run();
 // Shape-aware equality (async — dispatches through backend):
 expect(await y.equals(tensor([5, 7, 9]))).toBe(true);
 
-// Training — JAX-style: trace once, call many
+// Training — trace once, call many
 const W = randn([2, 8], { requiresGrad: true, std: 0.5 });
 const b = randn([8], { requiresGrad: true });
 

@@ -106,7 +106,7 @@ After every node, `decrementRef()` decrements each input's refcount. When it hit
 Every `RuntimeTensor` ([backend.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/runtime/src/backend.ts)) carries:
 
 - `storage` — the actual buffer (TypedArray / GPUBuffer / WASM handle), shared across views.
-- `shape`, `strides`, `offset` — independent of storage, like PyTorch.
+- `shape`, `strides`, `offset` — independent of storage.
 - `dtype` — `'float32' | 'int32' | 'bool'`.
 - `isView?` — when `true`, `backend.dispose()` is a no-op (the parent owns the storage).
 

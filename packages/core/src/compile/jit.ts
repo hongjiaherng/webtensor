@@ -6,8 +6,8 @@ import { compileGraph } from './trace';
 import { Device } from '../types';
 
 // ---------------------------------------------------------------------------
-// compile() — JAX-style jit: trace a TypeScript function once, return a
-// callable that feeds data through the compiled graph on each invocation.
+// compile() — trace a TypeScript function once, return a callable that feeds
+// data through the compiled graph on each invocation.
 // Users never see `placeholder()` IDs, `compileGraph`, or `engine.get`.
 
 export type ShapeLike = number[] | { shape: number[]; dtype?: DType };
