@@ -10,3 +10,11 @@ html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
 }
+
+/* Sidebar: visual trail for ancestor folder headers when a deeply nested
+   page is active. Radix Collapsible.Root carries data-state; its direct-child
+   link/button is the folder header; data-active="true" marks the selected page. */
+#nd-sidebar div[data-state]:has([data-active='true']) > a:not([data-active='true']),
+#nd-sidebar div[data-state]:has([data-active='true']) > button {
+  @apply text-fd-foreground! underline underline-offset-[3px];
+}

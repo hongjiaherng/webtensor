@@ -38,6 +38,7 @@
   "excludeProtected": false,
   "excludeExternals": true,
   "excludeNotDocumented": false,
+  "excludeReferences": true,
 
   "categorizeByGroup": true,
   "defaultCategory": "Other",

@@ -34,9 +34,3 @@ export function mean(a: Tensor, axis?: number | number[], keepdim = false): Tens
     },
   });
 }
-
-/**
- * @deprecated Use `mean`.
- * @category Reduction
- */
-export const reduceMean = mean;

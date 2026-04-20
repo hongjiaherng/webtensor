@@ -28,12 +28,12 @@ Check an item off (`[x]`) when it is fully implemented and tested on all target 
 
 **What it is:** A `@webtensor/core/nn` (or similar) module with `mse_loss`, `cross_entropy`, `log_softmax`, plus a `Parameter` convention so weights can be managed uniformly.
 
-**Why it matters:** Today training uses `reduceMean(mul(diff, diff))` ad-hoc. Named losses + `log_softmax` unlock classification training. This also paves the way for an Adam optimizer and richer schedulers.
+**Why it matters:** Today training uses `mean(mul(diff, diff))` ad-hoc. Named losses + `log_softmax` unlock classification training. This also paves the way for an Adam optimizer and richer schedulers.
 
 **What needs to change:**
 
 - **`log_softmax`** under `packages/core/src/ops/activation/` — numerically stable: `x - logsumexp(x, axis)`. Backward: `grad - softmax(x) * sum(grad, axis, keepdim=true)`.
-- **`mse_loss(pred, target)` = `reduceMean(pow(sub(pred, target), 2))`** — one-liner alias.
+- **`mse_loss(pred, target)` = `mean(pow(sub(pred, target), 2))`** — one-liner alias.
 - **`cross_entropy(logits, target)`** — combined `log_softmax` + negative-log-likelihood.
 - **`Adam`** — another host-side optimizer next to `SGD` in `packages/nn/src/optim/`. Keeps the existing placeholder-fed pattern (weights live as `Float32Array`s, not inside the graph).
 

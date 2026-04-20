@@ -34,6 +34,3 @@ export function sum(a: Tensor, axis?: number | number[], keepdim = false): Tenso
     },
   });
 }
-
-/** @deprecated Use `sum`. */
-export const reduceSum = sum;

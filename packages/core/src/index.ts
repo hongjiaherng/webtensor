@@ -1,5 +1,3 @@
-export const VERSION = '0.0.0';
-
 // ---------------------------------------------------------------------------
 // Public API — what the typical user imports.
 

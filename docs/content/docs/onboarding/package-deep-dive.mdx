@@ -33,7 +33,7 @@ For the boundary contract see [Architecture](/docs/advanced/architecture). This 
 | `Graph`          | `{ nodes, values, inputs, outputs, initializers }`. Serializable.                                       |
 | `AttributeValue` | Op-specific config — numbers, arrays, `ArrayBuffer` for embedded data.                                  |
 
-**Public exports:** `VERSION`, all types above, `computeContiguousStrides`. See [src/index.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/ir/src/index.ts).
+**Public exports:** all types above, `computeContiguousStrides`. See [src/index.ts](https://github.com/hongjiaherng/webtensor/blob/main/packages/ir/src/index.ts).
 
 **Must not depend on:** anything. This is the leaf. Any backend or runtime utility that creeps in here is a layering violation.
 

@@ -1,5 +1,5 @@
 {
-  "title": "webtensor",
+  "title": "Documentation",
   "pages": [
     "---Getting Started---",
     "index",
@@ -9,7 +9,6 @@
     "onboarding",
     "advanced",
     "---Reference---",
-    "api",
     "history"
   ]
 }

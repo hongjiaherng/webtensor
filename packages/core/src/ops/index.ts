@@ -20,8 +20,8 @@ export type { IsCloseOptions } from './elementwise/isclose';
 export { cast } from './elementwise/cast';
 
 // Reduction
-export { sum, reduceSum } from './reduction/sum';
-export { mean, reduceMean } from './reduction/mean';
+export { sum } from './reduction/sum';
+export { mean } from './reduction/mean';
 export { all } from './reduction/all';
 export { any } from './reduction/any';
 
