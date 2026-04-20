@@ -46,6 +46,8 @@
     "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../../public/diagrams",
     "docs:logo": "cd assets/logo && uv sync && uv run main.py",
     "smoke-test": "cd smoke-test && bun run dev",
+    "version:bump": "bun scripts/bump-version.ts",
+    "publish:dry": "bun publish --cwd packages/ir --access public --dry-run && bun publish --cwd packages/runtime --access public --dry-run && bun publish --cwd packages/core --access public --dry-run && bun publish --cwd packages/backend-cpu --access public --dry-run && bun publish --cwd packages/backend-webgpu --access public --dry-run && bun publish --cwd packages/backend-wasm --access public --dry-run && bun publish --cwd packages/nn --access public --dry-run",
     "publish:all": "bun publish --cwd packages/ir --access public && bun publish --cwd packages/runtime --access public && bun publish --cwd packages/core --access public && bun publish --cwd packages/backend-cpu --access public && bun publish --cwd packages/backend-webgpu --access public && bun publish --cwd packages/backend-wasm --access public && bun publish --cwd packages/nn --access public"
   }
 }
