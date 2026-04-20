@@ -133,11 +133,17 @@ export class WebGPUBackend implements Backend {
     this.device.queue.submit([commandEncoder.finish()]);
 
     // Destroy ephemeral meta buffers once the GPU is done.
-    // WebGPU keeps the underlying resources alive until all submitted work completes.
+    // WebGPU keeps the underlying resources alive until all submitted work
+    // completes. The `.catch` swallows device-lost / adapter-unplug
+    // rejections so they don't surface as unhandled promise rejections —
+    // the buffers become unreachable anyway when the device dies.
     if (tempBuffers.length > 0) {
-      this.device.queue.onSubmittedWorkDone().then(() => {
-        for (const buf of tempBuffers) buf.destroy();
-      });
+      this.device.queue
+        .onSubmittedWorkDone()
+        .then(() => {
+          for (const buf of tempBuffers) buf.destroy();
+        })
+        .catch(() => {});
     }
   }
 
@@ -145,9 +151,12 @@ export class WebGPUBackend implements Backend {
     if (tensor.isView) return;
     if (tensor.storage.buffer) {
       const bufferToDestroy = tensor.storage.buffer as GPUBuffer;
-      this.device.queue.onSubmittedWorkDone().then(() => {
-        bufferToDestroy.destroy();
-      });
+      this.device.queue
+        .onSubmittedWorkDone()
+        .then(() => {
+          bufferToDestroy.destroy();
+        })
+        .catch(() => {});
       tensor.storage.buffer = null;
     }
   }
