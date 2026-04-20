@@ -27,6 +27,19 @@ export function typedArrayCtor(
 }
 
 export function copyBuffer(dst: TypedArray, src: ArrayBufferView): void {
+  // When `src` is a typed array we require it to match `dst`'s element type.
+  // Reinterpreting bytes across dtypes (e.g. Float32 → Int32) silently
+  // corrupts values and has no legitimate caller in this codebase.
+  // A bare `DataView` or `ArrayBuffer` is accepted as an opaque byte source.
+  if (ArrayBuffer.isView(src) && !(src instanceof DataView)) {
+    const srcCtor = (src as unknown as { constructor: unknown }).constructor;
+    const dstCtor = (dst as unknown as { constructor: unknown }).constructor;
+    if (srcCtor !== dstCtor) {
+      throw new Error(
+        `copyBuffer: src type ${(srcCtor as { name: string }).name} does not match dst type ${(dstCtor as { name: string }).name}`,
+      );
+    }
+  }
   if (dst instanceof Float32Array) {
     dst.set(new Float32Array(src.buffer, src.byteOffset, src.byteLength / 4));
   } else if (dst instanceof Int32Array) {
