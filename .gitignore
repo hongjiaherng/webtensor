@@ -23,4 +23,7 @@ Thumbs.db
 docs/.next/
 docs/out/
 docs/.source/
-docs/package-lock.json
+docs/package-lock.json
+
+# Generated API reference (run `bun run docs:api` to regenerate)
+docs/content/docs/api/

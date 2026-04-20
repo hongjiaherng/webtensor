@@ -42,6 +42,7 @@
     "format:check": "prettier --check .",
     "docs:dev": "cd docs && bun run dev",
     "docs:build": "cd docs && bun run build",
+    "docs:api": "cd docs && bun run api",
     "docs:start": "cd docs && bun run start",
     "docs:plantuml": "plantuml -tsvg -failfast2 docs/diagrams/puml/*.puml -o ../../public/diagrams",
     "docs:logo": "cd assets/logo && uv sync && uv run main.py",

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "../packages/ir/src/index.ts",
+    "../packages/runtime/src/index.ts",
+    "../packages/core/src/index.ts",
+    "../packages/backend-cpu/src/index.ts",
+    "../packages/backend-wasm/src/index.ts",
+    "../packages/backend-webgpu/src/index.ts",
+    "../packages/nn/src/index.ts"
+  ],
+  "tsconfig": "./tsconfig.typedoc.json",
+  "out": "content/docs/api",
+
+  "plugin": ["typedoc-plugin-markdown", "typedoc-plugin-frontmatter"],
+
+  "readme": "none",
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "useCodeBlocks": true,
+  "expandObjects": true,
+  "expandParameters": true,
+  "parametersFormat": "table",
+  "propertiesFormat": "table",
+  "enumMembersFormat": "table",
+  "typeDeclarationFormat": "table",
+  "indexFormat": "list",
+
+  "fileExtension": ".mdx",
+  "outputFileStrategy": "members",
+  "flattenOutputFiles": false,
+  "mergeReadme": false,
+
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "excludeNotDocumented": false,
+
+  "categorizeByGroup": false,
+  "groupOrder": ["Functions", "Classes", "Interfaces", "Type Aliases", "Variables", "*"],
+  "categoryOrder": [
+    "Tensor",
+    "Factories",
+    "Elementwise",
+    "Reduction",
+    "Linalg",
+    "Activation",
+    "Movement",
+    "Memory",
+    "Autograd",
+    "Compile",
+    "Runtime",
+    "Other",
+    "*"
+  ]
+}

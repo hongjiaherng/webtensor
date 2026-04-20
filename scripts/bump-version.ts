@@ -9,7 +9,7 @@
 // All seven packages share the same version — workspace deps use `workspace:^`
 // so inter-package refs resolve automatically at publish time.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+export {}; // mark as module so top-level `await` is legal
 
 const PACKAGES = [
   'packages/ir',
@@ -21,16 +21,20 @@ const PACKAGES = [
   'packages/nn',
 ];
 
-const arg = process.argv[2];
+const arg = Bun.argv[2];
 if (!arg) {
   console.error('Usage: bun scripts/bump-version.ts <patch|minor|major|x.y.z>');
   process.exit(1);
 }
 
-const current = JSON.parse(readFileSync(`${PACKAGES[0]}/package.json`, 'utf8')).version as string;
+async function readPkg(dir: string): Promise<{ version: string } & Record<string, unknown>> {
+  return await Bun.file(`${dir}/package.json`).json();
+}
+
+const current = (await readPkg(PACKAGES[0])).version;
 
 for (const p of PACKAGES) {
-  const v = JSON.parse(readFileSync(`${p}/package.json`, 'utf8')).version;
+  const v = (await readPkg(p)).version;
   if (v !== current) {
     console.error(`version drift: ${p} is ${v}, expected ${current}`);
     process.exit(1);
@@ -51,9 +55,8 @@ console.log(`${current} -> ${next}`);
 
 for (const p of PACKAGES) {
   const path = `${p}/package.json`;
-  const src = readFileSync(path, 'utf8');
-  const pkg = JSON.parse(src);
+  const pkg = await readPkg(p);
   pkg.version = next;
-  writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+  await Bun.write(path, JSON.stringify(pkg, null, 2) + '\n');
   console.log(`  ${p} -> ${next}`);
 }
