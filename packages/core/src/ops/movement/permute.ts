@@ -2,8 +2,19 @@ import { Tensor } from '../../tensor';
 
 /** Reorder axes according to `axes`. Zero-copy view. */
 export function permute(a: Tensor, axes: number[]): Tensor {
-  if (axes.length !== a.shape.length) {
-    throw new Error(`permute: axes length ${axes.length} must match tensor rank ${a.shape.length}`);
+  const rank = a.shape.length;
+  if (axes.length !== rank) {
+    throw new Error(`permute: axes length ${axes.length} must match tensor rank ${rank}`);
+  }
+  const seen = new Array<boolean>(rank).fill(false);
+  for (const ax of axes) {
+    if (!Number.isInteger(ax) || ax < 0 || ax >= rank) {
+      throw new Error(`permute: axis ${ax} out of range for rank ${rank}`);
+    }
+    if (seen[ax]) {
+      throw new Error(`permute: axes must be a permutation; axis ${ax} repeated`);
+    }
+    seen[ax] = true;
   }
   const outShape = axes.map((ax) => a.shape[ax]);
   const inverseAxes = new Array(axes.length);
