@@ -10,6 +10,8 @@
 // so inter-package refs resolve automatically at publish time.
 export {}; // mark as module so top-level `await` is legal
 
+// Publishable packages bumped in strict lockstep — they share a version and
+// reference each other via `workspace:^`, so drift would break publish.
 const PACKAGES = [
   'packages/ir',
   'packages/runtime',
@@ -19,6 +21,11 @@ const PACKAGES = [
   'packages/backend-wasm',
   'packages/nn',
 ];
+
+// Private packages we keep aligned for consistency but don't enforce drift on,
+// since they've historically had independent versions. They get the same
+// `next` version written without comparing their current state.
+const MIRROR_PACKAGES = ['.', 'docs', 'smoke-test'];
 
 const arg = Bun.argv[2];
 if (!arg) {
@@ -58,4 +65,13 @@ for (const p of PACKAGES) {
   pkg.version = next;
   await Bun.write(path, JSON.stringify(pkg, null, 2) + '\n');
   console.log(`  ${p} -> ${next}`);
+}
+
+for (const p of MIRROR_PACKAGES) {
+  const path = `${p}/package.json`;
+  const pkg = await readPkg(p);
+  const prev = pkg.version;
+  pkg.version = next;
+  await Bun.write(path, JSON.stringify(pkg, null, 2) + '\n');
+  console.log(`  ${p === '.' ? '(root)' : p} -> ${next}${prev !== current ? ` (was ${prev})` : ''}`);
 }
