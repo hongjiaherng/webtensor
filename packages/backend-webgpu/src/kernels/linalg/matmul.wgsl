@@ -10,7 +10,7 @@ struct BatchMeta {
   M:          u32,
   K:          u32,
   N:          u32,
-  batch_out_shape: array<u32, 64>,
+  batch_out_shape: array<u32, __MAX_RANK__>,
 };
 
 @group(0) @binding(0) var<storage, read>       a:        array<f32>;

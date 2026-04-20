@@ -8,7 +8,7 @@
 __TENSOR_META__
 
 struct PadMeta {
-  pads_before: array<u32, 64>,
+  pads_before: array<u32, __MAX_RANK__>,
   value_bits:  u32,
   _p0: u32,
   _p1: u32,

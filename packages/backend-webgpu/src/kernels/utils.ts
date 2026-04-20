@@ -26,15 +26,20 @@ export const TENSOR_META_WGSL = `struct TensorMeta {
 };`;
 
 /**
- * Inject the shared `TensorMeta` struct into a WGSL source at the
- * `__TENSOR_META__` placeholder. Safe to call on any shader; templates without
- * the placeholder are returned unchanged.
+ * Inject the shared `TensorMeta` struct and `__MAX_RANK__` constant into a
+ * WGSL source. `__MAX_RANK__` expands to the current `MAX_RANK` literal, so
+ * op-specific aux structs can write `array<u32, __MAX_RANK__>` instead of
+ * hardcoding 64 and silently desyncing when MAX_RANK changes in `@webtensor/ir`.
+ * Safe to call on any shader; templates without the placeholders are returned
+ * unchanged.
  */
 export function injectMeta(template: string): string {
-  return template.replace(/__TENSOR_META__/g, TENSOR_META_WGSL);
+  return template
+    .replace(/__TENSOR_META__/g, TENSOR_META_WGSL)
+    .replace(/__MAX_RANK__/g, String(MAX_RANK));
 }
 
-/** Substitute `SCALAR` and `__TENSOR_META__` in a WGSL template. */
+/** Substitute `SCALAR`, `__TENSOR_META__`, and `__MAX_RANK__` in a WGSL template. */
 export function renderWgsl(template: string, dtype: DType): string {
   return injectMeta(template).replace(/\bSCALAR\b/g, WGSL_SCALAR[dtype]);
 }

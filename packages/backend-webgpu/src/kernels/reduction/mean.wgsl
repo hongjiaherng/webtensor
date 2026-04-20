@@ -7,8 +7,8 @@ struct ReduceMeta {
   reduce_rank:  u32,
   kept_total:   u32,
   reduce_total: u32,
-  kept_axes:    array<u32, 64>,
-  reduce_axes:  array<u32, 64>,
+  kept_axes:    array<u32, __MAX_RANK__>,
+  reduce_axes:  array<u32, __MAX_RANK__>,
 };
 
 @group(0) @binding(0) var<storage, read>       a:        array<f32>;
@@ -27,8 +27,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>,
   let out_idx = gid.y * ng.x * 64u + gid.x;
   if (out_idx >= u_reduce.kept_total) { return; }
 
-  var coord: array<u32, 64>;
-  for (var i = 0u; i < 64u; i++) { coord[i] = 0u; }
+  var coord: array<u32, __MAX_RANK__>;
+  for (var i = 0u; i < __MAX_RANK__u; i++) { coord[i] = 0u; }
 
   var rem = out_idx;
   for (var d = u_reduce.kept_rank; d > 0u; d--) {

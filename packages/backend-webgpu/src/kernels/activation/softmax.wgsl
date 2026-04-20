@@ -8,7 +8,7 @@ struct SoftmaxMeta {
   slice_count: u32,
   axis_len:    u32,
   _pad:        u32,
-  out_strides: array<u32, 64>,
+  out_strides: array<u32, __MAX_RANK__>,
 };
 
 @group(0) @binding(0) var<storage, read>       a:        array<f32>;
@@ -26,8 +26,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>,
   let s = gid.y * ng.x * 64u + gid.x;
   if (s >= u_sm.slice_count) { return; }
 
-  var coord: array<u32, 64>;
-  for (var i = 0u; i < 64u; i++) { coord[i] = 0u; }
+  var coord: array<u32, __MAX_RANK__>;
+  for (var i = 0u; i < __MAX_RANK__u; i++) { coord[i] = 0u; }
 
   var rem = s;
   for (var d = u_meta_a.rank; d > 0u; d--) {
