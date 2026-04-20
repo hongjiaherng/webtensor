@@ -103,10 +103,10 @@ export function reduceOutputShape(
 }
 
 /**
- * Resolve a reshape target shape that may contain a single `null` placeholder
- * (PyTorch's `-1`) by dividing the input size by the product of the other dims.
- * Throws if more than one null is present, the input size is unknown, or the
- * target size is incompatible with the input size.
+ * Resolve a reshape target shape that may contain a single inference placeholder
+ * (`null` or any negative integer, matching PyTorch's `-1`) by dividing the input
+ * size by the product of the other dims. Throws if more than one placeholder is
+ * present, the input size is unknown, or the target size is incompatible.
  */
 export function resolveShapeInference(
   inputShape: (number | null)[],
@@ -116,10 +116,13 @@ export function resolveShapeInference(
   let product = 1;
   for (let i = 0; i < targetShape.length; i++) {
     const d = targetShape[i];
-    if (d === null) {
+    if (d === null || (typeof d === 'number' && d < 0)) {
+      if (d !== null && !Number.isInteger(d)) {
+        throw new Error(`reshape: invalid dim ${d} at index ${i}`);
+      }
       nullIndices.push(i);
     } else {
-      if (!Number.isInteger(d) || d < 0) {
+      if (!Number.isInteger(d)) {
         throw new Error(`reshape: invalid dim ${d} at index ${i}`);
       }
       product *= d;

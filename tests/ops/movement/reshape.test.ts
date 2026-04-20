@@ -108,8 +108,17 @@ BACKENDS.forEach(({ name, create }) => {
       expect(y.shape).toEqual([2, 12]);
     });
 
-    it('throws on multiple nulls', () => {
+    it('infers -1 dim: [24] → [-1, 8]', async () => {
+      const src = Array.from({ length: 24 }, (_, i) => i + 1);
+      const y = await run(contiguous(reshape(tensor(src), [-1, 8])), { engine });
+      expect(y.shape).toEqual([3, 8]);
+    });
+
+    it('throws on multiple inference placeholders', () => {
       expect(() => reshape(tensor([1, 2, 3, 4]), [null, null])).toThrow(
+        /only one dimension can be inferred/,
+      );
+      expect(() => reshape(tensor([1, 2, 3, 4]), [-1, -1])).toThrow(
         /only one dimension can be inferred/,
       );
     });

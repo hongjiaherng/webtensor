@@ -3,7 +3,7 @@ import { resolveShapeInference } from '../../shape';
 
 /**
  * Reshape to `shape`. Auto-copies if the source is non-contiguous (PyTorch semantics).
- * A single `null` in `shape` is inferred from the input's total size (like `-1` in PyTorch).
+ * A single `null` or `-1` in `shape` is inferred from the input's total size (PyTorch semantics).
  */
 export function reshape(a: Tensor, shape: (number | null)[]): Tensor {
   const resolved = resolveShapeInference(a.shape, shape);

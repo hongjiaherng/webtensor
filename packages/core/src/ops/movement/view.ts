@@ -4,7 +4,7 @@ import { resolveShapeInference } from '../../shape';
 /**
  * Strict reshape: throws on non-contiguous input. Use `.contiguous()` first
  * or prefer `reshape()` (which auto-copies). A single `null` in `shape` is
- * inferred from the input's total size (like `-1` in PyTorch).
+ * or `-1` is inferred from the input's total size (PyTorch semantics).
  */
 export function view(a: Tensor, shape: (number | null)[]): Tensor {
   const resolved = resolveShapeInference(a.shape, shape);

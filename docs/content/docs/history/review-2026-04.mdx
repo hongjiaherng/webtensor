@@ -40,6 +40,7 @@ Every `getDispatch` in elementwise / activation / reduction / memory / movement 
 - `vite-plugin-wasm` remains in root `devDependencies` but is unused after the base64 migration.
 - `@webtensor/core` and `@webtensor/nn` don't declare `@webtensor/ir` as a direct dep; works via hoist, breaks on isolated publish.
 - `publish:all` has no version-bump step or `--dry-run`.
+- Explain why we enforce MAX_RANK in the IR and how it maps to backends.
 
 ## Testing gaps
 
