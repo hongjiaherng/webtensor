@@ -62,9 +62,10 @@ console.log(`${current} -> ${next}`);
 for (const p of PACKAGES) {
   const path = `${p}/package.json`;
   const pkg = await readPkg(p);
+  const prev = pkg.version;
   pkg.version = next;
   await Bun.write(path, JSON.stringify(pkg, null, 2) + '\n');
-  console.log(`  ${p} -> ${next}`);
+  console.log(`  ${p} -> ${next} ${prev !== current ? `(was ${current})` : ''}`);
 }
 
 for (const p of MIRROR_PACKAGES) {
@@ -73,5 +74,7 @@ for (const p of MIRROR_PACKAGES) {
   const prev = pkg.version;
   pkg.version = next;
   await Bun.write(path, JSON.stringify(pkg, null, 2) + '\n');
-  console.log(`  ${p === '.' ? '(root)' : p} -> ${next}${prev !== current ? ` (was ${prev})` : ''}`);
+  console.log(
+    `  ${p === '.' ? '(root)' : p} -> ${next}${prev !== current ? ` (was ${prev})` : ''}`,
+  );
 }
