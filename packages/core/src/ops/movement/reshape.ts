@@ -1,7 +1,7 @@
 import { Tensor } from '../../tensor';
 
 /** Reshape to `shape`. Auto-copies if the source is non-contiguous (PyTorch semantics). */
-export function reshape(a: Tensor, shape: number[]): Tensor {
+export function reshape(a: Tensor, shape: (number | null)[]): Tensor {
   return new Tensor({
     shape,
     dtype: a.dtype,
@@ -11,7 +11,7 @@ export function reshape(a: Tensor, shape: number[]): Tensor {
       op: 'Reshape',
       inputs: [a],
       attributes: { shape },
-      backward: (grad) => [reshape(grad, a.shape as number[])],
+      backward: (grad) => [reshape(grad, a.shape)],
     },
   });
 }

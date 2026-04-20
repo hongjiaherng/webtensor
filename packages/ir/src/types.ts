@@ -12,6 +12,7 @@ export type AttributeValue =
   | number
   | string
   | number[]
+  | (number | null)[]
   | string[]
   | boolean
   | ArrayBuffer

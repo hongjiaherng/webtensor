@@ -4,7 +4,7 @@ import { Tensor } from '../../tensor';
  * Strict reshape: throws on non-contiguous input. Use `.contiguous()` first
  * or prefer `reshape()` (which auto-copies).
  */
-export function view(a: Tensor, shape: number[]): Tensor {
+export function view(a: Tensor, shape: (number | null)[]): Tensor {
   return new Tensor({
     shape,
     dtype: a.dtype,
@@ -14,7 +14,7 @@ export function view(a: Tensor, shape: number[]): Tensor {
       op: 'View',
       inputs: [a],
       attributes: { shape },
-      backward: (grad) => [view(grad, a.shape as number[])],
+      backward: (grad) => [view(grad, a.shape)],
     },
   });
 }
