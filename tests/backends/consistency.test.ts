@@ -429,6 +429,51 @@ describe('Consistency: 1D @ 1D (dot)', () => {
     expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
 });
 
+describe('Consistency: 1D @ 2D (vector × matrix)', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        matmul(
+          tensor([1, 2, 3]),
+          tensor([
+            [1, 0, 2],
+            [0, 1, 3],
+            [1, 1, 4],
+          ]),
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
+describe('Consistency: 2D @ 1D (matrix × vector)', () => {
+  const results = new Map<string, Float32Array>();
+  beforeAll(async () => {
+    const r = await collectResults(
+      () =>
+        matmul(
+          tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+          ]),
+          tensor([7, 8, 9]),
+        ),
+      ['CPU', 'WASM', 'WebGPU'],
+    );
+    r.forEach((v, k) => results.set(k, v));
+  });
+  it('WASM matches CPU', () =>
+    expectClose(results.get('WASM')!, results.get('CPU')! as unknown as number[]));
+  it('WebGPU matches CPU', () =>
+    expectClose(results.get('WebGPU')!, results.get('CPU')! as unknown as number[]));
+});
+
 // ---------------------------------------------------------------------------
 // Phase 5 parity — ops added across CPU/WASM/WebGPU in phases 1e–5.
 
