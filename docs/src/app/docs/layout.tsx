@@ -4,6 +4,7 @@ import { baseOptions } from '@/lib/layout.shared';
 import { docsRoute } from '@/lib/shared';
 import type { Folder } from 'fumadocs-core/page-tree';
 import { BookOpenText, Braces } from 'lucide-react';
+import { SidebarResizer } from '@/components/sidebar-resizer';
 
 export default function Layout({ children }: LayoutProps<'/docs'>) {
   const tree = source.getPageTree();
@@ -18,6 +19,7 @@ export default function Layout({ children }: LayoutProps<'/docs'>) {
     <DocsLayout
       tree={tree}
       containerProps={{ className: '[--fd-layout-width:9999px]' }}
+      sidebar={{ banner: <SidebarResizer key="resizer" /> }}
       tabs={[
         {
           title: 'Documentation',
