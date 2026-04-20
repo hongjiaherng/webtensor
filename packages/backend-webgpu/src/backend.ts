@@ -105,32 +105,39 @@ export class WebGPUBackend implements Backend {
     const pipeline = this.getPipeline(node.op, kernel, node, inputs, outputs);
     const commandEncoder = this.device.createCommandEncoder();
 
-    let tempBuffers: GPUBuffer[];
-    if (kernel.executeOverride) {
-      // Multi-dispatch op (e.g. Concat) — hand off full encoder control.
-      ({ tempBuffers } = kernel.executeOverride(
-        this.device,
-        commandEncoder,
-        node,
-        inputs,
-        outputs,
-        pipeline,
-      ));
-    } else {
-      const bge = kernel.buildBindGroupEntries(this.device, node, inputs, outputs);
-      tempBuffers = bge.tempBuffers;
-      const bindGroup = this.device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: bge.entries,
-      });
-      const computePass = commandEncoder.beginComputePass();
-      computePass.setPipeline(pipeline);
-      computePass.setBindGroup(0, bindGroup);
-      const [x, y, z] = kernel.getDispatch(node, inputs, outputs);
-      computePass.dispatchWorkgroups(x, y, z);
-      computePass.end();
+    let tempBuffers: GPUBuffer[] = [];
+    try {
+      if (kernel.executeOverride) {
+        // Multi-dispatch op (e.g. Concat) — hand off full encoder control.
+        ({ tempBuffers } = kernel.executeOverride(
+          this.device,
+          commandEncoder,
+          node,
+          inputs,
+          outputs,
+          pipeline,
+        ));
+      } else {
+        const bge = kernel.buildBindGroupEntries(this.device, node, inputs, outputs);
+        tempBuffers = bge.tempBuffers;
+        const bindGroup = this.device.createBindGroup({
+          layout: pipeline.getBindGroupLayout(0),
+          entries: bge.entries,
+        });
+        const computePass = commandEncoder.beginComputePass();
+        computePass.setPipeline(pipeline);
+        computePass.setBindGroup(0, bindGroup);
+        const [x, y, z] = kernel.getDispatch(node, inputs, outputs);
+        computePass.dispatchWorkgroups(x, y, z);
+        computePass.end();
+      }
+      this.device.queue.submit([commandEncoder.finish()]);
+    } catch (err) {
+      // Pre-submit failure: the GPU will never see these buffers, so the
+      // onSubmittedWorkDone deferral would pin them forever. Destroy now.
+      for (const buf of tempBuffers) buf.destroy();
+      throw err;
     }
-    this.device.queue.submit([commandEncoder.finish()]);
 
     // Destroy ephemeral meta buffers once the GPU is done.
     // WebGPU keeps the underlying resources alive until all submitted work
