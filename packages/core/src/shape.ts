@@ -103,6 +103,65 @@ export function reduceOutputShape(
 }
 
 /**
+ * Resolve a reshape target shape that may contain a single `null` placeholder
+ * (PyTorch's `-1`) by dividing the input size by the product of the other dims.
+ * Throws if more than one null is present, the input size is unknown, or the
+ * target size is incompatible with the input size.
+ */
+export function resolveShapeInference(
+  inputShape: (number | null)[],
+  targetShape: (number | null)[],
+): number[] {
+  const nullIndices: number[] = [];
+  let product = 1;
+  for (let i = 0; i < targetShape.length; i++) {
+    const d = targetShape[i];
+    if (d === null) {
+      nullIndices.push(i);
+    } else {
+      if (!Number.isInteger(d) || d < 0) {
+        throw new Error(`reshape: invalid dim ${d} at index ${i}`);
+      }
+      product *= d;
+    }
+  }
+
+  const inputSize = shapeSize(inputShape);
+
+  if (nullIndices.length === 0) {
+    if (inputSize !== null && inputSize !== product) {
+      throw new Error(
+        `reshape: cannot reshape tensor of size ${inputSize} into shape [${targetShape.join(', ')}]`,
+      );
+    }
+    return targetShape as number[];
+  }
+
+  if (nullIndices.length > 1) {
+    throw new Error(`reshape: only one dimension can be inferred (got ${nullIndices.length} nulls)`);
+  }
+
+  if (inputSize === null) {
+    throw new Error(`reshape: cannot infer dim from input shape with dynamic dims`);
+  }
+
+  if (product === 0) {
+    throw new Error(`reshape: cannot infer dim when other dims have zero product`);
+  }
+
+  if (inputSize % product !== 0) {
+    throw new Error(
+      `reshape: cannot reshape tensor of size ${inputSize} into shape [${targetShape.join(', ')}]`,
+    );
+  }
+
+  const inferred = inputSize / product;
+  const out = targetShape.slice() as number[];
+  out[nullIndices[0]!] = inferred;
+  return out;
+}
+
+/**
  * Normalise an axes argument (number | number[] | undefined) to a sorted
  * non-negative array of axis indices against a tensor of the given rank.
  */

@@ -94,6 +94,38 @@ BACKENDS.forEach(({ name, create }) => {
       ).toBe(true);
     });
 
+    it('infers null dim: [24] → [null, 8]', async () => {
+      const src = Array.from({ length: 24 }, (_, i) => i + 1);
+      const y = await run(contiguous(reshape(tensor(src), [null, 8])), { engine });
+      expect(y.shape).toEqual([3, 8]);
+      expect(await y.equals(reshape(tensor(src), [3, 8]))).toBe(true);
+    });
+
+    it('infers null dim: [2,3,4] → [2, null]', async () => {
+      const src = Array.from({ length: 24 }, (_, i) => i + 1);
+      const base = reshape(tensor(src), [2, 3, 4]);
+      const y = await run(contiguous(reshape(base, [2, null])), { engine });
+      expect(y.shape).toEqual([2, 12]);
+    });
+
+    it('throws on multiple nulls', () => {
+      expect(() => reshape(tensor([1, 2, 3, 4]), [null, null])).toThrow(
+        /only one dimension can be inferred/,
+      );
+    });
+
+    it('throws when inferred dim is not an integer', () => {
+      expect(() => reshape(tensor([1, 2, 3, 4, 5]), [null, 2])).toThrow(
+        /cannot reshape tensor of size 5/,
+      );
+    });
+
+    it('throws when explicit shape has wrong total size', () => {
+      expect(() => reshape(tensor([1, 2, 3, 4]), [3, 2])).toThrow(
+        /cannot reshape tensor of size 4/,
+      );
+    });
+
     it('reshape → matmul pipeline', async () => {
       const y = await run(
         matmul(
