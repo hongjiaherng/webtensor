@@ -16,6 +16,7 @@ type AttributeValue =
   | number
   | string
   | number[]
+  | (number | null)[] // shape-valued attrs can carry dynamic dims
   | string[]
   | boolean
   | ArrayBuffer
@@ -114,6 +115,30 @@ shape: (number | null)[]
 | `[null, null]` | fully dynamic                                |
 
 Dynamic shapes (`null` dimensions) are part of the type system but are not yet enforced by the runtime. The current engine assumes all shapes are static at execution time.
+
+---
+
+## `MAX_RANK`
+
+```ts
+export const MAX_RANK = 64; // packages/ir/src/types.ts
+```
+
+Every `Tensor`, `Value`, and `RuntimeTensor` must have `shape.length <= MAX_RANK`. All three backends enforce this at `allocate()` and throw on violation — no silent corruption.
+
+**Why cap it at all?** Kernels on WASM and WebGPU pass shape/strides through fixed-size uniform buffers, not dynamic arrays. A fixed upper bound lets the meta-buffer layout be a compile-time constant on both the Rust and WGSL sides, which keeps pipelines cacheable and dispatch hot-paths branchless.
+
+**Why 64?** Large enough to cover every tensor shape the library is designed for (transformer activations top out well below this; batched matmul caps `batch_rank` at `MAX_RANK - 2 = 62`). Small enough that the meta buffer stays cheap — WebGPU's `TensorMeta` is 520 bytes (130 × u32) and WASM's largest meta layout (pad) is `3 + 4·MAX_RANK = 259` u32s.
+
+**Single source of truth.** `MAX_RANK` is declared once in `@webtensor/ir` and flows out to every backend:
+
+| Backend  | How it picks up `MAX_RANK`                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CPU      | Imports the constant directly; shape arrays have no fixed size (JS arrays), so the guard is an explicit check in `allocate()`.                                   |
+| WASM     | Rust-side `MAX_RANK` in `rust/src/kernels/mod.rs` is cross-checked at WASM load time against the TS value via a `max_rank()` export; mismatch throws immediately. |
+| WebGPU   | `injectMeta()` substitutes `__MAX_RANK__` into every WGSL shader so `TensorMeta` and all loop bounds size themselves from the IR constant — no hardcoded `64`.   |
+
+Bumping `MAX_RANK` requires rebuilding the WASM package (`wasm-pack build`) so the Rust-side constant propagates into the emitted binary.
 
 ---
 
