@@ -3,6 +3,7 @@
 import wasmBase64Raw from '../pkg/webtensor_wasm_bg.wasm';
 const wasmBase64 = wasmBase64Raw as unknown as string;
 import type { TypedArray } from '@webtensor/runtime';
+import { MAX_RANK } from '@webtensor/ir';
 
 export interface WasmTensorHandle {
   ptr: number;
@@ -96,6 +97,7 @@ type WasmExports = WebAssembly.Exports & {
   memory: WebAssembly.Memory;
   __wbindgen_externrefs: WebAssembly.Table;
   __wbindgen_start: () => void;
+  max_rank: () => number;
   alloc_f32: (len: number) => number;
   free_f32: (ptr: number, len: number) => void;
   alloc_i32: (len: number) => number;
@@ -183,6 +185,14 @@ export async function loadWasmModule(): Promise<WebtensorWasmModule> {
 
   const x = instance.exports as WasmExports;
   x.__wbindgen_start();
+
+  const wasmMaxRank = x.max_rank();
+  if (wasmMaxRank !== MAX_RANK) {
+    throw new Error(
+      `WASM MAX_RANK (${wasmMaxRank}) does not match @webtensor/ir MAX_RANK (${MAX_RANK}). ` +
+        `Rebuild backend-wasm (cd packages/backend-wasm && wasm-pack build rust --target bundler --out-dir ../pkg).`,
+    );
+  }
 
   cachedModule = {
     memory: x.memory,

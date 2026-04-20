@@ -2,7 +2,17 @@ mod memory;
 mod kernels;
 mod utils;
 
+use wasm_bindgen::prelude::*;
+
 pub use memory::*;
+
+/// Rust-side MAX_RANK, exposed so the TS loader can assert parity with
+/// `MAX_RANK` from `@webtensor/ir`. Desyncing silently corrupts every meta
+/// buffer; this export turns that into a load-time error.
+#[wasm_bindgen]
+pub fn max_rank() -> usize {
+    kernels::MAX_RANK
+}
 
 pub use kernels::activation::relu::backward::*;
 pub use kernels::activation::relu::forward::*;
