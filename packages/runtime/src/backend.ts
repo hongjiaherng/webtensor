@@ -147,16 +147,17 @@ export interface Backend {
   write(tensor: RuntimeTensor, data: ArrayBufferView): void;
 
   /**
-   * Run one op. Synchronous — CPU/WASM compute in place; WebGPU submits
-   * commands to the GPU queue (which processes them in order, so subsequent
-   * calls see the right state). Actual GPU work completion is not awaited
-   * here; it's awaited at `read()` time via `mapAsync`.
+   * Run one op. CPU/WASM compute in place and resolve immediately; WebGPU
+   * submits commands to the GPU queue (which processes them in order) and
+   * resolves without awaiting GPU completion — actual GPU work is awaited at
+   * `read()` time via `mapAsync`, so per-op awaits would needlessly serialize
+   * the pipeline.
    *
-   * `Engine.evaluate` still `await`s this call to yield a microtask tick
-   * between ops — that keeps the UI responsive on large graphs without
-   * adding real async overhead.
+   * The Promise return type lets `Engine.evaluate` `await` uniformly across
+   * backends, which also yields a microtask tick between ops and keeps the UI
+   * responsive on large graphs.
    */
-  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void;
+  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): Promise<void>;
 
   /** Free the tensor's storage. Synchronous. */
   dispose(tensor: RuntimeTensor): void;

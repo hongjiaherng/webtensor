@@ -96,7 +96,11 @@ export class WebGPUBackend implements Backend {
     this.device.queue.writeBuffer(destBuffer, 0, data.buffer, data.byteOffset, data.byteLength);
   }
 
-  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {
+  async execute(
+    node: Node,
+    inputs: RuntimeTensor[],
+    outputs: RuntimeTensor[],
+  ): Promise<void> {
     const kernel = this.getKernel(node.op);
     const pipeline = this.getPipeline(node.op, kernel, node, inputs, outputs);
     const commandEncoder = this.device.createCommandEncoder();

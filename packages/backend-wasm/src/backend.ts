@@ -69,7 +69,11 @@ export class WASMBackend implements Backend {
     return Promise.resolve(result as ArrayBufferView);
   }
 
-  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {
+  async execute(
+    node: Node,
+    inputs: RuntimeTensor[],
+    outputs: RuntimeTensor[],
+  ): Promise<void> {
     const kernel = wasmKernelRegistry.get(node.op);
     if (!kernel) throw new Error('WASMBackend: unsupported op ' + node.op);
     kernel(this.module, node, inputs, outputs);

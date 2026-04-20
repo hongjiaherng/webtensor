@@ -39,7 +39,11 @@ export class CPUBackend implements Backend {
     buf.set(data);
   }
 
-  execute(node: Node, inputs: RuntimeTensor[], outputs: RuntimeTensor[]): void {
+  async execute(
+    node: Node,
+    inputs: RuntimeTensor[],
+    outputs: RuntimeTensor[],
+  ): Promise<void> {
     const kernel = cpuKernelRegistry.get(node.op);
     if (!kernel) throw new Error('CPUBackend: unsupported op ' + node.op);
     kernel(node, inputs, outputs);
