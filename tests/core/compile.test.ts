@@ -72,7 +72,7 @@ BACKENDS.forEach(({ name, create }) => {
       );
       const { total, dot } = await fn({ a: tensor([1, 2, 3, 4]), b: tensor([1, 1, 1, 1]) });
       expect(await total.equals(tensor([2, 3, 4, 5]))).toBe(true);
-      expect(await dot.equals(tensor([10]))).toBe(true);
+      expect(await dot.equals(tensor(10))).toBe(true);
     });
 
     it('throws on missing feed key', async () => {

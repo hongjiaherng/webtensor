@@ -12,7 +12,7 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('rank 1: sum all elements', async () => {
       const y = await run(sum(tensor([1, 2, 3, 4])), { engine });
-      expect(await y.equals(tensor([10]))).toBe(true);
+      expect(await y.equals(tensor(10))).toBe(true);
     });
 
     it('rank 2: sum all', async () => {
@@ -25,7 +25,7 @@ BACKENDS.forEach(({ name, create }) => {
         ),
         { engine },
       );
-      expect(await y.equals(tensor([21]))).toBe(true);
+      expect(await y.equals(tensor(21))).toBe(true);
     });
 
     it('rank 2: axis 0', async () => {
@@ -152,7 +152,7 @@ BACKENDS.forEach(({ name, create }) => {
         ),
         { engine },
       );
-      expect(await y.equals(tensor([36]))).toBe(true);
+      expect(await y.equals(tensor(36))).toBe(true);
     });
 
     it('rank 4: axes [1,3]', async () => {
@@ -188,7 +188,7 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('single element → itself', async () => {
       const y = await run(sum(tensor([[42]])), { engine });
-      expect(await y.equals(tensor([42]))).toBe(true);
+      expect(await y.equals(tensor(42))).toBe(true);
     });
 
     it('empty axes (reduce none): returns original flat', async () => {

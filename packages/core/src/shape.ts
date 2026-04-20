@@ -99,7 +99,7 @@ export function reduceOutputShape(
       out.push(inputShape[i] as number);
     }
   }
-  return out.length > 0 ? out : [1]; // scalar: all dims reduced
+  return out; // full reduce + keepdim=false → rank-0 ([]); PyTorch semantics.
 }
 
 /**

@@ -14,7 +14,8 @@ import { InitOptions, buildFromBuffer } from './_internal';
  */
 export function tensor(data: NestedArray<number>, options?: InitOptions): Tensor {
   const extractedShape = inferShape(data);
-  const shape = options?.shape ?? (extractedShape.length > 0 ? extractedShape : [1]);
+  // Bare number → rank-0 scalar (PyTorch semantics). `inferShape(42)` is `[]`.
+  const shape = options?.shape ?? extractedShape;
   const flattened = flattenArray(data);
 
   const dtype = options?.dtype ?? 'float32';

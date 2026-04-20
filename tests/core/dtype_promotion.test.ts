@@ -127,7 +127,7 @@ CPU_ONLY.forEach(({ name, create }) => {
       );
       const y = await run(sum(a), { engine });
       expect(y.dtype).toBe('int32');
-      expect(await y.equals(tensor([21], { dtype: 'int32' }))).toBe(true);
+      expect(await y.equals(tensor(21, { dtype: 'int32' }))).toBe(true);
     });
 
     it('mean on int32 (currently stays int32)', async () => {
@@ -135,7 +135,7 @@ CPU_ONLY.forEach(({ name, create }) => {
       const a = tensor([2, 4, 6], { dtype: 'int32' });
       const y = await run(mean(a), { engine });
       expect(y.dtype).toBe('int32');
-      expect(await y.equals(tensor([4], { dtype: 'int32' }))).toBe(true);
+      expect(await y.equals(tensor(4, { dtype: 'int32' }))).toBe(true);
     });
   });
 });

@@ -12,7 +12,7 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('rank 1: mean all', async () => {
       const y = await run(mean(tensor([1, 2, 3, 4])), { engine });
-      expect(await y.allclose(tensor([2.5]))).toBe(true);
+      expect(await y.allclose(tensor(2.5))).toBe(true);
     });
 
     it('rank 2: mean all', async () => {
@@ -25,7 +25,7 @@ BACKENDS.forEach(({ name, create }) => {
         ),
         { engine },
       );
-      expect(await y.allclose(tensor([3.5]))).toBe(true);
+      expect(await y.allclose(tensor(3.5))).toBe(true);
     });
 
     it('rank 2: axis 0', async () => {
@@ -95,7 +95,7 @@ BACKENDS.forEach(({ name, create }) => {
 
     it('single element', async () => {
       const y = await run(mean(tensor([[7]])), { engine });
-      expect(await y.allclose(tensor([7]))).toBe(true);
+      expect(await y.allclose(tensor(7))).toBe(true);
     });
 
     it('zeros', async () => {
@@ -108,7 +108,7 @@ BACKENDS.forEach(({ name, create }) => {
         ),
         { engine },
       );
-      expect(await y.allclose(tensor([0]))).toBe(true);
+      expect(await y.allclose(tensor(0))).toBe(true);
     });
   });
 });
