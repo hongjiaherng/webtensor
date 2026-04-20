@@ -164,6 +164,6 @@ const step = await compile(
 );
 ```
 
-`grad(loss, param)` runs `loss.backward()` once (it is cached per-loss), then returns `param.grad`. The compiled function returns the materialized gradients as `Float32Array`s that you can feed into any optimizer. No `compileGraph`, no `engine.get(id)`, no tensor-ID tracking. See [FAQ: how do I train a model?](/docs/faq).
+`grad(loss, param)` runs `loss.backward()` once (it is cached per-loss), then returns `param.grad`. The compiled function returns the materialized gradients as `Float32Array`s that you can feed into any optimizer. No `compileGraph`, no `engine.get(id)`, no tensor-ID tracking. See [FAQs: how do I train a model?](/docs/faqs).
 
 Continue with [State of the project](/docs/onboarding/state-of-the-project).

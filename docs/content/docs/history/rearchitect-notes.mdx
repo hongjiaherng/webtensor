@@ -65,7 +65,7 @@ Shipped with PyTorch semantics: 1D·1D (dot), 1D·2D, 2D·1D, 2D·2D, and N-D ba
 
 **Shipped:** `mseLoss` in `packages/core/src/nn.ts`, `SGD` (with optional momentum) in `packages/core/src/optim.ts`, `makeParam(data, shape)` helper, `compile()` + `grad()` primitives in `packages/core/src/compile.ts`. End-to-end XOR MLP convergence test in `tests/graph/train_loop.test.ts`.
 
-**Decided design:** weights live as plain `Float32Array`s outside the graph, fed in each step through `Placeholder` nodes. The user writes the training loop explicitly; no `Trainer` wrapper (deliberately — see the FAQ on HuggingFace/Lightning antipatterns). `makeParam` is a thin helper pairing data with a shape; we do not have a rich `Parameter` class.
+**Decided design:** weights live as plain `Float32Array`s outside the graph, fed in each step through `Placeholder` nodes. The user writes the training loop explicitly; no `Trainer` wrapper (deliberately — see the FAQs on HuggingFace/Lightning antipatterns). `makeParam` is a thin helper pairing data with a shape; we do not have a rich `Parameter` class.
 
 **Remaining:**
 
