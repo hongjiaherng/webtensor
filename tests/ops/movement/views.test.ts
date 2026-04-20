@@ -156,6 +156,31 @@ BACKENDS.forEach(({ name, create }) => {
       );
     });
 
+    it('rejects wrong-length axes', () => {
+      const t = tensor([
+        [1, 2, 3],
+        [4, 5, 6],
+      ]);
+      expect(() => t.permute([0])).toThrow(/axes length/);
+    });
+
+    it('rejects out-of-range axes', () => {
+      const t = tensor([
+        [1, 2, 3],
+        [4, 5, 6],
+      ]);
+      expect(() => t.permute([0, 2])).toThrow(/out of range/);
+      expect(() => t.permute([0, -1])).toThrow(/out of range/);
+    });
+
+    it('rejects duplicate axes', () => {
+      const t = tensor([
+        [1, 2, 3],
+        [4, 5, 6],
+      ]);
+      expect(() => t.permute([0, 0])).toThrow(/repeated/);
+    });
+
     it('permute identity [0,1,2] = no-op', async () => {
       const t = tensor([
         [
