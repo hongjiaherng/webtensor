@@ -2,7 +2,10 @@ import { Tensor } from '../../tensor';
 import { mul } from './mul';
 import { tensor } from '../../init/tensor';
 
-/** Element-wise `a^exponent`. `exponent` is a scalar. */
+/**
+ * Element-wise `a^exponent`. `exponent` is a scalar.
+ * @category Elementwise
+ */
 export function pow(a: Tensor, exponent: number): Tensor {
   return new Tensor({
     shape: a.shape,

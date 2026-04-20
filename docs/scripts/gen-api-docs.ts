@@ -45,11 +45,23 @@ for await (const file of mdxGlob.scan('.')) {
   const raw = await Bun.file(file).text();
   if (raw.startsWith('---')) continue; // already has frontmatter
   const m = raw.match(H1);
-  const title = m
-    ? m[1]
-        .replace(/^(Function|Class|Interface|Type Alias|Variable|Enumeration):\s*/, '')
-        .replace(/\(\)$/, '')
-    : path.basename(file, '.mdx');
+
+  // README.mdx files land at the package root with titles like `core/src`.
+  // Retitle them to `@webtensor/<pkg>` for a cleaner TOC page.
+  const isPkgReadme = /[\\/]api[\\/]([^\\/]+)[\\/]README\.mdx$/.test(file);
+  const pkgMatch = file.match(/[\\/]api[\\/]([^\\/]+)[\\/]README\.mdx$/);
+
+  let title: string;
+  if (isPkgReadme && pkgMatch) {
+    title = `@webtensor/${pkgMatch[1]}`;
+  } else {
+    title = m
+      ? m[1]
+          .replace(/^(Function|Class|Interface|Type Alias|Variable|Enumeration):\s*/, '')
+          .replace(/\(\)$/, '')
+      : path.basename(file, '.mdx');
+  }
+
   const body = m ? raw.replace(m[0], '').replace(/^\n+/, '') : raw;
   const fm = ['---', `title: '${title.replace(/'/g, "\\'")}'`, '---', ''].join('\n');
   await writeFile(file, fm + body);

@@ -5,9 +5,10 @@ import { Node, DType } from '@webtensor/ir';
  * only the backend that allocated it knows the concrete type and reads it.
  *
  * Concrete types per backend (each casts internally):
- *   @webtensor/backend-cpu    → TypedArray (Float32Array, Int32Array, Uint8Array)
- *   @webtensor/backend-wasm   → WasmTensorHandle ({ ptr, elements, byteLength })
- *   @webtensor/backend-webgpu → GPUBuffer
+ *
+ * - `@webtensor/backend-cpu` → `TypedArray` (`Float32Array`, `Int32Array`, `Uint8Array`)
+ * - `@webtensor/backend-wasm` → `WasmTensorHandle` with `ptr`, `elements`, `byteLength`
+ * - `@webtensor/backend-webgpu` → `GPUBuffer`
  *
  * Storage is separate from RuntimeTensor — the foundation for zero-copy
  * stride-based views.

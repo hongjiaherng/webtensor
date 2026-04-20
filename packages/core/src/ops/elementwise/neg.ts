@@ -1,6 +1,9 @@
 import { Tensor } from '../../tensor';
 
-/** Element-wise negation: `-a`. */
+/**
+ * Element-wise negation: `-a`.
+ * @category Elementwise
+ */
 export function neg(a: Tensor): Tensor {
   return new Tensor({
     shape: a.shape,

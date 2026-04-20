@@ -19,12 +19,18 @@ export interface RunOptions {
  * For reusable training loops prefer `compile(fn, spec)` so the graph is
  * traced only once.
  *
+ * @example
  * ```ts
- * const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
- * console.log(y.data);  // Float32Array [5, 7, 9]
+ * import { tensor, add, mul, run } from '@webtensor/core';
  *
- * const [yA, yB] = await run([add(a, b), mul(a, b)]);
+ * const y = await run(add(tensor([1, 2, 3]), tensor([4, 5, 6])));
+ * console.log(y.data); // Float32Array [5, 7, 9]
+ *
+ * // multiple outputs in one pass
+ * const [yA, yB] = await run([add(a, b), mul(a, b)], { device: 'webgpu' });
  * ```
+ *
+ * @category Compile
  */
 export async function run(t: Tensor, options?: RunOptions): Promise<Tensor>;
 export async function run(ts: Tensor[], options?: RunOptions): Promise<Tensor[]>;

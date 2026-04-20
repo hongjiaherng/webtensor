@@ -10,6 +10,7 @@ import { contiguous } from '../memory/contiguous';
  * Backward: each input's gradient is the corresponding axis-slice of the
  * output gradient. The slice is a zero-copy view, so `concat` adds no
  * copy-back cost beyond what the user's downstream ops require.
+ * @category Movement
  */
 export function concat(tensors: Tensor[], axis: number = 0): Tensor {
   if (tensors.length === 0) throw new Error('concat: need at least one tensor');

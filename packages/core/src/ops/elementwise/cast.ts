@@ -12,6 +12,7 @@ import { Tensor } from '../../tensor';
  *
  * Not differentiable — cast breaks the gradient chain. If you need a
  * differentiable variant, keep the tensor in its original dtype.
+ * @category Elementwise
  */
 export function cast(a: Tensor, dtype: DType): Tensor {
   return new Tensor({

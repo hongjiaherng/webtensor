@@ -1,6 +1,9 @@
 import { Tensor } from '../../tensor';
 
-/** Swap the last two dimensions. Zero-copy view. */
+/**
+ * Swap the last two dimensions. Zero-copy view.
+ * @category Movement
+ */
 export function transpose(a: Tensor): Tensor {
   if (a.shape.length < 2) {
     throw new Error('Transpose requires at least 2 dimensions');

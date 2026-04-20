@@ -4,6 +4,7 @@ import { Tensor } from '../../tensor';
  * Element-wise `|a|`.
  *
  * NOTE: backward is not implemented (would require a `sign(a)` op).
+ * @category Elementwise
  */
 export function abs(a: Tensor): Tensor {
   return new Tensor({

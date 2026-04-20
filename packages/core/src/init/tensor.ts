@@ -5,12 +5,18 @@ import { inferShape, flattenArray } from '../shape';
 import { InitOptions, buildFromBuffer } from './_internal';
 
 /**
- * Create a tensor from a nested array of numbers. Mirrors `torch.tensor([...])`.
+ * Create a tensor from a nested array of numbers.
  *
+ * @example
  * ```ts
+ * import { tensor } from '@webtensor/core';
+ *
  * const x = tensor([[1, 2], [3, 4]]);                      // 2×2 Constant
  * const w = tensor([0.1, 0.2], { requiresGrad: true });    // trainable 1D param
+ * const y = tensor([1, 2, 3], { dtype: 'int32' });         // int32 vector
  * ```
+ *
+ * @category Factories
  */
 export function tensor(data: NestedArray<number>, options?: InitOptions): Tensor {
   const extractedShape = inferShape(data);

@@ -15,6 +15,7 @@ import { contiguous } from '../memory/contiguous';
  *
  * Note: ONNX Pad opset ≥ 11 takes `pads` as an input tensor. We keep it as an
  * attribute for compactness; ONNX export will hoist it to an initializer.
+ * @category Movement
  */
 export function pad(a: Tensor, pads: number[], value: number = 0): Tensor {
   const rank = a.shape.length;

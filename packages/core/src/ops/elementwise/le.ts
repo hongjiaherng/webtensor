@@ -1,4 +1,7 @@
 import { makeCompareOp } from './_helpers';
 
-/** Element-wise `a <= b`, broadcasting. Returns a bool tensor. ONNX: `LessOrEqual`. */
+/**
+ * Element-wise `a <= b`, broadcasting. Returns a bool tensor. ONNX: `LessOrEqual`.
+ * @category Elementwise
+ */
 export const le = makeCompareOp('LessOrEqual');

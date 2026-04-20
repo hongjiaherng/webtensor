@@ -4,17 +4,26 @@ import { zeros } from './zeros';
 import { ones } from './ones';
 import { randn } from './randn';
 
-/** Zero tensor matching `t`'s shape and dtype. */
+/**
+ * Zero tensor matching `t`'s shape and dtype.
+ * @category Factories
+ */
 export function zerosLike(t: Tensor, options?: InitOptions): Tensor {
   return zeros(t.shape, { dtype: t.dtype, device: t.device, ...options });
 }
 
-/** One tensor matching `t`'s shape and dtype. */
+/**
+ * One tensor matching `t`'s shape and dtype.
+ * @category Factories
+ */
 export function onesLike(t: Tensor, options?: InitOptions): Tensor {
   return ones(t.shape, { dtype: t.dtype, device: t.device, ...options });
 }
 
-/** Standard-normal tensor matching `t`'s shape. */
+/**
+ * Standard-normal tensor matching `t`'s shape.
+ * @category Factories
+ */
 export function randnLike(
   t: Tensor,
   options?: InitOptions & { seed?: number; mean?: number; std?: number },

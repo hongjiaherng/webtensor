@@ -4,6 +4,7 @@ import { InitOptions, buildFromBuffer, totalElements, xorshift32 } from './_inte
 /**
  * Normal (Gaussian) init via Box–Muller. Mirrors `torch.randn`; extends with
  * `mean` and `std` options for Xavier / He-style scaled initialization.
+ * @category Factories
  */
 export function randn(
   shape: (number | null)[],

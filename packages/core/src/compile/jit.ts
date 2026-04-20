@@ -102,6 +102,8 @@ type CompiledOutput<O> = O extends Tensor
  *   opt.step([W, b], [dW, db]);
  * }
  * ```
+ *
+ * @category Compile
  */
 export async function compile<S extends Record<string, ShapeLike>, O extends OutputShape>(
   fn: (inputs: InputsFromSpec<S>) => O,

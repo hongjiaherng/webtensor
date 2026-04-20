@@ -5,6 +5,7 @@ import { sub } from '../elementwise/sub';
 
 /**
  * Numerically-stable softmax along `axis` (default: last). IR op: `Softmax`.
+ * @category Activation
  */
 export function softmax(a: Tensor, axis = -1): Tensor {
   const rank = a.shape.length;

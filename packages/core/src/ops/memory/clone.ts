@@ -1,6 +1,9 @@
 import { Tensor } from '../../tensor';
 
-/** Deep copy of the tensor's data into fresh storage. */
+/**
+ * Deep copy of the tensor's data into fresh storage.
+ * @category Memory
+ */
 export function clone(a: Tensor): Tensor {
   return new Tensor({
     shape: a.shape,

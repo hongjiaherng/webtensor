@@ -9,6 +9,7 @@ import { contiguous } from '../memory/contiguous';
  *
  * `axis` accepts a single int, an array, or undefined (reduce-all).
  * Negative indices count from the end.
+ * @category Reduction
  */
 export function sum(a: Tensor, axis?: number | number[], keepdim = false): Tensor {
   const normalizedAxes = normalizeAxes(axis, a.shape.length);

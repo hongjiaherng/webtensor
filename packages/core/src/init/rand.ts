@@ -1,7 +1,10 @@
 import { Tensor } from '../tensor';
 import { InitOptions, buildFromBuffer, totalElements, xorshift32 } from './_internal';
 
-/** Uniform random in `[low, high)` (default `[0, 1)`). Mirrors `torch.rand`. */
+/**
+ * Uniform random in `[low, high)` (default `[0, 1)`). Mirrors `torch.rand`.
+ * @category Factories
+ */
 export function rand(
   shape: (number | null)[],
   options?: InitOptions & { seed?: number; low?: number; high?: number },

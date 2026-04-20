@@ -6,7 +6,10 @@ import { contiguous } from '../memory/contiguous';
 import { mul } from '../elementwise/mul';
 import { tensor } from '../../init/tensor';
 
-/** Mean over `axis` (or all axes if undefined). IR op: `ReduceMean`. */
+/**
+ * Mean over `axis` (or all axes if undefined). IR op: `ReduceMean`.
+ * @category Reduction
+ */
 export function mean(a: Tensor, axis?: number | number[], keepdim = false): Tensor {
   const normalizedAxes = normalizeAxes(axis, a.shape.length);
   const outShape = reduceOutputShape(a.shape, normalizedAxes, keepdim);
@@ -32,5 +35,8 @@ export function mean(a: Tensor, axis?: number | number[], keepdim = false): Tens
   });
 }
 
-/** @deprecated Use `mean`. */
+/**
+ * @deprecated Use `mean`.
+ * @category Reduction
+ */
 export const reduceMean = mean;

@@ -3,6 +3,7 @@ import { reshape } from './reshape';
 
 /**
  * Remove a size-1 dim at `dim`, or all size-1 dims if `dim` is omitted.
+ * @category Movement
  */
 export function squeeze(a: Tensor, dim?: number): Tensor {
   let outShape: (number | null)[];

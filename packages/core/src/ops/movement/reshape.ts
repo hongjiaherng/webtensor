@@ -4,6 +4,7 @@ import { resolveShapeInference } from '../../shape';
 /**
  * Reshape to `shape`. Auto-copies if the source is non-contiguous.
  * A single `null` or `-1` in `shape` is inferred from the input's total size.
+ * @category Movement
  */
 export function reshape(a: Tensor, shape: (number | null)[]): Tensor {
   const resolved = resolveShapeInference(a.shape, shape);

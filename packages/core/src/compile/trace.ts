@@ -19,6 +19,7 @@ import { Graph, Node, Value } from '@webtensor/ir';
  * AND an initializer. A batch input tensor is requiresGrad:false AND a graph input.
  * Conflating the two will break training — classify only on data provenance, never
  * on the gradient flag.
+ * @category Compile
  */
 export function compileGraph(outputs: Tensor[]): Graph {
   const nodes: Node[] = [];

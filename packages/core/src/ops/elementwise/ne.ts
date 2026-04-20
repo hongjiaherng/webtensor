@@ -5,5 +5,6 @@ import { makeCompareOp } from './_helpers';
  *
  * Not a standalone ONNX op — ONNX export must decompose as `Not(Equal(a, b))`.
  * We keep the composite IR node for compact graphs and let the exporter lower.
+ * @category Elementwise
  */
 export const ne = makeCompareOp('NotEqual');

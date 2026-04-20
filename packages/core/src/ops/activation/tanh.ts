@@ -3,7 +3,10 @@ import { tensor } from '../../init/tensor';
 import { mul } from '../elementwise/mul';
 import { sub } from '../elementwise/sub';
 
-/** Element-wise `tanh(a)`. */
+/**
+ * Element-wise `tanh(a)`.
+ * @category Activation
+ */
 export function tanh(a: Tensor): Tensor {
   return new Tensor({
     shape: a.shape,

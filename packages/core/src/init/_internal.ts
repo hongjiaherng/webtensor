@@ -95,6 +95,9 @@ export function buildFromBuffer(
     : constant(shape, dtype, buffer, options?.device);
 }
 
+/**
+ * @category Factories
+ */
 export function xorshift32(seed: number): () => number {
   let s = seed | 0 || 1;
   return () => {

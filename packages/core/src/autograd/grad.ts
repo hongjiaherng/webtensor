@@ -13,6 +13,21 @@ const backwardDone = new WeakSet<Tensor>();
  *
  * Call multiple times with the same `loss` to get gradients for different
  * params — `loss.backward()` is only run once per loss tensor.
+ *
+ * @example
+ * ```ts
+ * import { randn, grad, compile } from '@webtensor/core';
+ * import { mseLoss } from '@webtensor/nn';
+ *
+ * const W = randn([2, 4], { requiresGrad: true });
+ * const step = compile((x, y) => {
+ *   const yhat = x.matmul(W);
+ *   const loss = mseLoss(yhat, y);
+ *   return { loss, gW: grad(loss, W) };
+ * }, { x: [null, 2], y: [null, 4] });
+ * ```
+ *
+ * @category Autograd
  */
 export function grad(loss: Tensor, param: Tensor): Tensor {
   if (!loss.requiresGrad) {

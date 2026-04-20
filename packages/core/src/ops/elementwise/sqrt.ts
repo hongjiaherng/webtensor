@@ -3,7 +3,10 @@ import { div } from './div';
 import { mul } from './mul';
 import { tensor } from '../../init/tensor';
 
-/** Element-wise `sqrt(a)`. Float-only — cast int32 → float32 first. */
+/**
+ * Element-wise `sqrt(a)`. Float-only — cast int32 → float32 first.
+ * @category Elementwise
+ */
 export function sqrt(a: Tensor): Tensor {
   if (a.dtype !== 'float32') {
     throw new Error(`sqrt: requires float32 input, got ${a.dtype}. Cast first.`);

@@ -1,7 +1,10 @@
 import { Tensor } from '../../tensor';
 import { reshape } from './reshape';
 
-/** Flatten dims `[startDim, endDim]` (inclusive) into one. */
+/**
+ * Flatten dims `[startDim, endDim]` (inclusive) into one.
+ * @category Movement
+ */
 export function flatten(a: Tensor, startDim = 0, endDim = -1): Tensor {
   const rank = a.shape.length;
   const sd = startDim < 0 ? rank + startDim : startDim;

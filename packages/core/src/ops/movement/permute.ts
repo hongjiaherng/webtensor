@@ -1,6 +1,9 @@
 import { Tensor } from '../../tensor';
 
-/** Reorder axes according to `axes`. Zero-copy view. */
+/**
+ * Reorder axes according to `axes`. Zero-copy view.
+ * @category Movement
+ */
 export function permute(a: Tensor, axes: number[]): Tensor {
   const rank = a.shape.length;
   if (axes.length !== rank) {

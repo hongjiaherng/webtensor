@@ -6,12 +6,24 @@ import { unsqueeze } from '../movement/unsqueeze';
 import { squeeze } from '../movement/squeeze';
 
 /**
- * `matmul`:
+ * Matrix multiplication.
+ *
  *   - 1D·1D → scalar (dot product)
  *   - 1D·2D → prepend 1 to a, compute, drop prepended dim
  *   - 2D·1D → append 1 to b, compute, drop appended dim
  *   - 2D·2D → matrix-matrix product
  *   - N-D   → batched matmul with broadcast over leading dims
+ *
+ * @example
+ * ```ts
+ * import { tensor, matmul, run } from '@webtensor/core';
+ *
+ * const W = tensor([[1, 2], [3, 4], [5, 6]]);   // 3×2
+ * const x = tensor([10, 20]);                    // 2
+ * const y = await run(matmul(W, x));             // [50, 110, 170]
+ * ```
+ *
+ * @category Linalg
  */
 export function matmul(a: Tensor, b: Tensor): Tensor {
   if (a.shape.length === 0 || b.shape.length === 0) {

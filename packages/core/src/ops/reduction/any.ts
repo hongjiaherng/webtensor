@@ -4,6 +4,7 @@ import { reduceOutputShape, normalizeAxes } from '../../shape';
 /**
  * Logical OR over `axis` (or all axes if undefined). Input must be `bool`;
  * output is `bool`. IR op: `ReduceAny`. Not differentiable.
+ * @category Reduction
  */
 export function any(a: Tensor, axis?: number | number[], keepdim = false): Tensor {
   if (a.dtype !== 'bool') {

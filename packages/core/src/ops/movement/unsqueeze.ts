@@ -1,7 +1,10 @@
 import { Tensor } from '../../tensor';
 import { squeeze } from './squeeze';
 
-/** Insert a size-1 dimension at `dim`. */
+/**
+ * Insert a size-1 dimension at `dim`.
+ * @category Movement
+ */
 export function unsqueeze(a: Tensor, dim: number): Tensor {
   const rank = a.shape.length;
   const d = dim < 0 ? rank + 1 + dim : dim;

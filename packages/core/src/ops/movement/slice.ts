@@ -5,6 +5,7 @@ import { pad } from './pad';
  * Slice each dim to `[starts[i], ends[i])`. Zero-copy view.
  *
  * Backward: scatter the gradient back into a zero tensor at the sliced region.
+ * @category Movement
  */
 export function slice(a: Tensor, starts: number[], ends: number[]): Tensor {
   if (starts.length !== a.shape.length || ends.length !== a.shape.length) {

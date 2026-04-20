@@ -5,7 +5,10 @@ import { sumToShape } from '../../autograd/sumToShape';
 import { mul } from './mul';
 import { tensor } from '../../init/tensor';
 
-/** Element-wise `a / b` with broadcasting and dtype promotion. */
+/**
+ * Element-wise `a / b` with broadcasting and dtype promotion.
+ * @category Elementwise
+ */
 export function div(a: Tensor, b: Tensor): Tensor {
   if (!isArithmeticDType(a.dtype) || !isArithmeticDType(b.dtype)) {
     throw new Error(

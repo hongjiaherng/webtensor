@@ -1,6 +1,9 @@
 import { Tensor } from '../../tensor';
 
-/** Materialize a strided/view tensor into a fresh contiguous allocation. */
+/**
+ * Materialize a strided/view tensor into a fresh contiguous allocation.
+ * @category Memory
+ */
 export function contiguous(a: Tensor): Tensor {
   return new Tensor({
     shape: a.shape,

@@ -53,6 +53,9 @@ export interface TensorOptions {
   strides?: number[];
 }
 
+/**
+ * @category Tensor
+ */
 export class Tensor {
   id: string;
   shape: (number | null)[];

@@ -11,6 +11,7 @@ import { isArithmeticDType } from '@webtensor/runtime';
  * Inputs must be the same arithmetic dtype (float32 or int32). Cross-dtype
  * comparisons require an explicit `cast()` — this keeps kernel variants
  * bounded at one-per-dtype instead of one-per-pair.
+ * @category Elementwise
  */
 export function makeCompareOp(opName: string): (a: Tensor, b: Tensor) => Tensor {
   return (a: Tensor, b: Tensor): Tensor => {

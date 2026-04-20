@@ -7,6 +7,7 @@ import { reshape } from '../ops/movement/reshape';
  * Reduce a gradient tensor back to `targetShape` by summing over axes that
  * were broadcast during the forward pass. Used by binary-op backward closures
  * and by `Expand` backward.
+ * @category Autograd
  */
 export function sumToShape(grad: Tensor, targetShape: (number | null)[]): Tensor {
   const gradShape = grad.shape;

@@ -3,7 +3,10 @@ import { tensor } from '../../init/tensor';
 import { mul } from '../elementwise/mul';
 import { sub } from '../elementwise/sub';
 
-/** Element-wise logistic `1 / (1 + exp(-a))`. */
+/**
+ * Element-wise logistic `1 / (1 + exp(-a))`.
+ * @category Activation
+ */
 export function sigmoid(a: Tensor): Tensor {
   return new Tensor({
     shape: a.shape,

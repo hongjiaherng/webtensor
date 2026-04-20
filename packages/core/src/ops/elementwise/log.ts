@@ -1,7 +1,10 @@
 import { Tensor } from '../../tensor';
 import { div } from './div';
 
-/** Element-wise natural log `log(a)`. Float-only — cast int32 → float32 first. */
+/**
+ * Element-wise natural log `log(a)`. Float-only — cast int32 → float32 first.
+ * @category Elementwise
+ */
 export function log(a: Tensor): Tensor {
   if (a.dtype !== 'float32') {
     throw new Error(`log: requires float32 input, got ${a.dtype}. Cast first.`);

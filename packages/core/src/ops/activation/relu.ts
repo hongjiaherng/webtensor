@@ -1,6 +1,9 @@
 import { Tensor } from '../../tensor';
 
-/** Element-wise `max(0, a)`. Backward via the dedicated `ReluBackward` op for efficiency. */
+/**
+ * Element-wise `max(0, a)`. Backward via the dedicated `ReluBackward` op for efficiency.
+ * @category Activation
+ */
 export function relu(a: Tensor): Tensor {
   return new Tensor({
     shape: a.shape,

@@ -1,7 +1,10 @@
 import { Tensor } from '../../tensor';
 import { sumToShape } from '../../autograd/sumToShape';
 
-/** Expand size-1 dims to `shape`. Zero-copy stride-0 broadcast. */
+/**
+ * Expand size-1 dims to `shape`. Zero-copy stride-0 broadcast.
+ * @category Movement
+ */
 export function expand(a: Tensor, shape: number[]): Tensor {
   if (shape.length < a.shape.length) {
     throw new Error(
