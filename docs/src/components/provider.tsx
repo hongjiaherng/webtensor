@@ -22,7 +22,7 @@ export function Provider({ children }: { children: ReactNode }) {
         if (url.startsWith('/api/')) return orig(basePath + url, init);
         return orig(input, init);
       },
-      { preconnect: orig.preconnect?.bind(orig) },
+      { preconnect: (orig as { preconnect?: (url: string) => void }).preconnect?.bind(orig) },
     ) as typeof fetch;
     window.fetch = wrapped;
     return () => {
